@@ -1,16 +1,18 @@
 # JGraft
 
-JGraft is a data structure built around basic JSON-compatible concepts and in
+JGraft is a data structure that describes edits to a tree of data.
+The data structure is built around basic JSON-compatible concepts, and in
 some cases JavaScript semantics.  The main goal is to be able to exchange it
 in the form of JSON, especially between application back-ends and JavaScript
 front-ends, but other languages may include data types of their own if they
 don't need to serialize to JSON.
-The structure primarily uses array primitives to encode directives,
-Lisp-style, but switches to objects with named properties for any case where
-that is more convenient.  The directives (classified below as Actions and
-Match Functions) have symbolic names, but also can be represented by small
-integers for better performance in production environments.  The symbolic
-names are used in all examples below.
+
+The structure primarily uses array primitives to encode directives in a manner
+similar to the Lisp programming language, though it also uses JSON objects
+with named properties for any case where that is more convenient.
+The directives (classified below as Actions and Match Functions) have symbolic
+names, but also can be represented by small integers for better performance in
+production environments.  The symbolic names are used in all examples below.
 
 ## Actions
 
@@ -61,44 +63,94 @@ The `else_action` is also optional.
 
     ['ASSIGN', prop1, val1, prop2, val2, ...]
 
-Assign one or more properties of the current node.  This uses the JavaScript
-concept of properties, where an array has numbered properties and an object
-has named properties.  Properties within sub-nodes may be specified by using
-an array of property names instead of a single string / integer.
-Objects along the property path will be auto-vivified if it they don't exist,
-but fails with `INVALID_TARGET` if it would overwrite a scalar value with an
-object or array.
+Assign one or more properties (or properties of sub-objects) at the current
+node.  This uses the JavaScript concept of properties, where an array has
+numbered properties and an object has named properties.  If the `propN` is an
+array, it specifies a path to a sub-object.  Negative numbers reference
+array elements counting backward from the end, and `false` references a logical
+element beyond the end of the array.  The empty path refers to the node itself.
 
-To prevent inappropriate creation of sub-objects, use a `MATCH` directive that
-asserts the presence or absence of the structure as desired.  Assigning to an
-array more than one element beyond the end is still a fatal error, returning
-`INVALID_TARGET`.
+Objects along the property path will be auto-vivified if they don't exist, but
+the action fails with `INVALID_TARGET` if it would need to overwrite a scalar
+value with an object or array.
+To prevent inappropriate creation of sub-objects, use a containing `MATCH`
+directive that asserts the presence or absence of the structure as desired.
+Assigning to an array more than one element beyond the end is still a fatal
+error, returning `INVALID_TARGET`.
 
-You may overwrite the current node itself by specifying a property path of `[]`.
+    ['ASSIGN', 0, {x:1,y:1}]            // node[0]= { x: 1, y : 1 };
+    ['ASSIGN', [0,'x'], 5]              // node[0].x= 5;
+    ['ASSIGN', [-1,'x'], 6]             // node[node.length-1].x= 6;
+    ['ASSIGN', [false], {x:6}]          // node[node.length]= { x: 6 };
+
+If the `valueN` is an array, it means to get or calculate the value via an
+expression. (described below in [Expression Functions](#expression-functions).
+Any data referenced using the `GET` expression will be assigned by value, so
+effectively deep-cloned, though implementations may optimize this with a
+Copy-On-Write strategy.
+
+    ['ASSIGN', ['b',0], ['GET','a',4]]  // node.b[0]= deep_clone(node.a[4]);
+    ['ASSIGN', 'a', ['DEL']]            // delete node['a'];
+    ['ASSIGN', 'a', [[1,2,3]]]          // node.a= [1,2,3];
+
+Assignments are performed in order, so later value expressions see the
+modified state of the node.  If you need to hold onto current
+values temporarily without overwriting them, you can store them at a path
+starting with `null`.  This temporary variable exists only for the duration of
+the `ASSIGN` action.
+
+    ['ASSIGN', [null], ['GET']]         // temp= deep_clone(node);
+    ['ASSIGN', 'b', ['GET',null,'a']]   // node.b= temp.a;
+    ['ASSIGN', 'a', ['GET',null,'b']]   // node.a= temp.b;
+
+Deletions to array elements cause the following elements to be shifted to fill
+the gap.  There is no way to perform a logical insert operation using the
+`ASSIGN` action, other than explicitly re-assigning every element; see `SPLICE`.
 
 ### MOVE
 
-    ['MOVE', src_prop, dst_prop, src_prop2, dst_prop2...]
+    ['MOVE', src_prop1, dst_prop1, src_prop2, dst_prop2...]
 
-Move the value of one property to another property, deleting the original
-property.  Moves are performed in a logically simultaneous manner; every
-`src_prop` in the specification refers to the initial state of the tree of
-nodes and the destinations are not altered (including shifting array elements
-to fill holes) until all source values have been collected.  This allows you to
-swap two properties with a seuqence of `['MOVE',1,2,2,1]` or make a copy of a
-property by also moving it to its current location with `['MOVE',1,2,1,1]`.
-This action is also used for deleting properties, by specifying `null` for the
-destination. So for example, `['MOVE',1,null,2,null]` is equivalent to
-`['SPLICE',1,2]`.  Similarly, omitting the destination acts as a delete, so
-in a multi-action context that could be specified as `['MOVE',2],['MOVE',1]`,
-though that requires care to avoid referencing an array element that shifted.
+Rename one or more properties within a single object or array.  This is an
+optimized version of 'ASSIGN' primarily intended for shuffling the elements of
+an array, though it may also be used as a shorthand for renaming properties of
+objects.  The logical algorithm (which may be implemented in any equivalent
+manner) is as follows:
 
-If any source path doesn't exist, or any destination path can't be created,
-the graft operation fails with `INVALID_TARGET`.
+  - For arrays:
+    - For each pair of `src_prop`, `dst_prop`,
+      - Index `src_prop` must exist in the array, and must be distinct from
+        any other `src_prop` in this action.
+      - Index `dst_prop` must be in the range [0..length] (optionally using
+        negative number notation to count backward from the end of the array,
+        or the special value 'false' to refer to the length of the array) or
+        the value `null` which means to delete it.
+      - Queue the value at `src_prop` for insertion at index `dst_prop` if
+        `dst_prop` was not null.
+      - Queue `src_prop` for deletion.
+    - Iterating backward over each index where a change was queued,
+      - perform a logical splice(), replacing any queued deletion with any
+        queued insertions for that index.
+  - For objects:
+    - For each pair of `src_prop`, `dst_prop`,
+      - `src_prop` must exist in the object, and must be distinct from any
+        other `src_prop` in this action.
+      - `dst_prop` must be distinct from any other `dst_prop`, or the special
+        value `null`.  `dst_prop` is not required to exist in the object.
+      - Queue the assignment of the value from `src_prop` to `dst_prop`,
+        unless `dst_prop` was `null`.
+      - Queue the deletion of `src_prop`.
+    - Perform all queued deletions
+    - Perform all queued assignments
 
-If the `MOVE` action has only one source/destination pair it executes with
-less overhead.  If sequential move / delete actions are acceptable, consider
-that over a single multiple-attribute action.
+    [`MOVE',0,-1,-1,0]                  // ins[node.length-1]= node[0];
+                                        // ins[0]=             node[node.length-1];
+                                        // node.splice(node.length-1, 1, ins[node.length-1]);
+                                        // node.splice(0, 1, ins[0]);
+    
+    ['MOVE',1,false,2,false]            // ins[node.length]= [ node[1], node[2] ];
+                                        // node.splice(node.length, 0, ...ins[node.length]);
+                                        // node.splice(1, 2);
 
 ### SPLICE
 
@@ -106,11 +158,14 @@ that over a single multiple-attribute action.
 
 Replace a span of an array, just like the splice function found in most
 programming languages.  The current node must be an array or the graft fails
-with `INVALID_TARGET`.  `offset` may be `null` to refer to the end of the
+with `INVALID_TARGET`.  `offset` may be `false` to refer to the end of the
 array, or negaitve to count backward from the end of the array, but the
 resulting index must be within `[0..length]` or the graft fails with
 `INVALID_TARGET`.
 `count` may be `null` to replace the remainder of the array.
+The replacement values follow the same expression notation used by `ASSIGN`.
+All expressions in the replacement are evaluated *before* performing the
+splice, unlike the `ASSIGN` action.
 
 ### SPLIT
 
