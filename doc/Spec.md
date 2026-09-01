@@ -138,7 +138,7 @@ This is the primary tool used to re-implement text diff/patch behavior:
   ['SPLIT',
     { sep: "\n", trim: [" ","\r"] }
     ['MATCH',
-      ['SEQ', 10,
+      ['ARRAY', 10,
         "Line ten",
         "Line eleven",
         "Line twelve",
@@ -270,6 +270,20 @@ strings 'true' and 'false', and numbers are stringified to decimal form (no
 scientific notation) or possibly to the values `'NaN'` or `'Infinity'` if the
 data is able to contain those values.
 
+### ARRAY
+
+  ['ARRAY']
+  ['ARRAY', offset, cond[i], cond[i+1], cond[i+2]...]
+
+With no arguments, this merely asserts that the current node is an array.
+
+With arguments, this asserts that a range of the array matches the supplied
+conditions, according to `HAS`.  The `offset` may be negative to count
+backward from the end of the array.
+
+  // Assert that the array ends with 'x', 'y', 'z'
+  ['ARRAY', -3, 'x', 'y', 'z']
+
 ### AND
 
   ['AND', cond, and_cond...]
@@ -289,23 +303,6 @@ Any one of the following expressions must be true
 True when none of the arguments is true.
 (this would perhaps be more accurately labeled 'NOR')
 
-### SEQ
-
-  ['SEQ', FirstIdx, value0, value1...]
-
-This generates a specification object with numbered keys for each of the
-supplied values, starting from FirstIdx:
-
-  { FirstIdx: value0,
-    [FirstIdx+1]: value1,
-    ...
-  }
-
-The object is then used as normal by functions `HAS`.  (It would not be very
-useful for `IS` because `IS` would fail on indices lower than FirstIdx)
-This is essentially like a sparse array notation, which can't be specified
-directly in JSON.
-
 ### SPLIT
 
   ['SPLIT', split_spec, cond1, cond2...]
@@ -319,6 +316,33 @@ needs to be split.
 
 With a simple enough split and match condition, implementations may be able to
 compile this into a regular expression.
+
+### LT
+
+  ['LT', 65536]
+  ['LT', 'ASCII-STRING']
+
+Less-than test.  Returns true when the current node is the same type as the
+specified value and sorts less than the value according to its type.
+This is only portably defined for numbers and pure-ASCII strings, currently,
+since unicode strings have locale baggage.
+
+An unsupported type in the specification generates an `INVALID_GRAFT` error.
+If the current node's type does not match the specification value's type, this
+generates an `INVALID_TARGET` error.
+See `NUM` and `STR` if you wish to coerce the current node first.
+
+### LE
+
+Less-or-equal test.  Same design as `LT`.
+
+### GT
+
+Greater-than.  Same design as `LT`.
+
+### GE
+
+Greater-or-equal test.  Same design as `LT`.
 
 ## Errors
 
