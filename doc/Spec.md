@@ -10,9 +10,10 @@ don't need to serialize to JSON.
 The structure primarily uses array primitives to encode directives in a manner
 similar to the Lisp programming language, though it also uses JSON objects
 with named properties for any case where that is more convenient.
-The directives (classified below as Actions and Match Functions) have symbolic
-names, but also can be represented by small integers for better performance in
-production environments.  The symbolic names are used in all examples below.
+The directives (classified below as Actions, Match Functions, and Expression
+Functions) have symbolic names, but also can be represented by small integers
+for better performance in production environments.  The symbolic names are
+used in all examples below.
 
 ## Actions
 
@@ -63,12 +64,14 @@ The `else_action` is also optional.
 
     ['ASSIGN', prop1, val1, prop2, val2, ...]
 
-Assign one or more properties (or properties of sub-objects) at the current
-node.  This uses the JavaScript concept of properties, where an array has
-numbered properties and an object has named properties.  If the `propN` is an
-array, it specifies a path to a sub-object.  Negative numbers reference
-array elements counting backward from the end, and `false` references a logical
-element beyond the end of the array.  The empty path refers to the node itself.
+Assign one or more properties at the current node (or at sub-paths of it).
+This uses the JavaScript concept of properties, where an array has
+numbered properties and an object has named properties.  If the `propN`
+argument is an array, it specifies a path to a sub-object.  Negative numbers
+reference array elements counting backward from the end, and `false` references
+a logical element beyond the end of the array.  The empty path refers to the
+node itself.  A path beginning with `null` references a temporary namespace
+that exists only during this action.
 
 Objects along the property path will be auto-vivified if they don't exist, but
 the action fails with `INVALID_TARGET` if it would need to overwrite a scalar
@@ -112,10 +115,11 @@ the gap.  There is no way to perform a logical insert operation using the
     ['MOVE', src_prop1, dst_prop1, src_prop2, dst_prop2...]
 
 Rename one or more properties within a single object or array.  This is an
-optimized version of 'ASSIGN' primarily intended for shuffling the elements of
-an array, though it may also be used as a shorthand for renaming properties of
-objects.  The logical algorithm (which may be implemented in any equivalent
-manner) is as follows:
+alternative to `ASSIGN` optimized for shuffling the elements of an array when
+insertions are not required, though it may also be used to rename properties
+of objects.
+The logical algorithm (which may be implemented in any equivalent manner) is
+as follows:
 
   - For arrays:
     - For each pair of `src_prop`, `dst_prop`,
@@ -123,10 +127,10 @@ manner) is as follows:
         any other `src_prop` in this action.
       - Index `dst_prop` must be in the range [0..length] (optionally using
         negative number notation to count backward from the end of the array,
-        or the special value 'false' to refer to the length of the array) or
-        the value `null` which means to delete it.
+        or the special value `false` to refer to the length of the array) or
+        the value `null`.
       - Queue the value at `src_prop` for insertion at index `dst_prop` if
-        `dst_prop` was not null.
+        `dst_prop` was not `null`.
       - Queue `src_prop` for deletion.
     - Iterating backward over each index where a change was queued,
       - perform a logical splice(), replacing any queued deletion with any
@@ -137,11 +141,13 @@ manner) is as follows:
         other `src_prop` in this action.
       - `dst_prop` must be distinct from any other `dst_prop`, or the special
         value `null`.  `dst_prop` is not required to exist in the object.
-      - Queue the assignment of the value from `src_prop` to `dst_prop`,
+      - Queue the assignment of the current value of `src_prop` to `dst_prop`,
         unless `dst_prop` was `null`.
       - Queue the deletion of `src_prop`.
     - Perform all queued deletions
     - Perform all queued assignments
+
+Examples:
 
     [`MOVE',0,-1,-1,0]                  // ins[node.length-1]= node[0];
                                         // ins[0]=             node[node.length-1];
@@ -151,6 +157,13 @@ manner) is as follows:
     ['MOVE',1,false,2,false]            // ins[node.length]= [ node[1], node[2] ];
                                         // node.splice(node.length, 0, ...ins[node.length]);
                                         // node.splice(1, 2);
+    
+    ['MOVE','a','b','c','a']            // tmp1= node.a;
+                                        // tmp2= node.c;
+                                        // delete node.a;
+                                        // delete node.c;
+                                        // node.b= tmp1;
+                                        // node.a= tmp2;
 
 ### SPLICE
 
@@ -208,6 +221,7 @@ This is the primary tool used to re-implement text diff/patch behavior:
 
 ## Context Matching Functions <span id="context-match"></span>
 
+The matching system is invoked from either the `MATCH` or `IF` actions.
 JGraft provides a rich collection of match specifications.  The basic match
 function is `HAS`, described below.  This is used any time a scalar value or
 plain object is encountered.  Other functions are specified as lisp-style
@@ -398,6 +412,65 @@ Greater-than.  Same design as `LT`.
 ### GE
 
 Greater-or-equal test.  Same design as `LT`.
+
+## Expression Functions  <span id="expression-functions"></span>
+
+These functions can be used as the values for `ASSIGN` and `SPLICE` actions,
+and the conditions for `IF` actions.  The set of expressions is minimal but
+likely to expand in future versions.
+
+### DEL
+
+    ['DEL']
+
+Returns a sentinel value that represents the intent to "delete the assignment
+target".  The sentinel value does not compare equal to `null` or `undefined`
+or `false`.
+
+### GET
+
+    ['GET', 0]             // node[0]
+    ['GET', 'a']           // node.a
+    ['GET', 'a', 1]        // node.a[1]
+    ['GET', 'a', -1]       // node.a[node.a.length-1]
+    ['GET', null, 'a']     // temp.a
+
+Returns the value from a path relative to the current node, or optionally
+relative to a temporary storage of the current action.  If the referenced
+property does not exist, the graft fails with `INVALID_TARGET`.
+
+### TRY
+
+    ['TRY', expr1, expr2...]
+
+Returns the value of the first expression which does not fail with
+`INVALID_TARGET`.  Specification error `INVALID_GRAFT` is not trapped.
+
+### COALESCE
+
+    ['COALESCE', expr1, expr2...]
+
+Returns the value of the first expression which evaluates non-null.
+This does not coalesce across `INVALID_TARGET` errors.
+
+### IF
+
+    ['IF', cond1, expr1, cond2, expr2...]
+    ['IF', cond1, expr1, cond2, expr2... else_expr]
+
+Evaluate the first condition expression, and if it is true (in the JavaScript
+sense where zero, empty string, and null are considered false in addition to
+boolean false, and everything else is true)
+
+### HAS
+
+    ['HAS', prop_path, match_spec]
+
+This invokes the context-matching system against `prop_path`.  Within the
+`match_spec`, all the normal rules for the `HAS` action are used.  It returns
+a boolean true or false value (and never triggers `INVALID_TARGET`).
+The `prop_path` may use the leading `null` to refer to the temporary variable
+of the current action, or an empty array to refer to the current node.
 
 ## Errors
 
