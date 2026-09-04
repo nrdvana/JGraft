@@ -33,7 +33,7 @@ fails with `INVALID_TAGET`.
 
     ['MATCH', context_struct, subaction1, subaction2...]
 
-Assert that the current node matches a [Context specification](#context-match),
+Assert that the current node matches a [Context specification](#matching),
 then execute all sub-actions in sequence.  If it doesn't match, the graft
 operation will fail with `NO_MATCH`, unless the user has enabled "fuzzy"
 matching in which case the engine looks at nearby array indices to find a
@@ -48,17 +48,14 @@ specified for that location.
 
 ### IF
 
-    ['IF', context, action, else_action]
-    ['IF', context1, action1, context2, action2... else_action]
+    ['IF', expr1, action, else_action]
+    ['IF', expr1, action1, expr2, action2... else_action]
 
-Like the `MATCH` action, this compares the current node to a Context
-specification, optionally performing a fuzzy match.  Unlike `MATCH`, it is not
-fatal if it does not match, and will execute an optional `else_action` on
-failure.
-The action may have additional conditions; if two or more array elements
-remain after the last action element, they are considered to be an additional
-match_struct and action.  If one element remains, it is an `else_action`.
-The `else_action` is also optional.
+Evaluate an [expression](#expression), and if it returns true,
+perform the corresponding action and stop checking further expressions.
+This action accepts an arbitrarily long list of (expressinon,action)
+pairs, with an optional final "else" action.
+Errors during the action propagate upward.
 
 ### ASSIGN
 
@@ -219,54 +216,271 @@ This is the primary tool used to re-implement text diff/patch behavior:
       ],
     ]
 
-## Context Matching Functions <span id="context-match"></span>
+## Expressions <span id="expression"></span>
 
-The matching system is invoked from either the `MATCH` or `IF` actions.
+Expressions are composed of functions which return one value and have no
+side-effects.  Many functions implicitly use the value of the "current node",
+since they all execute in the context of matching a data structure.
+
+Expressions may return any JSON value, and aditionally the special values
+`undefined` and `DELETE`.  `undefined` behaves like an error condition; any
+operation involving `undefined` also returns `undefined`, and if an action
+receives `undefined` it ends the graft with an `INVALID_TARGET` error.
+The value `DELETE` is a sentinel value that means to delete the property to
+which it is being assigned.  `DELETE` tests false, but does not compare equal
+to any other JSON value.
+
+A quick overview of the expression functions:
+
+Name      | Description
+----------|----------------------------------------------------------
+AND       | True iff all arguments are true
+OR        | True if at least one argument is true
+NOT       | True iff none of the arguments are true
+MATCH     | Match a value to a match specification
+GET       | Fetch the value of a property relative to the current node
+TRY       | Return the first argument whose value is not `undefined`
+COALESCE  | Return the first argument whose value is not `null`
+IF        | Return the value paired with the first true condition
+DELETE    | Return the `DELETE` sentinel value
+BOOL      | Return argument cast to type
+NUM       | Return argument cast to type
+INT       | Return argument cast to type
+STR       | Return argument cast to type
+ARRAY     | Construct array from arguments
+OBJECT    | Construct object from arguments
+
+### AND
+
+    ['AND', expr1, expr2, expr3...]
+
+Evaluates expressions until one of them returns a false value, or they all
+return true.  If the expression result is not a native boolean, it casts zero,
+null, and empty string to false and all other values to true, except
+`undefined` which propagates like an exception.
+
+### OR
+
+    ['OR', expr1, expr2, expr3...]
+
+Evaluates expressions until the first one that returns a true value.
+If the expression result is not a native boolean, it casts zero, null, and
+empty string to false and all other values to true, except `undefined` which
+propagates like an exception.
+
+### NOT
+
+    ['NOT', expr1, expr2...]
+
+Evaluates expressions until the first one that returns a true value, then
+returns the boolean opposite.  (e.g. this is actually NOR)
+If the expression result is not a native boolean, it casts zero, null, and
+empty string to false and all other values to true, except `undefined` which
+propagates like an exception.
+
+### MATCH
+
+    ['MATCH', expr1, match_spec]
+
+Returns true if the result of the expression [matches](#matching) the
+`match_spec`.
+
+### GET
+
+    ['GET', property...]
+    ['GET', null, property...]
+
+Fetch a value from the current node, via a path of property names and array
+index numbers.  If the path begins with `null`, this references a temporary
+variable space of the current action (see [ASSIGN](#assign) )
+If the referenced property does not exist, this returns `undefined` which
+propagates like an error through other expressions.
+
+Example:
+
+    ['GET', 0]                  // node[0]
+    ['GET', 'a']                // node.a
+    ['GET', 'a', 1]             // node.a[1]
+    ['GET', 'a', -1]            // node.a[node.a.length-1]
+    ['GET', null, 'a']          // temp.a
+
+
+Returns the value from a path relative to the current node, or optionally
+relative to a temporary storage of the current action.  
+
+### TRY
+
+    ['TRY', expr1, expr2...]
+
+Returns the value of the first expression which is not `undefined`.
+
+### COALESCE
+
+    ['COALESCE', expr1, expr2...]
+
+Returns the value of the first expression which evaluates non-null.
+This does not coalesce across `undefined` errors.
+
+### IF
+
+    ['IF', cond1, expr1, cond2, expr2...]
+    ['IF', cond1, expr1, cond2, expr2... else_expr]
+
+Evaluate the first condition expression and [cast it to boolean](#bool).
+If it is true, return the value of the expression following it.
+With an odd number of arguments, the value of the final expression is
+returned if none of the conditions matched.
+
+### DELETE
+
+    ['DELETE']
+
+Return the special sentinel value for `DELETE`, which causes a property to be
+deleted when used in an assignment.
+
+### BOOL
+
+    ['BOOL', expr]
+
+Cast the result of `expr` to boolean.  For a non-boolean value, null, zero,
+and empty string become false, and every other (defined) value becomes true.
+`undefined` propagates like an exception. `null` is passed through unchanged.
+Objects and arrays both become `true`.
+
+### NUM
+
+    ['NUM', expr]
+
+Cast the result of `expr` to a number.  Strings in decimal format become
+numbers, and boolean true becomes 1 and boolean false becomes 0.  No parsing
+for infinity or NaN are provided.  Any parse error becomes `undefined`.
+`null` is passed through unchanged.
+Objects and arrays cast to `undefined` (an error) though the host language
+may override this behavior for native objects.
+
+### INT
+
+    ['INT', expr]
+
+Cast the result of `expr` to an integer.  Strings of decimal digits become
+integers, numbers get truncated to integers, and boolean true/false become 1/0.
+Any parse error becomes `undefined`.  `null` is passed through unchanged.
+Objects and arrays cast to `undefined` (an error) though the host language
+may override this behavior for native objects.
+
+### STR
+
+    ['STR', expr]
+
+Cast the result of `expr` to a string.  Numbers get stringified as decimal
+without scientific notation.  Boolean true/false become 'true' and 'false'.
+`null` is passed through unchanged.
+Objects and arrays cast to `undefined` (an error) though the host language
+may override this behavior for native objects.
+
+### ARRAY
+
+    ['ARRAY', el0_expr, el1_expr...]
+
+Construct an array value, using one expression for each element.
+
+### OBJECT
+
+    ['OBJECT', key0_expr, val0_expr, ...]
+
+Construct an object value, using literals or expressions for both the property
+names and values.  It is an error to define the same property name twice.
+
+## Context Matching <span id="matching"></span>
+
+The matching system is invoked from either the `MATCH` action or the `MATCH`
+expression function.
+
 JGraft provides a rich collection of match specifications.  The basic match
-function is `HAS`, described below.  This is used any time a scalar value or
-plain object is encountered.  Other functions are specified as lisp-style
-arrays where the first element is a function name, and the remaining elements
-are passed as arguments to that function.  Literal arrays can be specified
-by wrapping them in an additional array, such that the literal array appears
-where the function name would normally appear.
+function is `HAS` which requires certain properties to exist but does not
+specify them in full.  This is used any time a scalar value or plain object
+is encountered.  The matching system has its own collection of match functions
+specified as lisp-style arrays where the first element is a function name and
+the remaining elements are passed as arguments to that function.
+Literal arrays can be specified by wrapping them in an additional array, such
+that the literal array appears where the function name would normally appear.
+
+The following functions (which are distinct from the expression functions) all
+implicitly operate on the current node and return a boolean
+(or `undefined`, which propagates errors):
+
+Name      | Description
+----------|----------------------------------------------------------
+HAS       | Switch to partial matching
+IS        | Switch to exact matching
+AND       | All conditions match at current node
+OR        | At least one condition matches at current node
+NOT       | None of the conditions match at current node
+EXISTS    | Current node exists (including `null` values)
+BOOL      | Match any boolean, or cast to boolean for more matching
+NUM       | Match any number, or cast to numeric for more matching
+INT       | Match any integer, or cast to integer for more matching
+STR       | Match any string, or cast to string for more matching
+ARRAY     | Match any array, or match sub-range of an array
 
 ### HAS
 
-    null         // cur_node === null
-    0            // cur_node === 0
-    'str'        // cur_node === 'str'
-    { a:1, b:2 } // cur_node.a === 1 && cur_node.b === 2
-    [[1,2]]      // cur_node[0] === 1 && cur_node[1] === 2
+    null                      node === null
+    0                         node === 0
+    'str'                     node === 'str'
+    { a: 1 }                  node.a === 1
+    { a: [EXISTS] }           'a' in node
+    { a: [NOT, null] }        'a' in node && node.a !== null
+    [OR, 1, 2]                node === 1 || node === 2
+    { a: [[]] }               isArray(node.a)
+    { a: [IS, [[]]] }         isArray(node.a) && node.a.length == 0
+    { a: [IS, [[1,2]]] }      isArray(node.a) && node.a.length == 2
+                              && node.a[0] === 1 && node.a[1] === 2
+    { a: [ARRAY, 3, 6, 7] }   isArray(node.a) && node.a[3] === 6
+                              && node.a[4] === 7
 
 For scalars, this function is equivalent to JavaScript's `===` operator.
-For objects (including array values being compared to specification objects)
-all of the properties seen in the specification object must match the value
-object, recursively.  Extra properties in the value object are ignored.
+Arrays are treated as match functions.  Arrays within arrays mean that the
+node must be an array and must begin with the same elements.  Objects mean
+that all of the properties seen in the specification object must match the
+value object, recursively.  Extra properties in the value object are ignored.
 
 ### IS
 
     ['IS', exactly_this, or_exactly_this...]
 
 This is a variant of 'HAS' that forbids extra properties in a value object
-that were not in the specification object.  Additionally, specification
-objects cannot match array values.  Nested objects within the specification
-are also handled as 'IS' tests, until the next function.  Objects within
-a nested function revert to using 'HAS' unless that function is 'IS' or 'LIKE'.
+that were not in the specification object.  Nested objects within the
+specification are also handled as 'IS' tests, until the next function boundary.
+Objects within a nested function revert to 'HAS' semantics (unless of course
+that function is 'IS').
 
 The function can take additional arguments to perform an implied 'OR'.
+
+### AND
+
+    ['AND', cond, and_cond...]
+
+All following patterns must match at the current node
+
+### OR
+
+    ['OR', cond, or_cond...]
+
+Any one of the following patterns must match at the current node
+
+### NOT
+
+    ['NOT', cond, or_cond...]
+
+Matches when none of the arguments match at the current node.
+(this would perhaps be more accurately labeled 'NOR')
 
 ### EXISTS
 
     ['EXISTS']
 
 The property exists on the object (or array)
-
-### DEFINED
-
-    ['DEFINED']
-
-The property exists and value is not `null` (and not `undefined` if the host
-language has that distinction).
 
 ### BOOL
 
@@ -311,13 +525,6 @@ tests `cond` on the cast value.
 
 To test whether a node can be cast to a number, use `['NUM',['NUM']]`
 
-### REAL
-
-    ['REAL']
-    ['REAL', cond]
-
-Same as `NUM` above, but rejects `NaN` and `Infinity` values.
-
 ### INT
 
     ['INT']
@@ -353,25 +560,6 @@ backward from the end of the array.
     // Assert that the array ends with 'x', 'y', 'z'
     ['ARRAY', -3, 'x', 'y', 'z']
 
-### AND
-
-    ['AND', cond, and_cond...]
-
-All following expressions must be true
-
-### OR
-
-    ['OR', cond, or_cond...]
-
-Any one of the following expressions must be true
-
-### NOT
-
-    ['NOT', cond, or_cond...]
-
-True when none of the arguments is true.
-(this would perhaps be more accurately labeled 'NOR')
-
 ### SPLIT
 
     ['SPLIT', split_spec, cond1, cond2...]
@@ -384,7 +572,7 @@ content during a fuzzy search when you don't know which specific node path
 needs to be split.
 
 With a simple enough split and match condition, implementations may be able to
-compile this into a regular expression.
+compile this into a regular expression test.
 
 ### LT
 
@@ -412,65 +600,6 @@ Greater-than.  Same design as `LT`.
 ### GE
 
 Greater-or-equal test.  Same design as `LT`.
-
-## Expression Functions  <span id="expression-functions"></span>
-
-These functions can be used as the values for `ASSIGN` and `SPLICE` actions,
-and the conditions for `IF` actions.  The set of expressions is minimal but
-likely to expand in future versions.
-
-### DEL
-
-    ['DEL']
-
-Returns a sentinel value that represents the intent to "delete the assignment
-target".  The sentinel value does not compare equal to `null` or `undefined`
-or `false`.
-
-### GET
-
-    ['GET', 0]             // node[0]
-    ['GET', 'a']           // node.a
-    ['GET', 'a', 1]        // node.a[1]
-    ['GET', 'a', -1]       // node.a[node.a.length-1]
-    ['GET', null, 'a']     // temp.a
-
-Returns the value from a path relative to the current node, or optionally
-relative to a temporary storage of the current action.  If the referenced
-property does not exist, the graft fails with `INVALID_TARGET`.
-
-### TRY
-
-    ['TRY', expr1, expr2...]
-
-Returns the value of the first expression which does not fail with
-`INVALID_TARGET`.  Specification error `INVALID_GRAFT` is not trapped.
-
-### COALESCE
-
-    ['COALESCE', expr1, expr2...]
-
-Returns the value of the first expression which evaluates non-null.
-This does not coalesce across `INVALID_TARGET` errors.
-
-### IF
-
-    ['IF', cond1, expr1, cond2, expr2...]
-    ['IF', cond1, expr1, cond2, expr2... else_expr]
-
-Evaluate the first condition expression, and if it is true (in the JavaScript
-sense where zero, empty string, and null are considered false in addition to
-boolean false, and everything else is true)
-
-### HAS
-
-    ['HAS', prop_path, match_spec]
-
-This invokes the context-matching system against `prop_path`.  Within the
-`match_spec`, all the normal rules for the `HAS` action are used.  It returns
-a boolean true or false value (and never triggers `INVALID_TARGET`).
-The `prop_path` may use the leading `null` to refer to the temporary variable
-of the current action, or an empty array to refer to the current node.
 
 ## Errors
 
