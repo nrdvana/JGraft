@@ -31,13 +31,14 @@ fails with `INVALID_TAGET`.
 
 ### MATCH
 
-    ['MATCH', context_struct, subaction1, subaction2...]
+    ['MATCH', match_spec, subaction1, subaction2...]
 
 Assert that the current node matches a [Context specification](#matching),
 then execute all sub-actions in sequence.  If it doesn't match, the graft
 operation will fail with `NO_MATCH`, unless the user has enabled "fuzzy"
 matching in which case the engine looks at nearby array indices to find a
 match.
+
 The exact algorithm for permitting "fuzzy" matches is dependent on the engine
 and parameters supplied by the user.
 If a fuzzy match is successful, the array offsets discovered during that
@@ -55,7 +56,8 @@ Evaluate an [expression](#expression), and if it returns true,
 perform the corresponding action and stop checking further expressions.
 This action accepts an arbitrarily long list of (expressinon,action)
 pairs, with an optional final "else" action.
-Errors during the action propagate upward.
+If the expression evaluates to an error, or the selected action ends with an
+error, the `IF` action fails.
 
 ### ASSIGN
 
@@ -173,9 +175,10 @@ array, or negaitve to count backward from the end of the array, but the
 resulting index must be within `[0..length]` or the graft fails with
 `INVALID_TARGET`.
 `count` may be `null` to replace the remainder of the array.
-The replacement values follow the same expression notation used by `ASSIGN`.
-All expressions in the replacement are evaluated *before* performing the
-splice, unlike the `ASSIGN` action.
+
+The replacement values follow the same [expression](#expression) notation used
+by `ASSIGN`.  All expressions in the replacement are evaluated *before*
+performing the splice, unlike the `ASSIGN` action.
 
 ### SPLIT
 
@@ -391,6 +394,49 @@ Construct an array value, using one expression for each element.
 Construct an object value, using literals or expressions for both the property
 names and values.  It is an error to define the same property name twice.
 
+### SLICE
+
+    ['SLICE', ofs, count, array_val_expr]
+
+Return a sub-range of an array.  `ofs` can be negative to count backward from
+the end of the array. `count` can be `null` to select the remainder of the array.
+
+### SPLIT
+
+    ['SPLIT', split_spec, string_val_expr]
+
+This uses the same `split_spec` as the `SPLIT` action, but returns the array of
+strings as a value.
+
+### JOIN
+
+    ['JOIN', sep_expr, array_val_expr]
+
+The performs the opposite of a split, constucting a string from an array of
+strings and separator string.
+
+### CONCAT
+
+    ['CONCAT', str1_expr, str2_expr...]
+
+Concatenate one or more strings.
+
+### CMP_NUM
+
+    ['CMP_NUM', expr1, expr2]
+
+Perform numeric comparison between `expr1` and `expr2`, and return an integer
+-1, 0, or 1 if `expr1` is less, equal or greater than `expr2`.  If either
+value is not a number, this returns `null`.
+
+### CMP_STR
+
+    ['CMP_STR', expr1, expr2]
+
+Compare strings as a series of UTF-16 integers in the same manner as
+JavaScript, returning -1 or 1 at the first differing integer, or 0 if they are
+identical.  If either value is not a string, this returns `null`.
+
 ## Context Matching <span id="matching"></span>
 
 The matching system is invoked from either the `MATCH` action or the `MATCH`
@@ -422,6 +468,7 @@ NUM       | Match any number, or cast to numeric for more matching
 INT       | Match any integer, or cast to integer for more matching
 STR       | Match any string, or cast to string for more matching
 ARRAY     | Match any array, or match sub-range of an array
+EXPR      | Evaluate an expression at the current node
 
 ### HAS
 
@@ -560,46 +607,13 @@ backward from the end of the array.
     // Assert that the array ends with 'x', 'y', 'z'
     ['ARRAY', -3, 'x', 'y', 'z']
 
-### SPLIT
+### EXPR
 
-    ['SPLIT', split_spec, cond1, cond2...]
+    ['EXPR', expr_fn, args...]
 
-This is the same as the `SPLIT` action, but operates in matching context as a
-boolean that returns true if all the conditions return true.  Using this in
-a match is slower than using the `SPLIT` action and matching within the
-resulting array, but this gives you the chance to search for substrings in
-content during a fuzzy search when you don't know which specific node path
-needs to be split.
-
-With a simple enough split and match condition, implementations may be able to
-compile this into a regular expression test.
-
-### LT
-
-    ['LT', 65536]
-    ['LT', 'ASCII-STRING']
-
-Less-than test.  Returns true when the current node is the same type as the
-specified value and sorts less than the value according to its type.
-This is only portably defined for numbers and pure-ASCII strings, currently,
-since unicode strings have locale baggage.
-
-An unsupported type in the specification generates an `INVALID_GRAFT` error.
-If the current node's type does not match the specification value's type, this
-generates an `INVALID_TARGET` error.
-See `NUM` and `STR` if you wish to coerce the current node first.
-
-### LE
-
-Less-or-equal test.  Same design as `LT`.
-
-### GT
-
-Greater-than.  Same design as `LT`.
-
-### GE
-
-Greater-or-equal test.  Same design as `LT`.
+Evaluate the remainder of the array as an expression, and then match if the
+result of the expression coerces to a true value.  This does *not* use the
+result of an expression as a value to test against the current node.
 
 ## Errors
 
