@@ -75,8 +75,9 @@ The following properties are currently defined:
        correctly interpret the contents of this structure
   - writer: a string identifying the tool that authored the structure
   - comment: a free-form text comment string
+  - common: an array declaring constants for use in [`ASSIGN`](#assign) actions
   - regex: an object holding default configuration for regular expressions
-    - common: an array of [common subexpressions](#common-subexpressions)
+    - common: an array declaring [common subexpressions](#common-subexpressions)
 
 When exported to JSON, outer metadata should contain `v` (minimum version
 to correctly process the structure), and it should be at least as high as
