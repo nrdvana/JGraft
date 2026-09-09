@@ -43,6 +43,54 @@ A JGraft data structure is a tree of actions, Lisp-style, where each action is
 an array that begins with the action name (or numeric opcode) and contains
 parameters for that action, which will often include sub-actions.
 
+Name    | ID | Description
+--------|----|----------------------------------------------------------------
+JGRAFT  | -1 | Declare metadata; top-level element
+AT      |  0 | Navigate to sub-node and execute sub-actions
+MATCH   |  1 | Assert current node matches pattern
+IF      |  2 | Choose action based on which pattern matches
+ASSIGN  |  3 | Assign-by-value to properties
+MOVE    |  4 | Move existing values of an array/object to new properties
+SPLICE  |  5 | Perform standard splice() on an array
+SPLIT   |  6 | Split string node into array, apply actions, re-join as string
+
+### JGRAFT
+
+    ['JGRAFT', metadata, action1, action2...]
+
+This action is used for the top-level of an exported JGraft JSON file, or
+optional metadata deeper within the structure.
+When serialized to JSON, the top-level 'JGRAFT' action name is not replaced by
+a number, and there should be no whitespace until after the following comma.
+This gives JGraft JSON files a "magic number" of
+
+    '["JGRAFT",'
+
+The `metadata` is an object with semi-free-form properties, where top-level
+names matching `/^[a-z][A-Za-z0-9]*$/` are reserved for the protocol, and any
+others are user-defined.
+The following properties are currently defined:
+
+  - v: integer; the minimum JGraft specification version required to
+       correctly interpret the contents of this structure
+  - writer: a string identifying the tool that authored the structure
+  - comment: a free-form text comment string
+  - regex: an object holding default configuration for regular expressions
+    - common: an array of [common subexpressions](#common-subexpressions)
+
+When exported to JSON, outer metadata should contain `v` (minimum version
+to correctly process the structure), and it should be at least as high as
+any minimum version seen within.  It is permitted to declare `v` on
+sub-structures, for composability between different sources.
+Future versions of JGraft are expected to be backward compatible, but if
+incompatibilities arise, implementations should aim to support older versions
+dynamically so that they can process sub-structures from prior versions.
+
+For user-defined properties, a good pattern is to use a unique-ish property
+name containing a period (such as Java-style reverse domain name) or other
+special character like '#ProjectName' and place all custom data within an
+object under that.
+
 ### AT
 
     ['AT', path, subaction1, subaction2...]
@@ -307,43 +355,6 @@ This is the primary tool used to re-implement text diff/patch behavior:
       ],
     ]
 
-### JGRAFT
-
-    ['JGRAFT', metadata, action1, action2...]
-
-This action is used for the top-level of an exported JGraft JSON file, or
-optional metadata deeper within the structure.
-When serialized to JSON, the top-level 'JGRAFT' action name is not replaced by
-a number, and there should be no whitespace until after the following comma.
-This gives JGraft JSON files a "magic number" of
-
-    '["JGRAFT",'
-
-The `metadata` is an object with semi-free-form properties, where top-level
-names matching `/^[a-z][A-Za-z0-9]*$/` are reserved for the protocol, leading
-underscores are forbidden, and any others are user-defined.  The following
-properties are currently defined:
-
-  - v: integer; the minimum JGraft specification version required to
-       correctly interpret the contents of this structure
-  - writer: a string identifying the tool that authored the structure
-  - comment: a free-form text comment string
-  - regex: an object holding default configuration for regular expressions
-    - common: an array of [common subexpressions](#common-subexpressions)
-
-When exported to JSON, outer metadata should contain `v` (minimum version
-to correctly process the structure), and it should be at least as high as
-any minimum version seen within.  It is permitted to declare `v` on
-sub-structures, for composability between different sources.
-Future versions of JGraft are expected to be backward compatible, but if
-incompatibilities arise, implementations should aim to support older versions
-dynamically so that they can process sub-structures from prior versions.
-
-For user-defined properties, a good pattern is to use a unique-ish property
-name containing a period (such as Java-style reverse domain name) or other
-special character like '#ProjectName' and place all custom data within an
-object under that.
-
 ## <span id="matching">Context Matching</span>
 
 JGraft provides a rich collection of match specifications.  The basic match
@@ -358,20 +369,20 @@ that the literal array appears where the function name would normally appear.
 The following functions all implicitly operate on the current node and return
 a boolean of whether the current node passes the test:
 
-Name      | Description
-----------|----------------------------------------------------------
-HAS       | Switch to partial matching
-IS        | Switch to exact matching
-AND       | All conditions match at current node
-OR        | At least one condition matches at current node
-NOT       | None of the conditions match at current node
-EXISTS    | Current node exists (including `null` values)
-BOOL      | Match any boolean, or cast to boolean for more matching
-NUM       | Match any number, or cast to numeric for more matching
-INT       | Match any integer, or cast to integer for more matching
-STR       | Match any string, or cast to string for more matching
-ARRAY     | Match any array, or match sub-range of an array
-SPLIT     | Split a string to match against the resulting array
+ Name      | ID | Description
+-----------|----|----------------------------------------------------------
+ HAS       | 3  | Switch to partial matching
+ IS        | 4  | Switch to exact matching
+ NOT       | 0  | None of the conditions match at current node
+ OR        | 1  | At least one condition matches at current node
+ AND       | 2  | All conditions match at current node
+ EXISTS    | 5  | Current node exists (including `null` values)
+ BOOL      | 10 | Match any boolean, or cast to boolean for more matching
+ NUM       | 11 | Match any number, or cast to numeric for more matching
+ INT       | 8  | Match any integer, or cast to integer for more matching
+ STR       | 7  | Match any string, or cast to string for more matching
+ ARRAY     | 9  | Match any array, or match sub-range of an array
+ SPLIT     | 6  | Split a string to match against the resulting array
 
 ### HAS
 
