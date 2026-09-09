@@ -131,46 +131,71 @@ If the action aborts with an error, the `IF` action likewise fails.
 
     ['ASSIGN', prop1, val1, prop2, val2, ...]
 
+Assign one or more properties of the current node (or sub-paths of it).
+All assignments are considered to be "by value", deep-cloning objects rather
+than building a graph of object references, though more advanced
+implementations may implement copy-on-write to avoid some of the cloning.
+Assignments are performed sequentially, so later value expressions see the
+modified state of the node.
+
+The basic usage of this action is to assign literal values to named
+properties, but each property *and* value argument may instead be a
+[path](#paths).  This means that `[]` in the value position refers to the node
+itself (empty path) rather than a literal empty array to become the new value.
+As usual, an array literal value can be specified by wrapping
+it with another array, to disambiguate it from a path.
+
+Objects along the property path being assigned will be auto-vivified if they
+don't exist, but the action fails with `INVALID_TARGET` if it would need to
+convert a scalar, object, or array to an opposing type.
+To prevent inappropriate creation of sub-objects, use a containing `MATCH`
+directive that asserts the presence or absence of the structure as desired.
+Assigning to an array more than one element beyond the end is still a fatal
+error, returning `INVALID_TARGET`.
+
 Examples:
 
     ['ASSIGN', 0, {x:1,y:1}]            // node[0]= { x: 1, y : 1 };
     ['ASSIGN', [0,'x'], 5]              // node[0].x= 5;
     ['ASSIGN', [-1,'x'], 6]             // node[node.length-1].x= 6;
     ['ASSIGN', [false], {x:6}]          // node[node.length]= { x: 6 };
-    ['ASSIGN', ['b',0], ['a',4]]        // node.b[0]= deep_clone(node.a[4]);
+    ['ASSIGN', ['b',0], ['a',4]]        // node.b[0]= clone(node.a[4]);
     ['ASSIGN', 'a', null]               // node['a']= null;
-    ['ASSIGN', 'a', []]                 // node['a']= deep_clone(node);
+    ['ASSIGN', 'a', []]                 // node['a']= clone(node);
     ['ASSIGN', 'a', [[1,2,3]]]          // node.a= [1,2,3];
 
-Assign one or more properties at the current node (or at sub-paths of it).
-The basic usage of this action is to assign literal values to named
-properties, but each property *and* value argument may instead be a
-[path](#paths).  This means that `[]` in the value position refers to the node
-itself (empty path) rather than a literal empty array to become the new value.
-As usual, an array literal value can be specified by wrapping
-it with another array, to disambiguate it from a path.  All assignments are
-considered to be "by value", deep-cloning objects rather than building a graph
-of object references.  Assignments are performed in order, so later value
-expressions see the modified state of the node.
+Additionally, paths that begins with `null` access a special namespace.  The
+following path element must be an integer, or one of the following special
+names (or it's ID):
 
-Objects along the property path being assigned will be auto-vivified if they
-don't exist, but the action fails with `INVALID_TARGET` if it would need to
-overwrite a scalar value with an object or array.
-To prevent inappropriate creation of sub-objects, use a containing `MATCH`
-directive that asserts the presence or absence of the structure as desired.
-Assigning to an array more than one element beyond the end is still a fatal
-error, returning `INVALID_TARGET`.
+Name       | ID | Description
+-----------|----|-------------------------------------------------------------
+`"common"` | -1 | constants defined in the enclosing `JGRAFT` action
+`"stash"`  | -2 | variables shared among actions of enclosing `JGRAFT` action
 
-Additionally, using a path that begins with `null` reads and writes to a
-temporary variable instead of the current node, giving you a place to store
-temporaries.  The temporary variable space exists only for the duration of
-this `ASSIGN` action.
+All non-negative integers may be used for temporaries local to this `ASSIGN`
+action.  The top-level node of `common` and `stash` may not be assigned to,
+nor *any* path within `common`.  This namespace is not actually exposed as an
+array, so you cannot write to the `false` element to append to it, nor does it
+have a `length` property.  Elements of this namespace must be exist prior to
+being read, but can be auto-vivified in the usual manner.  As a special case,
+if the first property path element within `common` or `stash` is an integer,
+it gets coerced to a string.  This allows auto-generated numeric elements
+(which encode more compactly in JSON) for those without implying that they are
+arrays.
 
 Examples:
 
-    ['ASSIGN', [null], []]                // temp= deep_clone(node);
-    ['ASSIGN', 'b', [null,'a']]           // node.b= temp.a;
-    ['ASSIGN', 'a', [null,'b']]           // node.a= temp.b;
+    ['ASSIGN', [null,0], []]                // temp0=  clone(node);
+    ['ASSIGN', 'b', [null,0,'a']]           // node.b= clone(temp0.a);
+    ['ASSIGN', 'a', [null,0,'b']]           // node.a= clone(temp0.b);
+    
+    ['ASSIGN', [null,0], ['a']]             // temp0=  clone(node.a);
+    ['ASSIGN', 'a', ['b']]                  // node.a= clone(node.b);
+    ['ASSIGN', 'b', [null,0]]               // node.b= clone(temp0);
+    
+    ['ASSIGN', [null,-2,0], ['b']]          // jgraft.stash['0']= clone(node.b);
+    ['ASSIGN', 'b', [null,-1,'big_data']]   // node.b= clone(jgraft.common.big_data);
 
 ### MOVE
 
@@ -178,7 +203,7 @@ Examples:
 
 Relocate one or more values of properties within a single object or array.
 This is an alternative to `ASSIGN` optimized for shuffling the elements of an
-array when insertions are not required, though it may also be used to rename
+array when new data is not required, though it may also be used to rename
 properties of objects.
 All source and destination positions are resolved against the state of the
 current container at the start of the MOVE action.  The logical algorithm
@@ -520,8 +545,8 @@ The match against the array is also subject to fuzzy matching.
 
 If the host language has direct support for objects encapsulating a regular
 expression, and JSON serialization is not required, you may use those objects
-in any parameter that allows regular expressions with the full power and
-capabilities of your host language.
+in any parameter that allows regular expressions, to take advantage of the
+full power and capabilities of your host language.
 
 If you need to portably serialize the JGraft, the regular expressions may be
 specified as (you guessed it) lisp-style structure describing the pattern.
@@ -560,12 +585,14 @@ contain cyclic references.  In particular, if a common subexpression is
 specified using a reference, the reference must already exist and gets
 resolved immediately.
 
-The initial value of the common expression namespace can be supplied by
+The initial value of the common expression namespace can be supplied by an
 enclosing ['JGRAFT' actions](#jgraft) via the metadata property
-`regex.common`.  Temporary overrides can also be specified via Sequence
+`regex.common`.  Temporary overrides can also be specified via regex Sequence
 functions that begin with a `{}` configuration block.  In both cases, the list
-is specified as an array of key/value properties to apply to the namespace in
-order.
+is specified as an array of property/value pairs to apply to the namespace, in
+order.  Integers are permitted as the property name (implicitly coerced to
+strings) since numeric iteration is the simplest thing to generate and
+integers encode more compactly in JSON than strings.
 
 Action Example:
 
