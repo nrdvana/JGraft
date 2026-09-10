@@ -1,11 +1,12 @@
 # JGraft
 
-JGraft is a data structure that describes edits to a tree of data.
+JGraft is a data structure that describes edits to a tree of data.  So long as
+the input was a pure tree (not graph) the result will also be a tree.
 The data structure is built around basic JSON-compatible concepts, and in
 some cases JavaScript semantics.  The main goal is to be able to exchange it
-in the form of JSON, especially between application back-ends and JavaScript
-front-ends, but other languages may include data types of their own if they
-don't need to serialize to JSON.
+in the form of JSON, especially between JavaScript front-ends and application
+back-ends.  Other languages may include data types of their own within the
+tree if they don't need to serialize to JSON.
 
 The structure primarily uses array primitives to encode directives in a manner
 similar to the Lisp programming language, though it also uses JSON objects
@@ -18,24 +19,23 @@ The symbolic names are used in all examples below.
 ## Paths
 
 Several actions and match functions use the concept of a 'path' (of JSON
-property names).  A path is specified as a string, number or array:
+property names).  By example, paths look like:
 
     'a'                node.a
     0                  node[0]
+    -1                 node[node.length-1]
+    false              node[node.length]
     []                 node
     ['a']              node.a
-    [0]                node[0]
     ['a',1,'b',2]      node.a[1].b[2]
-    [-1]               node[node.length-1]
-    [false]            node[node.length]
     [null, ...]        special per-action
     [true, ...]        special per-action
 
-As shown above, negative numbers count backward from the end of an array,
-false refers to the nonexistent one-beyond-the-end element of an array which
-may sometimes be assigned to, and paths beginning with `null` or `true` are
-used as an escape sequence for special purposes depending on the current
-action.
+Strings refer to object properties.  Integers refer to array elements, where
+negative numbers count backward from the end of an array.  `false` refers to
+the nonexistent one-beyond-the-end element of an array which is valid for
+certain actions.  Paths beginning with `null` or `true` are used as an escape
+sequence for special purposes depending on the current action.
 
 ## Actions
 
@@ -75,9 +75,8 @@ The following properties are currently defined:
        correctly interpret the contents of this structure
   - writer: a string identifying the tool that authored the structure
   - comment: a free-form text comment string
-  - common: an array declaring constants for use in [`ASSIGN`](#assign) actions
-  - regex: an object holding default configuration for regular expressions
-    - common: an array declaring [common subexpressions](#common-subexpressions)
+  - const: an object of constants for use in [`ASSIGN`](#assign) actions
+  - regexCommon: an array declaring [common subexpressions](#common-subexpressions)
 
 When exported to JSON, outer metadata should contain `v` (minimum version
 to correctly process the structure), and it should be at least as high as
@@ -91,6 +90,22 @@ For user-defined properties, a good pattern is to use a unique-ish property
 name containing a period (such as Java-style reverse domain name) or other
 special character like '#ProjectName' and place all custom data within an
 object under that.
+
+The `JGRAFT` action acts like a scope for declaring constants, and also
+provides a fresh empty `stash` of shared temporary variables for the actions
+within it.  It also declares scoped regex common subexpressions.
+The algorithm when beginning a `JGRAFT` action is roughly:
+
+  - Set the `stash` namespace to a new empty object.
+  - Set the `const` namespace to the specified object, but inherit the
+    properties of the parent `const` namespace (or possibly values implicit
+    to the declared version of the JGraft spec).
+  - Create a local regex common-subexpresison namespace which inherits the
+    properties of the parent (or possibly values implicit to the declared
+    version of the JGraft spec).
+  - For each name/value pair specified in `regexCommon`, resolve references
+    in the expression and then assign the result to the named property of
+    the common-subexpression namespace.
 
 ### AT
 
@@ -132,27 +147,34 @@ If the action aborts with an error, the `IF` action likewise fails.
 
     ['ASSIGN', prop1, val1, prop2, val2, ...]
 
-Assign one or more properties of the current node (or sub-paths of it).
-All assignments are considered to be "by value", deep-cloning objects rather
-than building a graph of object references, though more advanced
-implementations may implement copy-on-write to avoid some of the cloning.
-Assignments are performed sequentially, so later value expressions see the
-modified state of the node.
+Assign a new value to one or more properties of the current node (or
+sub-paths of it).  The values may be literal, or may come from paths relative
+to the current node (but see below for exceptions).  All assignments are
+performed "by value", deep-cloning objects or arrays, so the resulting state
+of the data will not reference objects of the JGraft nor can this be used to
+create cyclic or even acyclic graphs of object references.  The list of
+assignments is performed sequentially, so later property and value expressions
+see the modified state of the node's tree.
 
 The basic usage of this action is to assign literal values to named
-properties, but each property *and* value argument may instead be a
-[path](#paths).  This means that `[]` in the value position refers to the node
-itself (empty path) rather than a literal empty array to become the new value.
-As usual, an array literal value can be specified by wrapping
+properties, but each property may be a deeper [path](#paths) specified as an
+array, and each value may be an array to designate it as a path rather than a
+literal value.  This means that `[]` in the value position refers to an empty
+path (i.e. the node itself) rather than a literal empty array to become the
+new value.  As usual, an array literal value can be specified by wrapping
 it with another array, to disambiguate it from a path.
 
 Objects along the property path being assigned will be auto-vivified if they
 don't exist, but the action fails with `INVALID_TARGET` if it would need to
-convert a scalar, object, or array to an opposing type.
+convert a scalar, object, or array to an opposing type.  Note that arrays
+are implied when an object path contains a number, and object are implied when
+the path contains a string.
 To prevent inappropriate creation of sub-objects, use a containing `MATCH`
 directive that asserts the presence or absence of the structure as desired.
-Assigning to an array more than one element beyond the end is still a fatal
-error, returning `INVALID_TARGET`.
+Assigning to an array more than one element beyond the end is a fatal error,
+returning `INVALID_TARGET`.  (unlike JavaScript which would permit this)
+Likewise, a path referencing an array element more than one beyond the end
+does *not* auto-vivify.
 
 Examples:
 
@@ -169,18 +191,18 @@ Additionally, paths that begins with `null` access a special namespace.  The
 following path element must be an integer, or one of the following special
 names (or it's ID):
 
-Name       | ID | Description
------------|----|-------------------------------------------------------------
-`"common"` | -1 | constants defined in the enclosing `JGRAFT` action
-`"stash"`  | -2 | variables shared among actions of enclosing `JGRAFT` action
+Name      | ID | Description
+----------|----|-------------------------------------------------------------
+`"const"` | -1 | constants defined in the enclosing `JGRAFT` action
+`"stash"` | -2 | variables shared among actions of enclosing `JGRAFT` action
 
 All non-negative integers may be used for temporaries local to this `ASSIGN`
-action.  The top-level node of `common` and `stash` may not be assigned to,
-nor *any* path within `common`.  This namespace is not actually exposed as an
+action.  The top-level node of `const` and `stash` may not be assigned to,
+nor *any* path within `const`.  This namespace is not actually exposed as an
 array, so you cannot write to the `false` element to append to it, nor does it
 have a `length` property.  Elements of this namespace must be exist prior to
 being read, but can be auto-vivified in the usual manner.  As a special case,
-if the first property path element within `common` or `stash` is an integer,
+if the first property path element within `const` or `stash` is an integer,
 it gets coerced to a string.  This allows auto-generated numeric elements
 (which encode more compactly in JSON) for those without implying that they are
 arrays.
@@ -196,63 +218,112 @@ Examples:
     ['ASSIGN', 'b', [null,0]]               // node.b= clone(temp0);
     
     ['ASSIGN', [null,-2,0], ['b']]          // jgraft.stash['0']= clone(node.b);
-    ['ASSIGN', 'b', [null,-1,'big_data']]   // node.b= clone(jgraft.common.big_data);
+    ['ASSIGN', 'b', [null,-1,'big_data']]   // node.b= clone(jgraft.const.big_data);
 
 ### MOVE
 
     ['MOVE', src_prop1, dst_prop1, src_prop2, dst_prop2...]
 
-Relocate one or more values of properties within a single object or array.
-This is an alternative to `ASSIGN` optimized for shuffling the elements of an
-array when new data is not required, though it may also be used to rename
-properties of objects.
-All source and destination positions are resolved against the state of the
-current container at the start of the MOVE action.  The logical algorithm
-(which may be implemented in any equivalent manner) is as follows:
+Relocate one or more values of properties within the current node's tree.
+This is an alternative to `ASSIGN` for when the source property is being
+deleted afterward and copy-by-value is unnecessary.  Unlike `ASSIGN`, every
+argument is a path, so a string refers to an object property of the current
+node, and an integer refers to an array element of the current node.
+Also unlike `ASSIGN`, the source property is deleted from its container at the
+end of the action, and if that container was an array, the deletion shifts all
+later elements up to fill the gap in the manner of splice().  (the top level
+of the `stash` namespace is still not considered an array, despite allowing
+numeric property names)
 
-  - For arrays:
-    - For each pair of `src_prop`, `dst_prop`,
-      - Index `src_prop` must exist in the array, and must be distinct from
-        any other `src_prop` in this action.
-      - Index `dst_prop` must be in the range [0..length] (optionally using
-        negative number notation to count backward from the end of the array,
-        or the special value `false` to refer to the length of the array) or
-        the value `null`.
-      - Queue the value at `src_prop` for insertion at index `dst_prop` if
-        `dst_prop` was not `null`.
-      - Queue `src_prop` for deletion.
-    - Iterating backward over each index where a change was queued,
-      - perform a logical splice(), performing any deletions and insertions
-        queued at that index.
-  - For objects:
-    - For each pair of `src_prop`, `dst_prop`,
-      - `src_prop` must exist in the object, and must be distinct from any
-        other `src_prop` in this action.
-      - `dst_prop` must be distinct from any other `dst_prop`, or the special
-        value `null`.  `dst_prop` is not required to exist in the object.
-      - Queue the assignment of the current value of `src_prop` to `dst_prop`,
-        unless `dst_prop` was `null`.
-      - Queue the deletion of `src_prop`.
-    - Perform all queued deletions
-    - Perform all queued assignments
+The moves described within a single `MOVE` action are performed in a
+semi-simultaneous manner, with all source and destination paths referring to
+the state of the current node's tree at the start of the MOVE action.
+The logical algorithm (which may be implemented in any equivalent manner) is
+as follows:
+
+  - For each source path:
+    - Locate the property, which must not have the sentinel value `MOVED` nor
+      pass through one along its path.  The property must exist.
+    - Take a reference to the value of the property and replace it with the
+      sentinel `MOVED` value.
+    - Queue the deletion of the leaf property from its container.
+  - For each destination path:
+    - Locate the property to be assigned.  The path may not pass through
+      `MOVED`, though the leaf property may have the value `MOVED`.
+    - If the container is an object:
+      - Queue a write to this object property.  It is an error to write to the
+        same property more than once.
+    - If the container is an array:
+      - Queue an insertion at this array index.  If another insertion was
+        queued for the same index, append this insertion with the previous
+        such that both elements will be spliced at this position, in the same
+        order as their specification in the `MOVE` argument list.
+  - For each container where something was queued:
+    - If the container is an object:
+      - Perform all queued writes for this container.
+      - Perform all queued deletions for this container where the current value
+        is still `MOVED`.
+    - If the container is an array:
+      - For each logical position where an insertion or deletion was queued,
+        perform a splice() that replaces any `MOVED` values with the elements
+        to be inserted there.  The queued actions at this point refer to
+        logical array positions, not literal index values.
+        (so an implementation needs to either iterate backward or otherwise
+        account for shifting indices of later splices() after earlier ones)
+
+The practical consequences of the algorithm are:
+
+  - No expensive deep-copying of objects is required, nor processing to
+    determine whether deep-copying would be required.
+  - It can swap the value of two properties without a temporary variable.
+  - It is not possible to degrade the tree into a graph, because properties at
+    the leaf of a move get replaced by the `MOVED` sentinel (or equivalent
+    implementaion, like a set of excluded paths) prior to checking any
+    destination path.
+  - Source paths are processed in specification order, so where source paths
+    overlap, descendants must be specified before their ancestors.
+  - It cannot swap the positions of a parent with child node, because the
+    destination for the parent would pass through the `MOVED` location of the
+    parent.  For that, you need two `MOVE` actions and a stash variable.
+  - If an editor has re-ordered the elements of an array, and knows the source
+    and destination index of each, it can easily export that edit as a `MOVE`
+    argument list from those pairs without any further thought.  Every
+    deletion will be paired with an insertion and the `MOVE` action can run in
+    `O(N)` time without actual splice() calls.
+
+The temporary path namespace (like `[null,0]`) is not useful for `MOVE`
+because all source paths refer to the initial state of things where no
+temporaries are defined, and temporaries get discarded at the end of the
+action so they aren't useful for destination paths.  So, the path of exactly
+`null` can be used in source paths to mean a literal `null` value, and in
+destination paths to mean "just delete it".
+The `const` namespace (`[null, -1, ...]`) is not useful because it is
+read-only.  The `stash` namespace (`[null, -2, ...]`) is quite useful, and is
+what you might use to swap the postions of a parent and child node between two
+`MOVE` actions.
 
 Examples:
 
-    [`MOVE',0,-1,-1,0]                  // ins[node.length-1]= node[0];
-                                        // ins[0]=             node[node.length-1];
-                                        // node.splice(node.length-1, 1, ins[node.length-1]);
-                                        // node.splice(0, 1, ins[0]);
+    [`MOVE',0,-1,-1,0]                  // tmp0= node[0];
+                                        // tmp1= node[node.length-1];
+                                        // node[0]= tmp1;
+                                        // node[node.length-1]= tmp0;
     
-    ['MOVE',1,false,2,false]            // ins[node.length]= [ node[1], node[2] ];
-                                        // node.splice(node.length, 0, ...ins[node.length]);
+    ['MOVE',1,false,2,false]            // node.push(node[1], node[2])
                                         // node.splice(1, 2);
     
     ['MOVE','a','b','c','a']            // tmp1= node.a;
                                         // tmp2= node.c;
-                                        // delete node.a;
-                                        // delete node.c;
                                         // node.b= tmp1;
                                         // node.a= tmp2;
+                                        // delete node.c;
+    
+    ['MOVE',['x','x'],'x','x',[null,'stash','parent']]
+    ['MOVE',[null,'stash','parent'],['x','x']]
+                                        // stash.parent= node.x;
+                                        // node.x= node.x.x;
+                                        // delete stash.parent.x;
+                                        // node.x.x= stash.parent;
 
 ### SPLICE
 
@@ -588,7 +659,7 @@ resolved immediately.
 
 The initial value of the common expression namespace can be supplied by an
 enclosing ['JGRAFT' actions](#jgraft) via the metadata property
-`regex.common`.  Temporary overrides can also be specified via regex Sequence
+`regexCommon`.  Temporary overrides can also be specified via regex Sequence
 functions that begin with a `{}` configuration block.  In both cases, the list
 is specified as an array of property/value pairs to apply to the namespace, in
 order.  Integers are permitted as the property name (implicitly coerced to
@@ -598,10 +669,9 @@ integers encode more compactly in JSON than strings.
 Action Example:
 
     ['JGRAFT',{
-      regex: {
-        common: [
-          "word", ["[", '', 48, 58, 65, 91, 95, 96, 97...],
-          ...
+      regexCommon: [
+        "word", ["[", '', 48, 58, 65, 91, 95, 96, 97...],
+        ...
 
 Function Example:
 
@@ -609,7 +679,7 @@ Function Example:
 
 ### Functions
 
-The functions are named according to the common regex notation they implement:
+The functions are named according to their typical regex syntax:
 
 Function                | Description
 ------------------------|-----------------------------------------------------
