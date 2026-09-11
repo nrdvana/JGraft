@@ -1,13 +1,13 @@
 # JGraft
 
-JGraft is a data structure that describes edits to a tree of data.  So long as
-the input was a pure tree (not graph) the result will also be a tree.
-The data structure is built around basic JSON-compatible concepts, and in
-some cases JavaScript semantics.  The main goal is to be able to exchange it
-in the form of JSON, especially between JavaScript front-ends and application
-back-ends.  Other languages may include data types of their own within the
-tree if they don't need to serialize to JSON.
+JGraft is a data structure that describes how to edit a tree of data.  It can
+describe edits where portions of the source and destination are fully defined
+and thus reversible, edits applicable to any compatible data structure, or
+conditional edits where the change depends on the state of the target data.
 
+The data structure is defined in basic JSON-compatible concepts, though a host
+language may include other native data types within the tree if they don't
+need to serialize to JSON.
 The structure primarily uses array primitives to encode directives in a manner
 similar to the Lisp programming language, though it also uses JSON objects
 with named properties for any case where that is more convenient.
@@ -36,6 +36,12 @@ negative numbers count backward from the end of an array.  `false` refers to
 the nonexistent one-beyond-the-end element of an array which is valid for
 certain actions.  Paths beginning with `null` or `true` are used as an escape
 sequence for special purposes depending on the current action.
+
+While JavaScript doesn't care much about the difference between arrays and
+objects, JSON and JGraft do, so strings may only specify properties of
+non-array objects, and integers may only be specify indices of arrays.
+(though an exception to this rule exists for the temporary namespaces, as
+described in the `ASSIGN` action)
 
 ## Actions
 
