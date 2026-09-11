@@ -53,6 +53,7 @@ ASSIGN  |  3 | Assign-by-value to properties
 MOVE    |  4 | Move existing values of an array/object to new properties
 SPLICE  |  5 | Perform standard splice() on an array
 SPLIT   |  6 | Split string node into array, apply actions, re-join as string
+WARN    | -2 | Emit diagnostic message and data
 
 ### JGRAFT
 
@@ -612,6 +613,40 @@ Matches when the current node is a string that, when split into an array of
 strings, matches the `match_spec` argument.
 This uses the same `split_spec` as the `SPLIT` action.
 The match against the array is also subject to fuzzy matching.
+
+### LOG
+
+    ['LOG', level, message]
+    ['LOG', level, message, data]
+
+As JGraft applies a patch it may emit diagnostic information, such as when
+a match succeeded at an offset from the declared array.  You can emit your own
+custom diagnostics as well, using this action.  The motivation is that while
+a tool like `patch` can make a fairly straightforward diagnostic about why
+applying a text diff failed, a JGraft mismatch can be much harder to explain.
+An author of a JGraft might have more domain-specific information about why
+something wouldn't match, and can encode that with some `IF` actions in a way
+that the graft operation fails with a useful error message.
+
+The `level` argument is one of the following strings, or the corresponding ID:
+
+`level` | ID | Meaning
+--------|----|----------------------------------------------------------------
+"info"  |  0 | shown if the user asks for details
+"warn"  |  1 | flagged for the user even if they didn't ask for details
+"error" |  2 | a fatal error that ends the graft attempt with `INVALID_TARGET`
+
+`message` may be a literal string, or a path relative to the `const` namespace
+which resolves to a string.  The string must not contain control characters
+(codepoints 0x00–0x1F and 0x80–0x9F).
+
+`data` is an optional literal value or path with the same rules as described
+for values in the `ASSIGN` action.  It provides data to the user relevant to
+the message.  This may be shown to the user in some form such as JSON, or
+inspected programmatically by code using a JGraft library.  If you want to
+provide multiple pieces of data you may first assemble an object structured
+as you like using an `ASSIGN` action to write to the `stash` namespace, and
+then reference that object in this action.
 
 ## <span id="regex">Regular Expressions</span>
 
