@@ -234,9 +234,8 @@ Examples:
 
 Relocate one or more values of properties within the current node's tree.
 This is an alternative to `ASSIGN` for when the source property is being
-deleted afterward and copy-by-value is unnecessary.  Unlike `ASSIGN`, every
-argument is a path, so a string refers to an object property of the current
-node, and an integer refers to an array element of the current node.
+deleted afterward and copy-by-value is unnecessary.  Unlike `ASSIGN`, no
+literal values can be specified; every argument is a property or path.
 Also unlike `ASSIGN`, the source property is deleted from its container at the
 end of the action, and if that container was an array, the deletion shifts all
 later elements up to fill the gap in the manner of splice().  (the top level
@@ -246,14 +245,16 @@ numeric property names)
 The moves described within a single `MOVE` action are performed in a
 semi-simultaneous manner, with all source and destination paths referring to
 the state of the current node's tree at the start of the MOVE action.
-The logical algorithm (which may be implemented in any equivalent manner) is
-as follows:
+The logical algorithm (which may be implemented in any equivalent manner) can
+maybe be described easiest using the concept of a sentinel value `MOVED` which
+is distinct from any user data and acts as a "hole" in the data, preventing
+further access.
 
   - For each source path:
-    - Locate the property, which must not have the sentinel value `MOVED` nor
+    - Locate the property, which must not have the value `MOVED` nor
       pass through one along its path.  The property must exist.
     - Take a reference to the value of the property and replace it with the
-      sentinel `MOVED` value.
+      `MOVED` value.
     - Queue the deletion of the leaf property from its container.
   - For each destination path:
     - Locate the property to be assigned.  The path may not pass through
