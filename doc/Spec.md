@@ -114,7 +114,8 @@ The algorithm when beginning a `JGRAFT` action is roughly:
 
 Navigate to a sub-node of the current node, then execute all sub-actions with
 that node as the current node.  The path must exist or the graft operation
-fails with `INVALID_TARGET`.
+fails with `INVALID_TARGET`.  The path cannot reference namespaces outside
+the target tree of data, such as with `[null,...]`.
 
 ### MATCH
 
@@ -167,7 +168,7 @@ it with another array, to disambiguate it from a path.
 
 Objects along the property path being assigned will be auto-vivified if they
 don't exist, but the action fails with `INVALID_TARGET` if it would need to
-convert a scalar, object, or array to an opposing type.  Note that arrays
+convert a scalar, object, or array to an opposing type.  Recall that arrays
 are implied when an object path contains a number, and object are implied when
 the path contains a string.
 To prevent inappropriate creation of sub-objects, use a containing `MATCH`
@@ -339,8 +340,11 @@ resulting index must be within `[0..length]` or the graft fails with
 `count` may be `null` to replace the remainder of the array.
 
 The replacement values may be literal values or [paths](#paths), relative to
-the same current node as the `SPLICE` action.  All replacement values are
-resolved before starting the splice operation.
+the same current node as the `SPLICE` action.  All replacement values use the
+same copy-by-value semantics as the `ASSIGN` action, though implementations
+may re-use values from the deleted portion of the array if only one reference
+is preserved.
+All replacement values are resolved before starting the splice operation.
 
 ### SPLIT
 
@@ -381,14 +385,17 @@ detecting a separator, and without adding the complexity of "look-behind" or
 "look-ahead" or capture groups to the portable regexes.
 
 A zero-length separator (including a successful zero-length regex match)
-is considered to match at every position except at the character immediately
-following the end of the previous match.  This means the separator of '' can
-be used to split the string into its individual characters.  It also means
-that a regular expression which can match the empty string will generate a
-single-character element any time none of the alternatives matched.  For
-example, the pattern `/a*/` applied to the string "baabca" results in:
+is considered to match at every boundary between characters except the one
+between the end of the previous separator and the following character
+(i.e. the current position) which prevents an infinite loop of empty
+elements.  This means the separator of `''` can be used to split the string
+into its individual characters.  It also means that a regular expression which
+can match the empty string will generate a single-character element any time
+none of the alternatives matched.
 
-    ['', 'b', 'b',  'c', '']
+For example, the pattern `/a*/` applied to the string "baabca" results in:
+
+    ['b', 'b',  'c', '']
 
 (Note that implementations may place limits on the resources consumed by a
 JGraft, and splitting a string into an array of individual characters is a
@@ -661,7 +668,8 @@ Think of it as a pre-parsed regular expression.  The notation is not intended
 to be written by hand, but aims to be readable enough to be debugged visually.  
 
 Implementations can try to flatten this structure into the syntax relevant for
-the host language, or just directly implement the character-matching engine.
+the host language's regex engine, or just directly implement the character-
+matching engine, which may actually be easier.
 The capabilities of this regular expression specification are intentionally
 limited to improve the odds that each host language can compile it into the
 host's native regexes, and textbook "regular" so that they give a clean
@@ -811,6 +819,14 @@ The first two parameters specifiy the minimum and maximum repeat count for
 which all remaining parameters (the pattern components) must be found.
 `min` must be an integer greater or equal to zero, and `max` must be greater
 or equal to `min`, or `null` to enable unlimited matching.
+
+Regex Notation | Function notation
+---------------|--------------------------
+ `*`           | ['{',0,null,...]
+ `?`           | ['{',0,1,...]
+ `+`           | ['{',1,null,...]
+ `{5}`         | ['{',5,5,...]
+ `{3,5}`       | ['{',3,5,...]
 
 #### Ref
 
