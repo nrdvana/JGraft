@@ -50,15 +50,18 @@ described in the `ASSIGN` action)
 
 Applying a JGraft to a target data structure may fail with:
 
-  * `INVALID_GRAFT` - the structure of the Graft itself does not match the
+  * `INVALID_GRAFT` - The structure of the Graft itself does not match the
                       spec, or is semantically invalid in some way.
-  * `INVALID_TARGET` - the graft describes an operation that can't apply due
-                       to the type or structure of the target
-  * `NO_MATCH` - a `MATCH` action failed to find a matching context
+  * `INVALID_TARGET` - The graft describes an operation that can't apply due
+                       to the type or structure of the target.
+  * `NO_MATCH` - A `MATCH` action failed to find a matching context.
+  * `RESOURCE_LIMIT` - Applying the graft would exceed configured constraints,
+                       such as too much memory, too many generated properties,
+                       or too deep of a tree.
 
 The recommended behavior for failures in a JGraft implementation are to emit
 the error along with some diagnostic properties describing the current node
-and action or match which failed, and make the partially-edited data structure
+and action/match which failed, and make the partially-edited data structure
 available for inspection.  See also the [LOG](#log) action.  Implementations
 may also provide a callback allowing the application to intercept a failure
 and resolve it in a way that allows the remainder of the JGraft to continue.
@@ -67,15 +70,15 @@ Ideally, an implementation should be shallow-cloning each ancestor node of an
 altered node back to the root as edits occur, so that the input data structure
 remains unchanged while the output gets to share un-altered sub-trees.  This
 isolates the partially-edited error state from the input data.  However, if
-shared structures are difficult or the host language or it is understood that
+shared structures are difficult for the host language or it is understood that
 the input data has already been deep-cloned for the library's exclusive use,
 the implementation may just mangle the input tree and provide that to the user
 as-is during errors.
 
 Implementations are also encouraged to provide an option of building an
-"undo" JGraft describing how to invert each of the changes it made.  If this
-option is enabled, during an error it should deliver one to the caller that
-fully describes how to restore the original from the partially edited tree.
+"undo" JGraft describing how to revert the changes it made.
+If this option is enabled, during an error it should deliver one to the caller
+that describes how to restore the original from the current mangled state.
 
 ## Actions
 
@@ -165,15 +168,20 @@ Assert that the current node matches a [match specification](#matching),
 then execute all sub-actions in sequence.  If it doesn't match, the graft
 operation will fail with `NO_MATCH`, unless the user has enabled "fuzzy"
 matching in which case the engine looks at nearby array indices to find a
-match.
+match.  If a fuzzy match is successful, the array offsets discovered during
+that process are applied to all property paths of the sub-actions which
+reference those arrays.  This is analogous to how unix `patch` applies
+"hunk at offset" by first searching for the matching lines then continuing
+as if they'd been specified for that location.
 
-The exact algorithm for permitting "fuzzy" matches is dependent on the engine
-and parameters supplied by the user.
-If a fuzzy match is successful, the array offsets discovered during that
-process are applied to any property path in the sub-actions which reference
-those arrays.  This is analogous to how unix `patch` applies "hunk at offset"
-by first searching for the matching lines then continuing as if they'd been
-specified for that location.
+The exact algorithm for performing the search for a "fuzzy" match is
+dependent on the engine and parameters supplied by the user.  While this
+specification leaves fuzzy matching open to experimentation, implementations
+should probably *not* apply offsets when array indices specified as negative
+numbers happen to alias indices where an offset is in effect.
+This specification makes no attempt to define behavior of depth-wise fuzzy
+matching through paths of objects, though a future revision might if common
+useful strategies emerge.
 
 ### IF
 
@@ -183,7 +191,15 @@ specified for that location.
 For each pair of (`match_spec`,`action`), test whether the current node
 matches and if so, apply the action, else continue to the next pair.
 If the list ends with a single element, it is treated as an "else" action.
-If the action aborts with an error, the `IF` action likewise fails.
+Lacking an "else" action, the `IF` action completes successfully even if
+no sub-action was performed.  If the sub-action aborts with an error, the
+`IF` action likewise fails.
+
+`IF` uses the same fuzzy matching mechanism as `MATCH`, if enabled, however
+implementations should always attempt every condition of the `IF` statement
+*without* additional fuzzy matching before trying again with fuzzy matching.
+Offsets derived from a fuzzy-match in a parent action will still be applied
+to both attempts.
 
 ### ASSIGN
 
@@ -281,11 +297,16 @@ later elements up to fill the gap in the manner of splice().  (the top level
 of the `stash` namespace is still not considered an array, despite allowing
 numeric property names)  Consequently, `MOVE` cannot read the current node
 itself using the empty path `[]` as that would imply deleting the current
-node.  The current node may be overwritten.
+node.  The current node *may* be overwritten.
 
 The moves described within a single `MOVE` action are performed in a
 semi-simultaneous manner, with all source and destination paths referring to
-the state of the current node's tree at the start of the MOVE action.
+the state of the current node's tree at the start of the MOVE action, with the
+exception that subsequent paths cannot traverse the node of earlier source
+paths, as they have become scheduled for relocation.  For any situation where
+this is inconvenient, just use multiple `MOVE` actions; `MOVE` with multiple
+pairs is intended mainly for the cases where this behavior is helpful.
+
 The logical algorithm (which may be implemented in any equivalent manner) can
 maybe be described easiest using the concept of a sentinel value `MOVED` which
 is distinct from any user data and acts as a "hole" in the data, preventing
@@ -379,6 +400,7 @@ Examples:
                                         // node.x= node.x.x;
                                         // delete stash.parent.x;
                                         // node.x.x= stash.parent;
+                                        // delete stash.parent;
 
 ### SPLICE
 
@@ -387,9 +409,9 @@ Examples:
 Replace a span of an array, just like the splice function found in most
 programming languages.  The current node must be an array or the graft fails
 with `INVALID_TARGET`.  `offset` may be `false` as an alias for the length of
-the array, or negative to count backward from the end of the array, but the
-resulting index must be within `[0..length]` or the graft fails with
-`INVALID_TARGET`.
+the array, or negative to count backward from the end of the array where -1
+is the final element, but the resulting index must be within `[0..length]` or
+the graft fails with `INVALID_TARGET`.
 `count` is the number of elements to repalce.  Negative numbers are aliases
 for the count that would end just before element `length-N`, and `null` is an
 alias for `length-offset`.  The resulting count must be within
@@ -397,7 +419,7 @@ alias for `length-offset`.  The resulting count must be within
 
 The replacement values (which may be paths) use the same specification as the
 values of the [`ASSIGN` action](#assign), and the copy-by-value semantics of
-the `ASSIGN` action with the exception that implementations may re-use values
+the `ASSIGN` action with the exception that implementations may re-use trees
 from the deleted portion of the array if only one reference is preserved.
 All replacement values are resolved before starting the splice operation.
 
@@ -539,15 +561,16 @@ that the graft operation fails with a useful error message.
 
 The `level` argument is one of the following strings, or the corresponding ID:
 
-`level` | ID | Meaning
---------|----|----------------------------------------------------------------
-"info"  |  0 | shown if the user asks for details
-"warn"  |  1 | flagged for the user even if they didn't ask for details
-"error" |  2 | a fatal error that ends the graft attempt with `NO_MATCH`
+String | ID | Meaning
+-------|----|----------------------------------------------------------------
+"info" |  0 | shown if the user asks for details
+"warn" |  1 | flagged for the user even if they didn't ask for details
+"fail" |  2 | a fatal error that ends the graft attempt with `NO_MATCH`
 
 `message` may be a literal string, or an array containing a path relative to
-the `const` namespace which resolves to a string.  The string must not contain
-control characters (codepoints 0x00–0x1F and 0x80–0x9F).
+the `const` namespace which resolves to a string.  The string should be
+generally printable, and may not contain unicode Surrogates, Noncharacters,
+or control characters (codepoints 0x00–0x1F and 0x80–0x9F).
 
 `data` is an optional literal value or path with the same rules as described
 for values in the `ASSIGN` action.  It provides data to the user relevant to
@@ -555,18 +578,22 @@ the message.  This may be shown to the user in some form such as JSON, or
 inspected programmatically by code using a JGraft library.  If you want to
 provide multiple pieces of data you may first assemble an object structured
 as you like using an `ASSIGN` action to write to the `stash` namespace, and
-then reference that object in this action.
+then reference that object in this action.  If the data is not being consumed
+immediately, implementations ensure it remains stable, such as deep-cloning
+it or setting up copy-on-write.  This is already handled if the standard
+operation of the engine is to shallow-clone the ancestors of each change.
 
 ## <span id="matching">Context Matching</span>
 
-JGraft provides a rich collection of match specifications.  The basic match
-function is `HAS`, which requires certain properties to exist but does not
-specify them in full.  This is used any time a scalar value or plain object
-is encountered.  The matching system has its own collection of match functions
-specified as lisp-style arrays where the first element is a function name and
-the remaining elements are passed as arguments to that function.
-Literal arrays can be specified by wrapping them in an additional array, such
-that the literal array appears where the function name would normally appear.
+JGraft provides a rich collection of match specifications.  The matching
+system has its own collection of match functions specified as lisp-style
+arrays where the first element is a function name and the remaining elements
+are passed as arguments to that function, but scalars, objects, and array
+literals (specified using an array of one array) are used as shorthand for
+the `HAS` and `IS` functions.  `HAS` requires only specified properties to
+exist in the current node; `IS` requires that all properties match between
+the specification and current node.  `HAS` and `IS` establish a scope for
+how child nodes are interpreted.
 
 The following functions all implicitly operate on the current node and return
 a boolean of whether the current node passes the test:
@@ -603,33 +630,35 @@ a boolean of whether the current node passes the test:
     { a: [ARRAY, 3, 6, 7] }             isArray(node.a) && node.a[3] === 6
                                         && node.a[4] === 7
 
-This is the default function used when a non-array is seen in a match
-specification.  For scalars, this function is equivalent to JavaScript's `===`
-operator.  For objects, the current node must be an object, and each specified
-property must match the same on the current node according to `HAS`.  If a
-specified property is missing from the current node, a comparison is still
-attempted during which the current node is effectively an undefined value
-which doesn't compare equal to anything.  The comparison could still return
-true if it makes use of `NOT`.
+This is the default function implied at the top of a match specification.
+It establishes a scope where the following rules apply:
+
+For scalars, this function is equivalent to JavaScript's `===` operator.
+
+For objects, the current node must be an object, and each specified property
+which is not a function must match the same value on the current node
+according to `HAS`.  If a specified property is missing from the current node,
+a comparison is still attempted during which the current node is effectively
+an undefined value which doesn't compare equal to anything.  The comparison
+could still return true if it makes use of `NOT`.
+
 Arrays are used to specify alternate match functions, and will receive a
 current node of whichever sub-property is being matched.  Literal arrays are
-specified as an array within an array, and mean that the current node must be
-an array where each specified element matches according to `HAS`.  Like with
-objects, comparisons will be attempted for specification of elements beyond
-the end of the current node.
+specified as an array of one element holding the literal array.  They requiure
+the current node to be an array where each specified element matches according
+to `HAS`.  Like with objects, comparisons will be attempted for specification
+of elements beyond the end of the current node.
 
-Extra properties or array elements in the current node (beyond what was
+Extra properties / array elements in the current node (beyond what was
 specified) are ignored.
 
 ### IS
 
     ['IS', match_spec...]
 
-This is a variant of 'HAS' that forbids extra properties in a value object
-that were not in the specification object.  Nested objects within the
-specification are also handled as 'IS' tests, until the next function boundary.
-Objects within a nested function revert to 'HAS' semantics (unless of course
-that function is 'IS').
+This is a variant of 'HAS' that forbids extra properties in the current node
+which were not in the specification object.  This sets up a scope where all
+contained non-functions are also interpreted as `IS` tests.
 
 The function can take additional arguments to perform an implied 'OR'.
 
@@ -663,7 +692,7 @@ one argument is used, it behaves identical to `[NOT,[OR,...]]`.
 
     ['EXISTS']
 
-The property exists on the object (or array).  It may be `null`.
+True when the current node is defined, including when the value is `null`.
 
 ### BOOL
 
@@ -704,7 +733,7 @@ by the host language may be a float, so long as it has an integer value)
 With no arguments, returns true if the current node is a string.
 
 You may specify a [regular expression](#regex) to additionally constrain which
-strings match.
+strings match.  The regex is not implicitly anchored.
 
 ### ARRAY
 
@@ -715,12 +744,13 @@ strings match.
 With no arguments, this merely asserts that the current node is an array.
 
 With one argument, it asserts the current node is an array with at least this
-number of elements.  When used as a direct child of an `IS` function, it
-requires the current node have exactly this number of elements.
+number of elements in the scope of `HAS`, or exactly this number of elements
+in the scope of an `IS` function.
 
-With more than one arguments, this asserts that a range of the array matches
-the supplied conditions, according to `HAS`.  The `offset` may be negative to
-count backward from the end of the array.
+With more than one argument, this asserts that a range of the array matches
+the specification of the respective element, inheriting the `HAS` or `IS`
+scope.  The `offset` may be negative to count backward from the end of the
+array.
 
     // Assert that the array ends with 'x', 'y', 'z'
     ['ARRAY', -3, 'x', 'y', 'z']
@@ -744,7 +774,7 @@ full power and capabilities of your host language.
 If you need to portably serialize the JGraft, the regular expressions may be
 specified as (you guessed it) lisp-style structure describing the pattern.
 Think of it as a pre-parsed regular expression.  The notation is not intended
-to be written by hand, but aims to be readable enough to be debugged visually.  
+to be written by hand, but aims to be readable enough for debugging.
 
 Implementations can try to flatten this structure into the syntax relevant for
 the host language's regex engine, or just directly implement the character-
@@ -761,9 +791,17 @@ semantics for the longest match, which is an easy fit for the standard C
 library, but a bit harder for engines like JavaScript, Python, or Perl
 which match according to a predictable backtracking order.
 
-Character matching is defined in terms of the unicode character set.
-Note that only whole unicode characters (not UTF-16 surrogate pairs) are
-permitted in pattern matching.
+Character matching is defined over a sequence of Unicode code point values.
+It is left to implementations or host languages to determine (or provide
+configuration for) how input strings are converted to this sequence,
+including the treatment of malformed encodings and unpaired surrogates.
+For example, an implementation might reject malformed UTF-8 or strings
+containing unpaired surrogates, replace malformed input, or expose surrogate
+code points individually. These choices are outside the JGraft specification.
+
+JGraft character classes may include surrogate code point values
+(U+D800–U+DFFF). These can only match when the host's interpretation of the
+input string exposes corresponding values in the character sequence.
 
 ### Common Subexpressions
 
