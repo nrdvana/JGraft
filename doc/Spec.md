@@ -7,7 +7,9 @@ conditional edits where the change depends on the state of the target data.
 
 The data structure is defined in basic JSON-compatible concepts, though a host
 language may include other native data types within the tree if they don't
-need to serialize to JSON.
+need to serialize to JSON.  (implementations allowing other host language
+types are responsible for defining equality, cloning, and serialization
+behavior for them, which is outside the scope of portable JGraft)
 The structure primarily uses array primitives to encode directives in a manner
 similar to the Lisp programming language, though it also uses JSON objects
 with named properties for any case where that is more convenient.
@@ -32,16 +34,48 @@ property names).  By example, paths look like:
     [true, ...]        special per-action
 
 Strings refer to object properties.  Integers refer to array elements, where
-negative numbers count backward from the end of an array.  `false` refers to
-the nonexistent one-beyond-the-end element of an array which is valid for
-certain actions.  Paths beginning with `null` or `true` are used as an escape
-sequence for special purposes depending on the current action.
+negative numbers count backward from the end of an array (but must still fall
+within the array).  `false` is an alias for the numeric length of an array,
+which is generally an error to read from, but often may be written.
+Paths beginning with `null` or `true` are used as an escape sequence for
+special purposes depending on the current action.
 
 While JavaScript doesn't care much about the difference between arrays and
 objects, JSON and JGraft do, so strings may only specify properties of
-non-array objects, and integers may only be specify indices of arrays.
+non-array objects, and integers may only specify indices of arrays.
 (though an exception to this rule exists for the temporary namespaces, as
 described in the `ASSIGN` action)
+
+## Errors
+
+Applying a JGraft to a target data structure may fail with:
+
+  * `INVALID_GRAFT` - the structure of the Graft itself does not match the
+                      spec, or is semantically invalid in some way.
+  * `INVALID_TARGET` - the graft describes an operation that can't apply due
+                       to the type or structure of the target
+  * `NO_MATCH` - a `MATCH` action failed to find a matching context
+
+The recommended behavior for failures in a JGraft implementation are to emit
+the error along with some diagnostic properties describing the current node
+and action or match which failed, and make the partially-edited data structure
+available for inspection.  See also the [LOG](#log) action.  Implementations
+may also provide a callback allowing the application to intercept a failure
+and resolve it in a way that allows the remainder of the JGraft to continue.
+
+Ideally, an implementation should be shallow-cloning each ancestor node of an
+altered node back to the root as edits occur, so that the input data structure
+remains unchanged while the output gets to share un-altered sub-trees.  This
+isolates the partially-edited error state from the input data.  However, if
+shared structures are difficult or the host language or it is understood that
+the input data has already been deep-cloned for the library's exclusive use,
+the implementation may just mangle the input tree and provide that to the user
+as-is during errors.
+
+Implementations are also encouraged to provide an option of building an
+"undo" JGraft describing how to invert each of the changes it made.  If this
+option is enabled, during an error it should deliver one to the caller that
+fully describes how to restore the original from the partially edited tree.
 
 ## Actions
 
@@ -59,7 +93,7 @@ ASSIGN  |  3 | Assign-by-value to properties
 MOVE    |  4 | Move existing values of an array/object to new properties
 SPLICE  |  5 | Perform standard splice() on an array
 SPLIT   |  6 | Split string node into array, apply actions, re-join as string
-WARN    | -2 | Emit diagnostic message and data
+LOG     | -2 | Emit diagnostic message and data
 
 ### JGRAFT
 
@@ -107,7 +141,7 @@ The algorithm when beginning a `JGRAFT` action is roughly:
   - Set the `const` namespace to the specified object, but inherit the
     properties of the parent `const` namespace (or possibly values implicit
     to the declared version of the JGraft spec).
-  - Create a local regex common-subexpresison namespace which inherits the
+  - Create a local regex common-subexpression namespace which inherits the
     properties of the parent (or possibly values implicit to the declared
     version of the JGraft spec).
   - For each name/value pair specified in `regexCommon`, resolve references
@@ -162,7 +196,10 @@ performed "by value", deep-cloning objects or arrays, so the resulting state
 of the data will not reference objects of the JGraft nor can this be used to
 create cyclic or even acyclic graphs of object references.  The list of
 assignments is performed sequentially, so later property and value expressions
-see the modified state of the node's tree.
+see the modified state of the node's tree.  For each property/value pair, the
+value is completely resolved and deep-cloned before modifying the destination
+path.  If the value is a path, it must exist or the action fails with
+`INVALID_TARGET`.
 
 The basic usage of this action is to assign literal values to named
 properties, but each property may be a deeper [path](#paths) specified as an
@@ -175,14 +212,14 @@ it with another array, to disambiguate it from a path.
 Objects along the property path being assigned will be auto-vivified if they
 don't exist, but the action fails with `INVALID_TARGET` if it would need to
 convert a scalar, object, or array to an opposing type.  Recall that arrays
-are implied when an object path contains a number, and object are implied when
-the path contains a string.
+are implied when an object path contains a number, and objects are implied
+when the path contains a string.
 To prevent inappropriate creation of sub-objects, use a containing `MATCH`
 directive that asserts the presence or absence of the structure as desired.
-Assigning to an array more than one element beyond the end is a fatal error,
+Assigning to an array element greater than `length+1` is a fatal error,
 returning `INVALID_TARGET`.  (unlike JavaScript which would permit this)
-Likewise, a path referencing an array element more than one beyond the end
-does *not* auto-vivify.
+Likewise, a path through an array element at `length+1` or greater does
+*not* auto-vivify and fails with `INVALID_TARGET`.
 
 Examples:
 
@@ -195,9 +232,9 @@ Examples:
     ['ASSIGN', 'a', []]                 // node['a']= clone(node);
     ['ASSIGN', 'a', [[1,2,3]]]          // node.a= [1,2,3];
 
-Additionally, paths that begins with `null` access a special namespace.  The
+Additionally, paths that begin with `null` access a special namespace.  The
 following path element must be an integer, or one of the following special
-names (or it's ID):
+names (or its ID):
 
 Name      | ID | Description
 ----------|----|-------------------------------------------------------------
@@ -208,7 +245,7 @@ All non-negative integers may be used for temporaries local to this `ASSIGN`
 action.  The top-level node of `const` and `stash` may not be assigned to,
 nor *any* path within `const`.  This namespace is not actually exposed as an
 array, so you cannot write to the `false` element to append to it, nor does it
-have a `length` property.  Elements of this namespace must be exist prior to
+have a `length` property.  Elements of this namespace must exist prior to
 being read, but can be auto-vivified in the usual manner.  As a special case,
 if the first property path element within `const` or `stash` is an integer,
 it gets coerced to a string.  This allows auto-generated numeric elements
@@ -230,17 +267,21 @@ Examples:
 
 ### MOVE
 
+    ['MOVE', src_prop1, dst_prop1]
     ['MOVE', src_prop1, dst_prop1, src_prop2, dst_prop2...]
 
 Relocate one or more values of properties within the current node's tree.
 This is an alternative to `ASSIGN` for when the source property is being
-deleted afterward and copy-by-value is unnecessary.  Unlike `ASSIGN`, no
-literal values can be specified; every argument is a property or path.
+deleted afterward and copy-by-value is unnecessary.  Unlike `ASSIGN`, literal
+values cannot be specified (other than `null`) so strings/numbers are
+interpreted as a property name/index.
 Also unlike `ASSIGN`, the source property is deleted from its container at the
 end of the action, and if that container was an array, the deletion shifts all
 later elements up to fill the gap in the manner of splice().  (the top level
 of the `stash` namespace is still not considered an array, despite allowing
-numeric property names)
+numeric property names)  Consequently, `MOVE` cannot read the current node
+itself using the empty path `[]` as that would imply deleting the current
+node.  The current node may be overwritten.
 
 The moves described within a single `MOVE` action are performed in a
 semi-simultaneous manner, with all source and destination paths referring to
@@ -287,13 +328,18 @@ The practical consequences of the algorithm are:
   - It can swap the value of two properties without a temporary variable.
   - It is not possible to degrade the tree into a graph, because properties at
     the leaf of a move get replaced by the `MOVED` sentinel (or equivalent
-    implementaion, like a set of excluded paths) prior to checking any
+    implementation, like a set of excluded paths) prior to checking any
     destination path.
   - Source paths are processed in specification order, so where source paths
     overlap, descendants must be specified before their ancestors.
   - It cannot swap the positions of a parent with child node, because the
     destination for the parent would pass through the `MOVED` location of the
     parent.  For that, you need two `MOVE` actions and a stash variable.
+  - Moving an array element "forward" within the same array does not result in
+    the element arriving at the declared index unless another element was also
+    moved backward.  e.g. `[MOVE,2,5]` results in element 2 arriving at index
+    4 at the end because deletions occur after insertions, but
+    `[MOVE,2,5,5,2]` does result in elements 2 and 5 swapping places.
   - If an editor has re-ordered the elements of an array, and knows the source
     and destination index of each, it can easily export that edit as a `MOVE`
     argument list from those pairs without any further thought.  Every
@@ -308,12 +354,12 @@ action so they aren't useful for destination paths.  So, the path of exactly
 destination paths to mean "just delete it".
 The `const` namespace (`[null, -1, ...]`) is not useful because it is
 read-only.  The `stash` namespace (`[null, -2, ...]`) is quite useful, and is
-what you might use to swap the postions of a parent and child node between two
+what you might use to swap the positions of a parent and child node between two
 `MOVE` actions.
 
 Examples:
 
-    [`MOVE',0,-1,-1,0]                  // tmp0= node[0];
+    ['MOVE',0,-1,-1,0]                  // tmp0= node[0];
                                         // tmp1= node[node.length-1];
                                         // node[0]= tmp1;
                                         // node[node.length-1]= tmp0;
@@ -340,17 +386,19 @@ Examples:
 
 Replace a span of an array, just like the splice function found in most
 programming languages.  The current node must be an array or the graft fails
-with `INVALID_TARGET`.  `offset` may be `false` to refer to the end of the
-array, or negative to count backward from the end of the array, but the
+with `INVALID_TARGET`.  `offset` may be `false` as an alias for the length of
+the array, or negative to count backward from the end of the array, but the
 resulting index must be within `[0..length]` or the graft fails with
 `INVALID_TARGET`.
-`count` may be `null` to replace the remainder of the array.
+`count` is the number of elements to repalce.  Negative numbers are aliases
+for the count that would end just before element `length-N`, and `null` is an
+alias for `length-offset`.  The resulting count must be within
+`[0..length-offset]`.
 
-The replacement values may be literal values or [paths](#paths), relative to
-the same current node as the `SPLICE` action.  All replacement values use the
-same copy-by-value semantics as the `ASSIGN` action, though implementations
-may re-use values from the deleted portion of the array if only one reference
-is preserved.
+The replacement values (which may be paths) use the same specification as the
+values of the [`ASSIGN` action](#assign), and the copy-by-value semantics of
+the `ASSIGN` action with the exception that implementations may re-use values
+from the deleted portion of the array if only one reference is preserved.
 All replacement values are resolved before starting the splice operation.
 
 ### SPLIT
@@ -361,8 +409,9 @@ This can only be applied at a string node, or it fails with `INVALID_TARGET`.
 It splits the string according to `split_spec` to create an array, then runs
 each sub-action on that array, then re-assembles the string from the elements
 of the array.  The separator and any trimmed characters are preserved to use
-when re-assembling the string; each generated array element carries them as
-hidden metadata.
+when re-assembling the string; the generated array carries them as hidden
+metadata.  Actions that modify the array also modify the metadata in parallel
+as described below.
 
 The `split_spec` may be a simple string used as a verbatim separator, or it may
 be an object with a more elaborate specification:
@@ -410,19 +459,23 @@ quick way to reach those limits.)
 
 Once a separator is found, it uses the value of `keep` to determine what to do
 with it.  The default is to hide the separator from the resulting array but
-store it (attached invisibly to the preceeding element) until it is time to
+store it (attached invisibly to the preceding element) until it is time to
 reconstruct the string.
 The value "<" means to keep the separator as part of the current element in
 the generated array, and likewise ">" means to keep it as part of the
 following element.  The value '@' means to include the separator as its own
-element of the resulting array, in which case these elements get reassembled
-with an empty string as the join character.
+element of the resulting array.  In all three cases, separator metadata is not
+used, and elements get reassembled with an empty string as the separator since
+the actual separator is part of the data.
 
 `ltrim` and `rtrim` are used to hide unimportant characters from the resulting
 array element strings, such as leading/trailing whitespace (like `diff -b`)
 and you can (exclusive to the others) specify `trim` to set them both to the
-same value.  `ltrim` is implicitly anchored to the start of the string, and
-`rtrim` is implicitly anchored to the end, allowing a common value for `trim`.
+same value.  `ltrim` is implicitly anchored to the start of the element string,
+and `rtrim` is implicitly anchored to the end, allowing a common value for
+`trim`.  The longest match of `ltrim` gets removed first, followed by removing
+the longest match of `trtim` from the remainder, to resolve cases where the
+trimming could overlap.
 If you want to permanently remove the trimmed characters, use `discard: true`.
 
 If the separators are not added to the array using `keep` they are stored in
@@ -431,18 +484,21 @@ characters are stored there.  As actions like `ASSIGN`, `MOVE`, and `SPLICE`
 process the array, assignments from one element of the array to another carry
 the separator and trimmings to the new element.  Assignments of values from
 any other source (constants, a different array, etc) do not carry this
-metadata, and eliminate trimmings of the assigned line.  Deletions on the
-array perform a parallel deletion on the metadata array, and every insert
-operation clones the separator of the previous or following element such that
-every element continues to have a defined separator.  Trimmings do not get
-cloned.
+metadata, and eliminate trimmings at the assigned element, though the
+separator of that element remains.  Deletions on the array perform a parallel
+deletion on the metadata array, and every insert operation clones the
+separator of the previous element (and if none, the following element) such
+that every element continues to have a defined separator.  Trimmings do not
+get cloned.
 If the array becomes empty at any point, the separator reverts to `default`.
-`default` must be specified when `sep` is a regular expresion and `keep` is
+`default` must be specified when `sep` is a regular expression and `keep` is
 not used; if `sep` is a string then it also implies `default` and if `keep`
 is used then separators are not relevant to the join operation.
 
 Once all actions have been applied to the array, it gets reassembled into a
-string.  Each element must be a string, or it fails with `INVALID_GRAFT`.
+string.  Each element must be a string, or it fails with `INVALID_TARGET`.
+(a particularly generous implementation might detect whether the non-string
+came unconditionally from the graft itself and report `INVALID_GRAFT` instead)
 Each element gets any hidden trimmed characters re-added, and any hidden
 separator is appended only if there is a following element.  In order to get a
 "newline at the end of the file" the final element of the array needs to be an
@@ -452,7 +508,7 @@ add this element as desired.
 This is the primary tool used to re-implement text diff/patch behavior:
 
     ['SPLIT',
-      { sep: ["|", "\n", "\r\n"], default: "\n", trim: ["{",0,null," "] }
+      { sep: ["|", "\n", "\r\n"], default: "\n", trim: ["{",0,null," "] },
       ['MATCH',
         ['ARRAY', 10,
           "Line ten",
@@ -466,6 +522,40 @@ This is the primary tool used to re-implement text diff/patch behavior:
         ]
       ],
     ]
+
+### LOG
+
+    ['LOG', level, message]
+    ['LOG', level, message, data]
+
+As JGraft applies a patch it may emit diagnostic information, such as when
+a match succeeded at an offset from the declared array.  You can emit your own
+custom diagnostics as well, using this action.  The motivation is that while
+a tool like `patch` can make a fairly straightforward diagnostic about why
+applying a text diff failed, a JGraft mismatch can be much harder to explain.
+An author of a JGraft might have more domain-specific information about why
+something wouldn't match, and can encode that with some `IF` actions in a way
+that the graft operation fails with a useful error message.
+
+The `level` argument is one of the following strings, or the corresponding ID:
+
+`level` | ID | Meaning
+--------|----|----------------------------------------------------------------
+"info"  |  0 | shown if the user asks for details
+"warn"  |  1 | flagged for the user even if they didn't ask for details
+"error" |  2 | a fatal error that ends the graft attempt with `NO_MATCH`
+
+`message` may be a literal string, or an array containing a path relative to
+the `const` namespace which resolves to a string.  The string must not contain
+control characters (codepoints 0x00–0x1F and 0x80–0x9F).
+
+`data` is an optional literal value or path with the same rules as described
+for values in the `ASSIGN` action.  It provides data to the user relevant to
+the message.  This may be shown to the user in some form such as JSON, or
+inspected programmatically by code using a JGraft library.  If you want to
+provide multiple pieces of data you may first assemble an object structured
+as you like using an `ASSIGN` action to write to the `stash` namespace, and
+then reference that object in this action.
 
 ## <span id="matching">Context Matching</span>
 
@@ -489,11 +579,11 @@ a boolean of whether the current node passes the test:
  OR        | 1  | At least one condition matches at current node
  AND       | 2  | All conditions match at current node
  EXISTS    | 5  | Current node exists (including `null` values)
- BOOL      | 10 | Match any boolean, or cast to boolean for more matching
- NUM       | 11 | Match any number, or cast to numeric for more matching
- INT       | 8  | Match any integer, or cast to integer for more matching
- STR       | 7  | Match any string, or cast to string for more matching
- ARRAY     | 9  | Match any array, or match sub-range of an array
+ BOOL      | 10 | Match any boolean
+ NUM       | 11 | Match any number, or restricted range of numbers
+ INT       | 8  | Match any integer, or restricted range of integers
+ STR       | 7  | Match any string, or strings restricted by a regex
+ ARRAY     | 9  | Match any array, or array with specified sub-range
  SPLIT     | 6  | Split a string to match against the resulting array
 
 ### HAS
@@ -516,18 +606,24 @@ a boolean of whether the current node passes the test:
 This is the default function used when a non-array is seen in a match
 specification.  For scalars, this function is equivalent to JavaScript's `===`
 operator.  For objects, the current node must be an object, and each specified
-property must match the same on the current node according to `HAS`.
+property must match the same on the current node according to `HAS`.  If a
+specified property is missing from the current node, a comparison is still
+attempted during which the current node is effectively an undefined value
+which doesn't compare equal to anything.  The comparison could still return
+true if it makes use of `NOT`.
 Arrays are used to specify alternate match functions, and will receive a
 current node of whichever sub-property is being matched.  Literal arrays are
 specified as an array within an array, and mean that the current node must be
-an array where each specified element matches according to `HAS`.
+an array where each specified element matches according to `HAS`.  Like with
+objects, comparisons will be attempted for specification of elements beyond
+the end of the current node.
 
 Extra properties or array elements in the current node (beyond what was
 specified) are ignored.
 
 ### IS
 
-    ['IS', match_spec, match_spec...]
+    ['IS', match_spec...]
 
 This is a variant of 'HAS' that forbids extra properties in a value object
 that were not in the specification object.  Nested objects within the
@@ -541,19 +637,27 @@ The function can take additional arguments to perform an implied 'OR'.
 
     ['AND', match_spec, match_spec...]
 
-All following patterns must match at the current node.
+All following patterns must match at the current node.  There must be at least
+two arguments.  Though side-effects should not be visible from matching,
+implementations should still adhere to short-circuiting behavior, testing the
+arguments in order and stoping at the first failure.
 
 ### OR
 
     ['OR', match_spec, match_spec...]
 
-Any one of the following patterns must match at the current node.
+Any one of the following patterns must match at the current node.  There must
+be at least two arguments.  Implementations should adhere to short-circuiting
+behavior in case side effects become visible, testing the arguments in order
+and stoping at the first success.
 
 ### NOT
 
+    ['NOT', match_spec]
     ['NOT', match_spec, or_match_spec...]
 
-Matches when none of the arguments match at the current node.
+Matches when none of the arguments match at the current node.  When more than
+one argument is used, it behaves identical to `[NOT,[OR,...]]`.
 
 ### EXISTS
 
@@ -577,7 +681,7 @@ With no arguments, returns true if the current node is a number, including NaN
 and Inf.  Note that JSON-compatible data structures cannot contain these
 values, but they are included here for use with host language support.
 
-With one or two arguments, also verify that the number is within the range of
+With two arguments, also verify that the number is within the range of
 `[min,max]` (inclusive).  `min` or `max` may be `null` to omit the respective
 test.  In contexts where infinity is available, positive and negative infinity
 may also be used for the `min` and `max` values.  In contexts where NaN is
@@ -589,7 +693,8 @@ causes NaN values in the data to fail to match.
     ['INT']
     ['INT', min, max]
 
-Same as `NUM` above, but rejects all non-integer values.
+Same as `NUM` above, but rejects all non-integer values.  (the container used
+by the host language may be a float, so long as it has an integer value)
 
 ### STR
 
@@ -609,12 +714,13 @@ strings match.
 
 With no arguments, this merely asserts that the current node is an array.
 
-With one argument, it asserts the current node is an array with a number of
-elements (an exact number under `IS`, or at least this many under `HAS`).
+With one argument, it asserts the current node is an array with at least this
+number of elements.  When used as a direct child of an `IS` function, it
+requires the current node have exactly this number of elements.
 
-With arguments, this asserts that a range of the array matches the supplied
-conditions, according to `HAS`.  The `offset` may be negative to count
-backward from the end of the array.
+With more than one arguments, this asserts that a range of the array matches
+the supplied conditions, according to `HAS`.  The `offset` may be negative to
+count backward from the end of the array.
 
     // Assert that the array ends with 'x', 'y', 'z'
     ['ARRAY', -3, 'x', 'y', 'z']
@@ -627,40 +733,6 @@ Matches when the current node is a string that, when split into an array of
 strings, matches the `match_spec` argument.
 This uses the same `split_spec` as the `SPLIT` action.
 The match against the array is also subject to fuzzy matching.
-
-### LOG
-
-    ['LOG', level, message]
-    ['LOG', level, message, data]
-
-As JGraft applies a patch it may emit diagnostic information, such as when
-a match succeeded at an offset from the declared array.  You can emit your own
-custom diagnostics as well, using this action.  The motivation is that while
-a tool like `patch` can make a fairly straightforward diagnostic about why
-applying a text diff failed, a JGraft mismatch can be much harder to explain.
-An author of a JGraft might have more domain-specific information about why
-something wouldn't match, and can encode that with some `IF` actions in a way
-that the graft operation fails with a useful error message.
-
-The `level` argument is one of the following strings, or the corresponding ID:
-
-`level` | ID | Meaning
---------|----|----------------------------------------------------------------
-"info"  |  0 | shown if the user asks for details
-"warn"  |  1 | flagged for the user even if they didn't ask for details
-"error" |  2 | a fatal error that ends the graft attempt with `INVALID_TARGET`
-
-`message` may be a literal string, or a path relative to the `const` namespace
-which resolves to a string.  The string must not contain control characters
-(codepoints 0x00–0x1F and 0x80–0x9F).
-
-`data` is an optional literal value or path with the same rules as described
-for values in the `ASSIGN` action.  It provides data to the user relevant to
-the message.  This may be shown to the user in some form such as JSON, or
-inspected programmatically by code using a JGraft library.  If you want to
-provide multiple pieces of data you may first assemble an object structured
-as you like using an `ASSIGN` action to write to the `stash` namespace, and
-then reference that object in this action.
 
 ## <span id="regex">Regular Expressions</span>
 
@@ -689,8 +761,9 @@ semantics for the longest match, which is an easy fit for the standard C
 library, but a bit harder for engines like JavaScript, Python, or Perl
 which match according to a predictable backtracking order.
 
-Character matching is defined in terms of the unicode character set, which
-JSON already provides.
+Character matching is defined in terms of the unicode character set.
+Note that only whole unicode characters (not UTF-16 surrogate pairs) are
+permitted in pattern matching.
 
 ### Common Subexpressions
 
@@ -720,7 +793,7 @@ Action Example:
 
     ['JGRAFT',{
       regexCommon: [
-        "word", ["[", '', 48, 58, 65, 91, 95, 96, 97...],
+        "word", ["[", 48, 57, 65, 90, 95, 95, 97...],
         ...
 
 Function Example:
@@ -740,12 +813,12 @@ Function                | Description
 `["|", ... ]`           | Alternation - Match any one alternative
 `["[", ... ]`           | Charclass - A set of distinct characters
 `["{", min, max, ... ]` | Repetition - Match zero, one or more times
-`["&", ...]`            | Ref - reference a common subexpresion
+`["&", name]`           | Ref - reference a common subexpression
 
 #### Sequence
 
-  ['', ...]
-  [config, ...]
+    ['', ...]
+    [config, ...]
 
 This is provided as a container for a list of other elements.  It may
 optionally begin with an object specifying configuration details:
@@ -765,13 +838,14 @@ engines often do)
 
     ['|', this, or_that...]
 
-Match any one alternative.  Each parameter may be a single string which must
-match exactly, or an array indicating a function.  The order of alternatives
-should not matter in theory, because the output is a simple boolean and does
-not track positional matches of the pattern components.  Implementations which
-convert this specification to the host language's regex engine are free to
-attempt to re-order the alternatives in the order that yields the highest
-performance.
+Match any one alternative.  Requires two or more parameters.  Each parameter
+may be a single string which must match exactly, or an array indicating a
+function.  The order of alternatives should not matter in theory, because the
+output is a simple boolean and does not track positional matches of the
+pattern components.
+Implementations which convert this specification to the host language's regex
+engine are free to attempt to re-order the alternatives in the order that
+yields the highest performance.
 
 #### Charset
 
@@ -797,7 +871,8 @@ open-ended range), otherwise it is interpreted as a single character to
 include or exclude.  A number is treated as a unicode codepoint value, and
 likewise begins or ends a range.  Finally, you may use `['&',name]` notation
 to reference a [common subexpression](#common-subexpressions), which must
-resolve to a charset definition.
+resolve to a charset definition.  (a name resolving to anything else results
+in `INVALID_GRAFT`)
 
 Examples:
 
@@ -809,7 +884,7 @@ Examples:
     // [0-9]
     ["[", "0123456789"]
     ["[", "0", "9"]
-    ["[", 48, 58]
+    ["[", 48, 57]
     
     // [0-9a-zA-Z_.-]
     ["[", "0","9", "A","Z", "a","z", "_-."]
@@ -822,7 +897,7 @@ Examples:
 
     ["{", min, max, pattern...]
 
-The first two parameters specifiy the minimum and maximum repeat count for
+The first two parameters specify the minimum and maximum repeat count for
 which all remaining parameters (the pattern components) must be found.
 `min` must be an integer greater or equal to zero, and `max` must be greater
 or equal to `min`, or `null` to enable unlimited matching.
@@ -837,15 +912,8 @@ Regex Notation | Function notation
 
 #### Ref
 
-Inject the value of a common subexpression
+    ["&", name]
 
-## Errors
-
-Applying a JGraft to a target data structure may fail with:
-
-  * `INVALID_GRAFT` - the structure of the Graft itself does not match the
-                      spec, or is semantically invalid in some way.
-  * `INVALID_TARGET` - the graft describes an operation that can't apply due
-                       to the type or structure of the target
-  * `NO_MATCH` - a `MATCH` action failed to find a matching context
+Inject the value of a common subexpression.  Name is a property name or path
+within the [common subexpression](#common-subexpressions) namespace.
 
