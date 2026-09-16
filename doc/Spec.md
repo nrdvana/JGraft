@@ -287,120 +287,140 @@ Examples:
     ['MOVE', src_prop1, dst_prop1, src_prop2, dst_prop2...]
 
 Relocate one or more values of properties within the current node's tree.
+For each pair of (source,destination), processed in sequence, set the
+destination to refer to the value of the source, by reference, and then
+delete the source reference to that sub-tree.  The source property must
+exist, and it is an error for the destination path to pass through or
+terminate at the node the source path references.
+
 This is an alternative to `ASSIGN` for when the source property is being
-deleted afterward and copy-by-value is unnecessary.  Unlike `ASSIGN`, literal
-values cannot be specified (other than `null`) so strings/numbers are
-interpreted as a property name/index.
-Also unlike `ASSIGN`, the source property is deleted from its container at the
-end of the action, and if that container was an array, the deletion shifts all
-later elements up to fill the gap in the manner of splice().  (the top level
-of the `stash` namespace is still not considered an array, despite allowing
-numeric property names)  Consequently, `MOVE` cannot read the current node
-itself using the empty path `[]` as that would imply deleting the current
-node.  The current node *may* be overwritten.
+deleted afterward and copy-by-value is unnecessary.  It has most of the same
+semantics as `ASSIGN`, but a few key differences:
 
-The moves described within a single `MOVE` action are performed in a
-semi-simultaneous manner, with all source and destination paths referring to
-the state of the current node's tree at the start of the MOVE action, with the
-exception that subsequent paths cannot traverse the node of earlier source
-paths, as they have become scheduled for relocation.  For any situation where
-this is inconvenient, just use multiple `MOVE` actions; `MOVE` with multiple
-pairs is intended mainly for the cases where this behavior is helpful.
+  * The pairs are specified as (source,destination) instead of
+    (destination,source).
+  * Literal values cannot be specified (other than `null`)
+    so string/number arguments are interpreted as a paths of one element.
+  * The `const` namespace is not usable because `MOVE` cannot alter it.
+  * You can use half-index numbers (`.5`) to insert between existing
+    elements of an array.
+  * Array insertions and deletions are postponed until the end of the `MOVE`
+    action, then resolved in tandem per array.
 
-The logical algorithm (which may be implemented in any equivalent manner) can
-maybe be described easiest using the concept of a sentinel value `MOVED` which
-is distinct from any user data and acts as a "hole" in the data, preventing
-further access.
+The value `null` may be used as a source to write a literal `null` to a path.
+This is provided as a convenience to preserve the existence of a property that
+would otherwise get deleted, without needing a followup `ASSIGN` action to fix
+it.  The value `null` may be used as a destination as a way of requesting
+deletion of the value without re-adding it anywhere.
 
-  - For each source path:
-    - Locate the property, which must not have the value `MOVED` nor
-      pass through one along its path.  The property must exist.
-    - Take a reference to the value of the property and replace it with the
-      `MOVED` value.
-    - Queue the deletion of the leaf property from its container.
-  - For each destination path:
-    - Locate the property to be assigned.  The path may not pass through
-      `MOVED`, though the leaf property may have the value `MOVED`.
-    - If the container is an object:
-      - Queue a write to this object property.  It is an error to write to the
-        same property more than once.
-    - If the container is an array:
-      - Queue an insertion at this array index.  If another insertion was
-        queued for the same index, append this insertion with the previous
-        such that both elements will be spliced at this position, in the same
-        order as their specification in the `MOVE` argument list.
-  - For each container where something was queued:
-    - If the container is an object:
-      - Perform all queued writes for this container.
-      - Perform all queued deletions for this container where the current value
-        is still `MOVED`.
-    - If the container is an array:
-      - For each logical position where an insertion or deletion was queued,
-        perform a splice() that replaces any `MOVED` values with the elements
-        to be inserted there.  The queued actions at this point refer to
-        logical array positions, not literal index values.
-        (so an implementation needs to either iterate backward or otherwise
-        account for shifting indices of later splices() after earlier ones)
+The final path element of an array destination may be a half-index number
+(an index plus or minus 0.5), to indicate an insertion point between
+elements.  Positive numbers count from the start of the array, and negative
+numbers count backward, but as a special case `-0.5` refers to the insertion
+point before element `0` rather than the point right after the final element
+`-1`.  As with `ASSIGN`, you may define an element at the current numeric
+length of the array (optionally using the alias `false`) which will be visible
+to subsequent source/dest pairs.  Since this is addressable, there is no need
+to create an insertion queue there.  An insertion queue is associated with the
+array object itself; relocating that array elsewhere in the tree carries the
+queued insertions with it.
+Implementations must either queue the insertion in relation to an array
+reference, or keep track of subsequent path mutations affecting those arrays.
 
-The practical consequences of the algorithm are:
+Enumerated for an array currently of length 2, it looks like this:
+
+Index  | Meaning
+-------|--------------------
+-0.5   | Before element 0
+ 0     | Overwrite element 0
+ 0.5   | Between elements 0 and 1
+ 1     | Overwrite element 1
+ 1.5   | Boundary after element 1 and before a potential element 2
+ 2.5   | Illegal, until after defining element 2
+ 2     | Append immediately as element 2
+ false | Append immediately as element 2
+ -1    | Overwrite element 1
+ -1.5  | Between elements 0 and 1
+ -2    | Overwrite element 0
+ -2.5  | Before element 0
+ -3    | Illegal, until after defining element 2
+ -3.5  | Illegal, until after defining element 2
+
+As usual, negative numbers used in paths must alias to a position relative to
+existing elements of the array, so `-length - 0.5` is the lowest allowed
+negative number.
+
+A deletion naturally implies shifting the following elements to fill the gap;
+to prevent confusion in the indices of subsequent source and destination
+paths, the shifting does not occur until the end of the `MOVE` action after
+all source/dest pairs have been processed.
+Until then, reading from the the moved array index becomes an `INVALID_TARGET`
+error unless a new value is written there first.
+If you write a new value to an element where a deletion was scheduled, the
+deletion is cancelled, including if you manually assign the value `null` to it
+or cause it to auto-vivify (as per `ASSIGN`) by specifying a destination
+path through it.  When processed, each span of deletions is replaced by any
+insertions from that span.  The sequential ordering of remaining elements,
+queued deletions and queued insertions is preserved as they are resolved.
+
+Since insertions and deletions do not occur until all movement pairs have been
+processed, all index (and half-index) numbers counting forward from the start
+of the array refer to the same coordinates throughout the `MOVE` action.
+Index (and half-index) numbers which count backward from the end of the array
+are resolved based on the current length of the array (not including pending
+insertions) at that point in processing movement pairs.
+
+Half-index values may *only* be the final element of the destination path of
+the pair.  You cannot subsequently use them as source paths, nor write
+through them to deeper sub-paths, nor auto-vivify through them.  The value
+written essentially disappears from the namespace until the end of the `MOVE`
+action when all the insertions and deletions get resolved.
+To use multiple `MOVE` pairs to construct the tree that needs inserted,
+perform the changes in the temporary namespace before a final move to a
+half-index destination.
+
+The practical consequences of array handling are:
 
   - No expensive deep-copying of objects is required, nor processing to
     determine whether deep-copying would be required.
-  - It can swap the value of two properties without a temporary variable.
-  - It is not possible to degrade the tree into a graph, because properties at
-    the leaf of a move get replaced by the `MOVED` sentinel (or equivalent
-    implementation, like a set of excluded paths) prior to checking any
-    destination path.
-  - Source paths are processed in specification order, so where source paths
-    overlap, descendants must be specified before their ancestors.
-  - It cannot swap the positions of a parent with child node, because the
-    destination for the parent would pass through the `MOVED` location of the
-    parent.  For that, you need two `MOVE` actions and a stash variable.
-  - Moving an array element "forward" within the same array does not result in
-    the element arriving at the declared index unless another element was also
-    moved backward.  e.g. `[MOVE,2,5]` results in element 2 arriving at index
-    4 at the end because deletions occur after insertions, but
-    `[MOVE,2,5,5,2]` does result in elements 2 and 5 swapping places.
+  - It is not possible to degrade the data from a tree to a graph, because
+    for every reference added, the old reference is immediately destroyed
+    (or made inaccessible) and the no-prefix rule prevents cycles.
   - If an editor has re-ordered the elements of an array, and knows the source
     and destination index of each, it can easily export that edit as a `MOVE`
-    argument list from those pairs without any further thought.  Every
+    argument list from those pairs by adding ".5" to each destination.  Every
     deletion will be paired with an insertion and the `MOVE` action can run in
     `O(N)` time without actual splice() calls.
 
-The temporary path namespace (like `[null,0]`) is not useful for `MOVE`
-because all source paths refer to the initial state of things where no
-temporaries are defined, and temporaries get discarded at the end of the
-action so they aren't useful for destination paths.  So, the path of exactly
-`null` can be used in source paths to mean a literal `null` value, and in
-destination paths to mean "just delete it".
-The `const` namespace (`[null, -1, ...]`) is not useful because it is
-read-only.  The `stash` namespace (`[null, -2, ...]`) is quite useful, and is
-what you might use to swap the positions of a parent and child node between two
-`MOVE` actions.
-
 Examples:
 
-    ['MOVE',0,-1,-1,0]                  // tmp0= node[0];
-                                        // tmp1= node[node.length-1];
-                                        // node[0]= tmp1;
-                                        // node[node.length-1]= tmp0;
+    ['MOVE', 0,[null,0],           // tmp['0']= node[0];
+                                   // mark_vacant(node, 0);
+            -1,0,                  // node[0]= node[node.length-1];
+                                   // mark_populated(node, 0);
+                                   // mark_vacant(node, node.length-1);
+            [null,0],-1]           // node[node.length-1]= tmp['0'];
+                                   // mark_populated(node, node.length-1);
+                                   // mark_vacant(tmp, '0');
     
-    ['MOVE',1,false,2,false]            // node.push(node[1], node[2])
-                                        // node.splice(1, 2);
+    ['MOVE',1,-0.5,2,false]        // pos0_queue= [ node[1] ];
+                                   // mark_vacant(node, 1);
+                                   // node.push(node[2]);
+                                   // mark_vacant(node, 2);
+                                   // node.splice(1,2);
+                                   // node.splice(0, 0, ...pos0_queue);
     
-    ['MOVE','a','b','c','a']            // tmp1= node.a;
-                                        // tmp2= node.c;
-                                        // node.b= tmp1;
-                                        // node.a= tmp2;
-                                        // delete node.c;
+    ['MOVE','a','b','c','a']       // node.b= node.a;
+                                   // delete node.a;
+                                   // node.a= node.c;
+                                   // delete node.c;
     
-    ['MOVE',['x','x'],'x','x',[null,'stash','parent']]
-    ['MOVE',[null,'stash','parent'],['x','x']]
-                                        // stash.parent= node.x;
-                                        // node.x= node.x.x;
-                                        // delete stash.parent.x;
-                                        // node.x.x= stash.parent;
-                                        // delete stash.parent;
+    ['MOVE',['x','x'],[null,0],    // tmp['0']= node.x.x;
+                                   // delete node.x.x;
+            'x',[null,0,'x'],      // tmp['0'].x= node.x;
+                                   // delete node.x;
+            [null,0],'x']]         // node.x= tmp['0'];
+                                   // delete tmp['0'];
 
 ### SPLICE
 
