@@ -1,22 +1,89 @@
 # JGraft
 
+## Introduction
+
 JGraft is a data structure that describes how to edit a tree of data.  It can
 describe edits where portions of the source and destination are fully defined
 and thus reversible, edits applicable to any compatible data structure, or
 conditional edits where the change depends on the state of the target data.
 
-The data structure is defined in basic JSON-compatible concepts, though a host
-language may include other native data types within the tree if they don't
-need to serialize to JSON.  (implementations allowing other host language
-types are responsible for defining equality, cloning, and serialization
-behavior for them, which is outside the scope of portable JGraft)
-The structure primarily uses array primitives to encode directives in a manner
-similar to the Lisp programming language, though it also uses JSON objects
-with named properties for any case where that is more convenient.
-The directives (classified below as Actions or Match Functions) have
-symbolic names, but also can be represented by small integers for better
-performance in production environments.
-The symbolic names are used in all examples below.
+The data that JGraft operates on is defined using basic JSON-compatible types:
+`null`, booleans, numbers, JSON-compatible strings, arrays, and objects.
+Implementations may include other native host-language data types if the
+application doesn't need to interoperate with different host languages.
+(implementations allowing other host language types are responsible for
+defining equality, cloning, and serialization behavior for them, which is
+outside the scope of portable JGraft)
+
+### Representation
+
+The JGraft data structure contains "actions" and "expressions" in addition
+to literal data.  When serialized to JSON, they take the form of arrays in the
+style of the Lisp programming language, where the first element indicates the
+operation and remaining elements become an argument list for it.
+The operation (first element) may be specified using either a name or numeric
+ID; the ID is useful for compact encoding in production, and the name is
+useful for development and debugging.
+In contexts allowing a mixture of data and expressions, array literal values
+get "escaped" by wrapping them with another array. In other words, in the JSON
+description of JGraft in a context that allows data and expressons, an array
+containing exactly one element which is an array means literally the inner
+array, and every other array carries special meaning.
+
+Implementations may choose to use host-language objects of some sort to
+represent actions and expressions, then perform the array encoding during
+serialization and reconstruct the objects during deserialization.
+Implementations could also choose to leave the JGraft data
+structure in its JSON-compatible form and interpret it on the fly.
+They should make it clear to the developer whether the data structure the
+application code interacts with is using objects and literal arrays, or the
+direct "arrays-are-special" representation of JGraft.
+The remainder of this specification uses the JSON form of actions and
+expressions, since the object model of a host language is left unspecified.
+
+### Action Overview
+
+Actions describe the overall algorithm of the JGraft.  Each action dictates
+the meaning of its arguments; they may include other sub-actions, match
+expressions, objects of configuration properties, and so on.  If you want to
+validate the JGraft or build host language objects for the actions, it needs
+to be handled recursively per-action.  Actions occupy a namespace apart from
+expressions, and are not interchangable.
+
+The root of a JGraft is the `JGRAFT` action.  The `JGRAFT` action may contain
+metadata and scope-based configuration.  It establishes a scope for constants
+and stash variables, available to all sub-actions.  The constants help reduce
+redundant data within that tree, and the stash facilitates transfer of values
+between actions.
+
+The primary intended workflow for JGraft is to use a `MATCH` or `IF` action to
+verify that the input data tree matches expectations (or find a matching
+location in the tree with some fuzzy matching) and then within that use
+`ASSIGN`, `MOVE` or other actions to alter the tree.
+
+Here is a sumamry:
+
+Name                     | ID | Description
+-------------------------|----|----------------------------------------------
+[JGRAFT](#action-jgraft) | -1 | Declare metadata; top-level element
+[AT](#action-at)         |  0 | Navigate to sub-node and execute sub-actions
+[MATCH](#action-match)   |  1 | Assert current node matches pattern
+[IF](#action-if)         |  2 | Choose action based on which pattern matches
+[ASSIGN](#action-assign) |  3 | Assign-by-value to properties
+[MOVE](#actions-move)    |  4 | Move existing values between properties
+[SPLICE](#action-splice) |  5 | Perform standard splice() on an array
+[SPLIT](#action-split)   |  6 | Split string into array, apply actions, re-join
+[LOG](#action-log)       | -2 | Emit diagnostic message and data
+
+The `SPLICE` action is an optimization vs. `ASSIGN` or `MOVE` for making
+changes to a range of an array.
+
+The `SPLIT` action is a tool for parsing strings in order to make changes
+within them, resulting in a string.  It can also be used to access specific
+substrings and copy them into stash variables for use in other actions.
+
+The `LOG` action can be used to provide improved diagnostics to a user
+applying a JGraft.
 
 ## Paths
 
@@ -81,22 +148,6 @@ If this option is enabled, during an error it should deliver one to the caller
 that describes how to restore the original from the current mangled state.
 
 ## Actions
-
-A JGraft data structure is a tree of actions, Lisp-style, where each action is
-an array that begins with the action name (or numeric opcode) and contains
-parameters for that action, which will often include sub-actions.
-
-Name    | ID | Description
---------|----|----------------------------------------------------------------
-JGRAFT  | -1 | Declare metadata; top-level element
-AT      |  0 | Navigate to sub-node and execute sub-actions
-MATCH   |  1 | Assert current node matches pattern
-IF      |  2 | Choose action based on which pattern matches
-ASSIGN  |  3 | Assign-by-value to properties
-MOVE    |  4 | Move existing values of an array/object to new properties
-SPLICE  |  5 | Perform standard splice() on an array
-SPLIT   |  6 | Split string node into array, apply actions, re-join as string
-LOG     | -2 | Emit diagnostic message and data
 
 ### JGRAFT
 
