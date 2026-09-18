@@ -6,6 +6,8 @@ JGraft is a data structure that describes how to edit a tree of data.  It can
 describe edits where portions of the source and destination are fully defined
 and thus reversible, edits applicable to any compatible data structure, or
 conditional edits where the change depends on the state of the target data.
+It is a data structure rather than a parsed language to make it easier to
+programmatically generate, combine fragments, extract fragments, and inspect.
 
 The data that JGraft operates on is defined using basic JSON-compatible types:
 `null`, booleans, numbers, JSON-compatible strings, arrays, and objects.
@@ -15,20 +17,30 @@ application doesn't need to interoperate with different host languages.
 defining equality, cloning, and serialization behavior for them, which is
 outside the scope of portable JGraft)
 
+The JGraft data structure contains "actions" and "expressions" in addition
+to literal data.  Actions have the potential to mutate the tree or exhibit
+other side effects, but they are restricted to ensure the input tree remains
+a tree.  Expressions include Match-Patterns and Functions, and have no side
+effects.  JGraft is designed so that untrusted data and grafts can be
+processed safely when implementations enforce appropriate resource limits,
+such as memory usage limits, node creation limits, and stack depth limits.
+To this end, it has no flow control or free-form looping construct.
+
 ### Representation
 
-The JGraft data structure contains "actions" and "expressions" in addition
-to literal data.  When serialized to JSON, they take the form of arrays in the
-style of the Lisp programming language, where the first element indicates the
-operation and remaining elements become an argument list for it.
+The JGraft tree contains actions and expressions, but JSON has no mechanism to
+tag data with a type.  So, when serialized to JSON they take the form of
+arrays in the style of the Lisp programming language, where the first element
+indicates the operation and remaining elements become an argument list for it.
 The operation (first element) may be specified using either a name or numeric
 ID; the ID is useful for compact encoding in production, and the name is
 useful for development and debugging.
 In contexts allowing a mixture of data and expressions, array literal values
-get "escaped" by wrapping them with another array. In other words, in the JSON
-description of JGraft in a context that allows data and expressons, an array
-containing exactly one element which is an array means literally the inner
-array, and every other array carries special meaning.
+get "escaped" by wrapping them with another array.  In other words, in the
+JSON representation of JGraft in a context that allows data and expressions,
+an array containing exactly one element which is also an array means a literal
+array having the elements of the inner array.  The elements may then
+recursively contain expressions or array literals by this convention.
 
 Implementations may choose to use host-language objects of some sort to
 represent actions and expressions, then perform the array encoding during
@@ -48,7 +60,7 @@ the meaning of its arguments; they may include other sub-actions, match
 expressions, objects of configuration properties, and so on.  If you want to
 validate the JGraft or build host language objects for the actions, it needs
 to be handled recursively per-action.  Actions occupy a namespace apart from
-expressions, and are not interchangable.
+expressions, and are not interchangeable.
 
 The root of a JGraft is the `JGRAFT` action.  The `JGRAFT` action may contain
 metadata and scope-based configuration.  It establishes a scope for constants
@@ -61,7 +73,7 @@ verify that the input data tree matches expectations (or find a matching
 location in the tree with some fuzzy matching) and then within that use
 `ASSIGN`, `MOVE` or other actions to alter the tree.
 
-Here is a sumamry:
+Here is a summary:
 
 Name                     | ID | Description
 -------------------------|----|----------------------------------------------
@@ -70,7 +82,7 @@ Name                     | ID | Description
 [MATCH](#action-match)   |  1 | Assert current node matches pattern
 [IF](#action-if)         |  2 | Choose action based on which pattern matches
 [ASSIGN](#action-assign) |  3 | Assign-by-value to properties
-[MOVE](#actions-move)    |  4 | Move existing values between properties
+[MOVE](#action-move)     |  4 | Move existing values between properties
 [SPLICE](#action-splice) |  5 | Perform standard splice() on an array
 [SPLIT](#action-split)   |  6 | Split string into array, apply actions, re-join
 [LOG](#action-log)       | -2 | Emit diagnostic message and data
@@ -87,31 +99,33 @@ applying a JGraft.
 
 ## Paths
 
-Several actions and match functions use the concept of a 'path' (of JSON
-property names).  By example, paths look like:
+Several actions and expressions use the concept of a 'path'.  This is a
+description of how to navigate from some reference tree node to a deeper node
+by following object property names or array index numbers.
+When an action or expression declares that it takes a path in a positional
+argument, it means a [NODE expression](#expr-path),
+[CONST expression](#expr-const), [STASH expression](#expr-stash),
+[TEMP expression](#expr-temp).  To aid compact encoding, a plain number or
+string (or `false`) is interpreted as a single argument to a `NODE`
+expression.  Some actions also restrict which path types may be used, like how
+`MOVE` can't make use of a `CONST` path.
+Paths always descend the tree and have no concept of "up a level" like a
+filesystem's `..` convention.  A path element *may* be another expression
+(limited to functions) which evaluates to become the name or number or alias
+of a property.
 
-    'a'                node.a
-    0                  node[0]
-    -1                 node[node.length-1]
-    false              node[node.length]
-    []                 node
-    ['a']              node.a
-    ['a',1,'b',2]      node.a[1].b[2]
-    [null, ...]        special per-action
-    [true, ...]        special per-action
-
-Strings refer to object properties.  Integers refer to array elements, where
-negative numbers count backward from the end of an array (but must still fall
-within the array).  `false` is an alias for the numeric length of an array,
-which is generally an error to read from, but often may be written.
-Paths beginning with `null` or `true` are used as an escape sequence for
-special purposes depending on the current action.
-
-While JavaScript doesn't care much about the difference between arrays and
-objects, JSON and JGraft do, so strings may only specify properties of
-non-array objects, and integers may only specify indices of arrays.
-(though an exception to this rule exists for the temporary namespaces, as
-described in the `ASSIGN` action)
+In general, strings may only refer to object properties and integers may only
+refer to array elements.  This is particularly important when auto-vivifying a
+path; integers will create arrays and strings will create objects.
+Also, the `STASH`, `CONST`, and `TEMP` namespaces permit a leading integer as
+a property name even though the namespaces aren't arrays, for the improved
+serialization size.  Negative numbers are available as aliases for the
+`length-X` element of the array.  The value `false` is available as an alias
+for `length` of the current array, which is an element that doesn't exist but
+may be written, growing the array.
+(`-0` would be the ideal alias, but too many languages drop that distinction
+when decoding JSON)
+The values `null` and `true` may not appear in paths.
 
 ## Errors
 
@@ -351,8 +365,8 @@ semantics as `ASSIGN`, but a few key differences:
   * The pairs are specified as (source,destination) instead of
     (destination,source).
   * Literal values cannot be specified (other than `null`)
-    so string/number arguments are interpreted as a paths of one element.
-  * The `const` namespace is not usable because `MOVE` cannot alter it.
+    so string/number arguments are interpreted as one-element paths.
+  * The `const` namespace is not usable because `MOVE` alters source data.
   * You can use half-index numbers (`.5`) to insert between existing
     elements of an array.
   * Array insertions and deletions are postponed until the end of the `MOVE`
