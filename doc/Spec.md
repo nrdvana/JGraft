@@ -241,6 +241,32 @@ may be written, growing the array.
 when decoding JSON)
 The values `null` and `true` may not appear in paths.
 
+## Dates
+
+Dates are a problematic domain to make a specification for.  JGraft tries to
+keep the implementation burden low, like not requiring calendar math or
+Unicode tables, but applications almost certainly want some integration with
+the date objects of the host language.  Meanwhile, JSON doesn't even define
+a notation for dates.
+
+JGraft takes an approach of using the ISO 8601 strings, specifically
+`YYYY-MM-DD` and `YYYY-MM-DDTHH:MM:SSZ` (with optional decimal point and
+sub-seconds) to represent dates, and then the expression `CASTDATE` to flag
+occurrences that are meant to really be dates.  If an implementation does not
+wish to get involved with date objects, it can just pass-through the ISO
+notation as a string (after validating it) and use string comparison.  If an
+implementation wants to make use of date objects, the `CASTDATE` function can
+return actual host language date objects.  The implementation should ensure
+that making greater/lessthan comparisons between date objects and strings
+maintains the same behavior as if the comparison was done between two of the
+ISO strings.  The generator of a JGraft should attempt to accurately wrap all
+the values it knows to be dates with the `CASTDATE` function.
+
+Time zones are still not permitted, as then the comparison of two dates could
+require calendar math.  Portable grafts should declare all dates in UTC, and
+if host date objects are not used, the strings in the target data tree also
+need to be in UTC.
+
 ## Errors
 
 Applying a JGraft to a target data structure may fail with:
