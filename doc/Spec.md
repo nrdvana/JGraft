@@ -26,7 +26,7 @@ processed safely when implementations enforce appropriate resource limits,
 such as memory usage limits, node creation limits, and stack depth limits.
 To this end, it has no flow control or free-form looping construct.
 
-### Representation
+## Representation
 
 The JGraft tree contains actions and expressions, but JSON has no mechanism to
 tag data with a type.  So, when serialized to JSON they take the form of
@@ -53,7 +53,7 @@ direct "arrays-are-special" representation of JGraft.
 The remainder of this specification uses the JSON form of actions and
 expressions, since the object model of a host language is left unspecified.
 
-### Action Overview
+## Action Overview
 
 Actions describe the overall algorithm of the JGraft.  Each action dictates
 the meaning of its arguments; they may include other sub-actions, match
@@ -97,15 +97,129 @@ substrings and copy them into stash variables for use in other actions.
 The `LOG` action can be used to provide improved diagnostics to a user
 applying a JGraft.
 
+## Expression Overview
+
+Expressions are essentially "functions without visible side effects", though
+there are two special categories:
+
+  * "Reference Expressions" reference a [path](#paths) within the input data
+    or one of the special namespaces JGraft offers, and can be both read and
+    written by actions.
+  * "Match Expressions" compare the current node to a structural pattern and
+    return a boolean of whether it matched, though that boolean is implicitly
+    consumed in the context of another match expression.
+
+Everything else is just a "Function".  Functions don't need to be pure in the
+mathematical sense, but the "no visible side effects" rule is important
+because they may be evaluated any number of times during fuzzy-matching, and
+because JGraft does not define an order for enumerating object properties
+during the matching process.  They *may* have a side effect of incrementing
+a resource counter that aborts the graft operation due to resource usage, but
+that is not visible *to the expressions*.
+
+Here is a summary:
+
+Name                     | Type  | ID | Description
+-------------------------|-------|----|---------------------------------
+[TEMP](#ex-temp)         | Ref   | -3 | A path in the temp namespace
+[STASH](#ex-stash)       | Ref   | -2 | A path in the stash namespace
+[CONST](#ex-const)       | Ref   | -1 | A path in the const namespace
+[NODE](#ex-node)         | Ref   |  0 | A path in the current node
+[HAS](#ex-has)           | Match |  1 | Partial structured match
+[IS](#ex-is)             | Match |  2 | Exact structured match
+[NONE](#ex-none)         | Match |  3 | Logical NOT/NOR of match exprs
+[ANY](#ex-any)           | Match |  4 | Logical OR of match exprs
+[ALL](#ex-all)           | Match |  5 | Logical AND of match exprs
+[EXISTS](#ex-exists)     | Match |  6 | Current node exists
+[ARRAY](#ex-array)       | Match |  7 | Match arrays, specific elements
+[STR](#ex-str)           | Match |  8 | Match strings, optional regex
+[NUM](#ex-num)           | Match |  9 | Match numbers, optional range
+[BOOL](#ex-bool)         | Match | 10 | Match booleans
+[CASE](#ex-case)         | Fn    | 31 | If/else that returns a value
+[NOT](#ex-not)           | Fn    | 32 | Logical NOT of value exprs
+[AND](#ex-and)           | Fn    | 33 | Logical AND of value exprs
+[OR](#ex-or)             | Fn    | 34 | Logical OR of value exprs
+[CASTBOOL](#ex-castbool) | Fn    | 35 | Cast argument to boolean
+[CASTNUM](#ex-castnum)   | Fn    | 36 | Cast argument to number
+[CASTSTR](#ex-caststr)   | Fn    | 37 | Cast argument to string
+[SPLIT](#ex-split)       | Fn    | 38 | Split a string into an array
+[JOIN](#ex-join)         | Fn    | 39 | Join array into a string
+
+To quickly understand how these types interact, consider these examples:
+
+    [IS, { "a": [ANY, false, true] }]
+    // node.a === false || node.a == true
+
+When a match expression encounters another match expression, the outer match
+expression calls the inner one with a modified current node and context of
+`IS` vs. `HAS` matching (discussed next) and consumes the boolean return value
+as the status of whether it matched.  In this case, the outer passes `node.a`
+as the current node, and the inner one tests two values against that, and
+returns a boolean of whether `node.a` equaled any of them.  The outer `IS`
+action consumes the boolean as the result for matching property 'a'.
+
+    [IS, { "a": [NONE, { "b": 1 }, { "c": 1 }] }]
+    // !deep_equals(node.a, {b:1}) && !deep_equals(node.a, {c:1})
+
+The `HAS` expression tests that specified properties of the current node
+match, and the `IS` expression additionally tests that no extra properties
+existed on the object.  Every match expression (other than `IS` and `HAS`)
+receive the `IS` vs. `HAS` semantics from the caller if the caller was also
+a match expression.  They are *not* preserved through a regular function
+call, and revert to the default `HAS` semantics if a match expression is
+used inside a function.  In this case, the `NONE` expression inherits `IS`
+semantics.
+
+    [IS, { "a": [OR, false, true] }]
+    // node.a === ( false || true )
+
+When a match expression encounters a function expression, it calls the
+function *without* updating the current node, and uses the return value as a
+literal value to match against.  The return value of this `OR` expression is
+`true`, so then the `IS` expression compares `node.a === true` to determine
+whether that property is valid.
+
+    [IS, { "a": [NODE, 'b'] }]
+    // deep_equals(node.a, node.b)
+
+Likewise, a ref expression within a match expression resolves to a value using
+the same current node as the outer match action.  Then the value is used in the
+match expression as a literal to match against.  This `NODE` expression
+evaluates to `node.b`, and then the `IS` expression checks whether `node.a` is
+an identical tree to that value.
+
+    [OR, [ANY, 2, 3], [IS, [NODE,'b'], 2]]]
+    // node === 2 || node === 3 || node.b === 2
+
+When a function contains a match expression, the match expression tests
+against the current node and returns a boolean.  If you want to test against
+a different value (which need not even be in the tree) the `HAS` and `IS`
+functions have a 2-argument form that overrides the current node with a value
+of your choice.  In this case, a reference expression sets the current node to
+`node.b` then tests against the literal `2`, and the boolean result gets
+combined with the boolean result of testing whether `node` is the value `1`
+or `2`.
+
+    [IS, { "a": [IS, [LT, [CASTNUM], 8], true], "b": 5 }]
+    // parseNumber(node.a) < 8 && node.b === 5
+
+If you want the return value of a function to be consumed as the match result
+for matching a property, simply use the `IS` or `HAS` expression to compare it
+to `true`.  In this case, `LT` is not a match expression so it can't be used
+directly within the structure of the outer `IS` in the intended manner.  Use a
+second `IS` with the 2-argument form to compare the output of the `LT`
+function to `true`.  That gets used as the match result for `node.a` because
+`IS` is a match expression.
+
 ## Paths
 
 Several actions and expressions use the concept of a 'path'.  This is a
 description of how to navigate from some reference tree node to a deeper node
 by following object property names or array index numbers.
 When an action or expression declares that it takes a path in a positional
-argument, it means a [NODE expression](#expr-path),
-[CONST expression](#expr-const), [STASH expression](#expr-stash),
-[TEMP expression](#expr-temp).  To aid compact encoding, a plain number or
+argument, it means a [NODE expression](#ex-path),
+[CONST expression](#ex-const), [STASH expression](#ex-stash), or
+[TEMP expression](#ex-temp).  To aid compact encoding, a plain number or
 string (or `false`) is interpreted as a single argument to a `NODE`
 expression.  Some actions also restrict which path types may be used, like how
 `MOVE` can't make use of a `CONST` path.
@@ -117,10 +231,10 @@ of a property.
 In general, strings may only refer to object properties and integers may only
 refer to array elements.  This is particularly important when auto-vivifying a
 path; integers will create arrays and strings will create objects.
-Also, the `STASH`, `CONST`, and `TEMP` namespaces permit a leading integer as
-a property name even though the namespaces aren't arrays, for the improved
-serialization size.  Negative numbers are available as aliases for the
-`length-X` element of the array.  The value `false` is available as an alias
+However, the `STASH`, `CONST`, and `TEMP` namespaces permit a leading integer
+as a property name even though the namespaces aren't arrays, for the improved
+serialization size.  Negative numbers are available as aliases for the array
+element at `[array.length-X]`.  The value `false` is available as an alias
 for `length` of the current array, which is an element that doesn't exist but
 may be written, growing the array.
 (`-0` would be the ideal alias, but too many languages drop that distinction
@@ -131,21 +245,28 @@ The values `null` and `true` may not appear in paths.
 
 Applying a JGraft to a target data structure may fail with:
 
-  * `INVALID_GRAFT` - The structure of the Graft itself does not match the
-                      spec, or is semantically invalid in some way.
+  * `INVALID_GRAFT` - The structure of the JGraft itself violates the spec.
   * `INVALID_TARGET` - The graft describes an operation that can't apply due
                        to the type or structure of the target.
+  * `INVALID_OPERAND` - The runtime value given to an action or expression
+                        is invalid.  This may be the fault of either the
+                        target data or the described graft.
   * `NO_MATCH` - A `MATCH` action failed to find a matching context.
   * `RESOURCE_LIMIT` - Applying the graft would exceed configured constraints,
                        such as too much memory, too many generated properties,
                        or too deep of a tree.
 
+Note that `INVALID_TARGET` and `INVALID_OPERAND` errors which occur inside of
+a match expression get trapped and simply cause it to fail to match, which may
+in turn generate a `NO_MATCH` error.
+
 The recommended behavior for failures in a JGraft implementation are to emit
 the error along with some diagnostic properties describing the current node
-and action/match which failed, and make the partially-edited data structure
-available for inspection.  See also the [LOG](#log) action.  Implementations
-may also provide a callback allowing the application to intercept a failure
-and resolve it in a way that allows the remainder of the JGraft to continue.
+and action/expression which failed, and make the partially-edited data
+structure available for inspection.  See also the [LOG](#log) action.
+Implementations may also provide a callback allowing the application to
+intercept a failure and resolve it in a way that allows the remainder of the
+JGraft to continue.
 
 Ideally, an implementation should be shallow-cloning each ancestor node of an
 altered node back to the root as edits occur, so that the input data structure
