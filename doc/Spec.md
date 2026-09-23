@@ -135,6 +135,7 @@ Name                     | Type  | ID | Description
 [STR](#ex-str)           | Match |  8 | Match strings, optional regex
 [NUM](#ex-num)           | Match |  9 | Match numbers, optional range
 [BOOL](#ex-bool)         | Match | 10 | Match booleans
+[DATE](#ex-date)         | Match | 11 | Match date-like things
 [CASE](#ex-case)         | Fn    | 31 | If/else that returns a value
 [NOT](#ex-not)           | Fn    | 32 | Logical NOT of value exprs
 [AND](#ex-and)           | Fn    | 33 | Logical AND of value exprs
@@ -249,23 +250,20 @@ Unicode tables, but applications almost certainly want some integration with
 the date objects of the host language.  Meanwhile, JSON doesn't even define
 a notation for dates.
 
-JGraft takes an approach of using the ISO 8601 strings, specifically
-`YYYY-MM-DD` and `YYYY-MM-DDTHH:MM:SSZ` (with optional decimal point and
-sub-seconds) to represent dates, and then the expression `CASTDATE` to flag
-occurrences that are meant to really be dates.  If an implementation does not
-wish to get involved with date objects, it can just pass-through the ISO
-notation as a string (after validating it) and use string comparison.  If an
-implementation wants to make use of date objects, the `CASTDATE` function can
-return actual host language date objects.  The implementation should ensure
-that making greater/lessthan comparisons between date objects and strings
-maintains the same behavior as if the comparison was done between two of the
-ISO strings.  The generator of a JGraft should attempt to accurately wrap all
-the values it knows to be dates with the `CASTDATE` function.
+JGraft takes an approach of using expressions to identify when dates are
+intended, and then comparing them directly field-to-field for year, month,
+day, hour, minute, and second.  The `CASTDATE` function allows
+`YYYY-MM-DD HH:MM:SS` notation and ISO 8601 variations like the "T"
+separator, "Z" suffix, and sub-seconds specified with a decimal point. It
+parses them to an array of 6 numbers, or 3 numbers for `YYYY-MM-DD` strings.
+The numbers are parsed as-is, and not adjusted to be zero-based.
+Portable JGraft should exclusively use UTC, and does not support time zone
+notations, because correctly handling time zones would require date math.
 
-Time zones are still not permitted, as then the comparison of two dates could
-require calendar math.  Portable grafts should declare all dates in UTC, and
-if host date objects are not used, the strings in the target data tree also
-need to be in UTC.
+If an implementation wants to make use of host language date objects, the
+`CASTDATE` function can return them.  However, the implementation should
+ensure that date object comparisons behave equivalently to comparing arrays of
+`[y,m,d]` or `[y,m,d,h,n,s]` numbers.
 
 ## Errors
 
