@@ -53,6 +53,21 @@ direct "arrays-are-special" representation of JGraft.
 The remainder of this specification uses the JSON form of actions and
 expressions, since the object model of a host language is left unspecified.
 
+## Contexts
+
+Every action and expression declares the context of each of its arguments.
+Contexts help reduce the verbosity of the encoding by giving more complex
+meaning to simpler JSON structures.
+
+  * Value context - Non-objects are interpreted as literal values.
+                    Arrays are expressions. Expressions evaluate to values.
+  * Match context - Non-objects are interpreted as literal values to match
+                    against.  Arrays are expressions.  Expressions are
+                    handled differently according to their type.
+  * Path context  - Non-objects are interpreted as properties of the current
+                    node.  Arrays are expressions.  Expressions are limited
+                    to path expressions.
+
 ## Action Overview
 
 Actions describe the overall algorithm of the JGraft.  Each action dictates
@@ -64,7 +79,7 @@ expressions, and are not interchangeable.
 
 The root of a JGraft is the `JGRAFT` action.  The `JGRAFT` action may contain
 metadata and scope-based configuration.  It establishes a scope for constants
-and stash variables, available to all sub-actions.  The constants help reduce
+and stash variables available to all sub-actions.  The constants help reduce
 redundant data within that tree, and the stash facilitates transfer of values
 between actions.
 
@@ -106,8 +121,8 @@ there are two special categories:
     or one of the special namespaces JGraft offers, and can be both read and
     written by actions.
   * "Match Expressions" compare the current node to a structural pattern and
-    return a boolean of whether it matched, though that boolean is implicitly
-    consumed in the context of another match expression.
+    return a boolean of whether it matched.  Match expressions have special
+    behavior when calling other match expressions.
 
 Everything else is just a "Function".  Functions don't need to be pure in the
 mathematical sense, but the "no visible side effects" rule is important
@@ -117,7 +132,17 @@ during the matching process.  They *may* have a side effect of incrementing
 a resource counter that aborts the graft operation due to resource usage, but
 that is not visible *to the expressions*.
 
-Here is a summary:
+When a match expression directly calls another match expression, it passes a
+hidden parameter of whether the context is "IS" (full equality) or "HAS"
+(partial equality).  It also updates the current node
+relative to the structural position of the inner match expression.
+Match expressions do not alter the current node when calling functions.
+Further, it consumes the boolean result of the inner match expression as an
+indication of whether the match succeeded.  This differs from a match
+expression calling a function, where the function's return value would be
+used as a value to match against.
+
+The following expressions are available:
 
 Name                     | Type  | ID | Description
 -------------------------|-------|----|---------------------------------
@@ -140,77 +165,72 @@ Name                     | Type  | ID | Description
 [NOT](#ex-not)           | Fn    | 32 | Logical NOT of value exprs
 [AND](#ex-and)           | Fn    | 33 | Logical AND of value exprs
 [OR](#ex-or)             | Fn    | 34 | Logical OR of value exprs
-[CASTBOOL](#ex-castbool) | Fn    | 35 | Cast argument to boolean
-[CASTNUM](#ex-castnum)   | Fn    | 36 | Cast argument to number
-[CASTSTR](#ex-caststr)   | Fn    | 37 | Cast argument to string
-[SPLIT](#ex-split)       | Fn    | 38 | Split a string into an array
-[JOIN](#ex-join)         | Fn    | 39 | Join array into a string
+[CASTBOOL](#ex-castbool) | Fn    | 35 | Cast value to boolean
+[CASTNUM](#ex-castnum)   | Fn    | 36 | Cast value to number
+[CASTSTR](#ex-caststr)   | Fn    | 37 | Cast value to string
+[CASTDATE](#ex-castdate) | Fn    |    | Cast value to host date
+[SPLIT](#ex-split)       | Fn    |    | Split a string into an array
+[JOIN](#ex-join)         | Fn    |    | Join array into a string
+[LESS](#ex-less)         | Fn    |    | Less-than test
+[LESSEQ](#ex-lesseq)     | Fn    |    | Less-or-equal test
+[MIN](#ex-min)           | Fn    |    | Minimum of list
+[MAX](#ex-max)           | Fn    |    | Maximum of list
+[COALESCE](#ex-coalesce) | Fn    |    | First non-null value of list
+[ADD](#ex-add)           | Fn    |    | Add numbers
+[SUB](#ex-sub)           | Fn    |    | Subtract numbers
+[MUL](#ex-mul)           | Fn    |    | Multiply numbers
+[DIV](#ex-div)           | Fn    |    | Divide numbers
+[MOD](#ex-mod)           | Fn    |    | Calculate Modulus
 
-To quickly understand how these types interact, consider these examples:
+To quickly understand how the types interact, consider these examples:
 
-    [IS, { "a": [ANY, false, true] }]
-    // node.a === false || node.a == true
+    [IS, { "a": [ANY, false, true, { c: 2 }] }]
+    // implies [IS, { "a": [ANY, false, true, [IS, { c: 2 }]] }]
+    // node.a === false || node.a === true || node.a.c === 2
 
-When a match expression encounters another match expression, the outer match
-expression calls the inner one with a modified current node and context of
-`IS` vs. `HAS` matching (discussed next) and consumes the boolean return value
-as the status of whether it matched.  In this case, the outer passes `node.a`
-as the current node, and the inner one tests two values against that, and
-returns a boolean of whether `node.a` equaled any of them.  The outer `IS`
-action consumes the boolean as the result for matching property 'a'.
+In this case, the outer match expression passes `node.a` as the current node,
+and a `IS` context.  The `ANY` expression tests whether `node.a` matches
+against any of of the values.  When it tests the third value, it performs an
+`IS` operation rather than the default of `HAS`.  The boolean result of `ANY`
+is consumed as the result for whether property 'a' matched.
 
-    [IS, { "a": [NONE, { "b": 1 }, { "c": 1 }] }]
-    // !deep_equals(node.a, {b:1}) && !deep_equals(node.a, {c:1})
+    [IS, { "a": [NONE, { "b": 1 }] }]
+    // implies [IS, { "a": [NONE, [IS, {"b": 1}]] }]
 
-The `HAS` expression tests that specified properties of the current node
-match, and the `IS` expression additionally tests that no extra properties
-existed on the object.  Every match expression (other than `IS` and `HAS`)
-receive the `IS` vs. `HAS` semantics from the caller if the caller was also
-a match expression.  They are *not* preserved through a regular function
-call, and revert to the default `HAS` semantics if a match expression is
-used inside a function.  In this case, the `NONE` expression inherits `IS`
-semantics.
-
-    [IS, { "a": [OR, false, true] }]
-    // node.a === ( false || true )
-
-When a match expression encounters a function expression, it calls the
-function *without* updating the current node, and uses the return value as a
-literal value to match against.  The return value of this `OR` expression is
-`true`, so then the `IS` expression compares `node.a === true` to determine
-whether that property is valid.
+In this case, the outer `IS` match expression passes `node.a` as the current
+node to the `NONE` expresison with `IS` context.  The `NONE` expression tests
+whether `node.a` is not exactly identical to `{b:1}`.
 
     [IS, { "a": [NODE, 'b'] }]
     // deep_equals(node.a, node.b)
 
-Likewise, a ref expression within a match expression resolves to a value using
-the same current node as the outer match action.  Then the value is used in the
+A ref expression within a match expression resolves the value from the same
+current node as the outer match action, because the current node only changes
+automatically when calling a match expression.  Then the value is used in the
 match expression as a literal to match against.  This `NODE` expression
 evaluates to `node.b`, and then the `IS` expression checks whether `node.a` is
-an identical tree to that value.
+an identical tree to `node.b`.
 
-    [OR, [ANY, 2, 3], [IS, [NODE,'b'], 2]]]
-    // node === 2 || node === 3 || node.b === 2
+    [IS, { "a": [OR, false, { b: 1 }] }]
+    // node.a === ( false || node.b === 1 )
+    // probably not what was intended
 
-When a function contains a match expression, the match expression tests
-against the current node and returns a boolean.  If you want to test against
-a different value (which need not even be in the tree) the `HAS` and `IS`
-functions have a 2-argument form that overrides the current node with a value
-of your choice.  In this case, a reference expression sets the current node to
-`node.b` then tests against the literal `2`, and the boolean result gets
-combined with the boolean result of testing whether `node` is the value `1`
-or `2`.
+In this example where someone probably meant to use `ANY` instead of `OR`,
+a match expression calls a function (non-match expression) and uses the return
+value as *a value to match against*.  Additionally, because it is a function,
+the current node does not change, so `{b: 1}` refers to `node.b`, not
+`node.a.b`.
 
-    [IS, { "a": [IS, [LT, [CASTNUM], 8], true], "b": 5 }]
-    // parseNumber(node.a) < 8 && node.b === 5
+    [IS, { "a": [IS, [LESS, [CASTNUM], 8], true] }]
+    // (parseNumber(node.a) < 8) === true
 
-If you want the return value of a function to be consumed as the match result
-for matching a property, simply use the `IS` or `HAS` expression to compare it
-to `true`.  In this case, `LT` is not a match expression so it can't be used
-directly within the structure of the outer `IS` in the intended manner.  Use a
-second `IS` with the 2-argument form to compare the output of the `LT`
-function to `true`.  That gets used as the match result for `node.a` because
-`IS` is a match expression.
+If you want the return value of a function to be used as the match *result*,
+simply use the two-argument form of `IS` or `HAS` to compare it to `true`.
+In this case, `LESS` is not a match expression so it can't be used directly
+within the structure of the outer `IS` in the intended manner.
+The inner `IS` compares two values instead of comparing one value to the
+current node.  The inner `IS` also causes the current node to change to
+`node.a` which is used by the `CASTNUM` expression.
 
 ## Paths
 
@@ -224,23 +244,23 @@ argument, it means a [NODE expression](#ex-path),
 string (or `false`) is interpreted as a single argument to a `NODE`
 expression.  Some actions also restrict which path types may be used, like how
 `MOVE` can't make use of a `CONST` path.
-Paths always descend the tree and have no concept of "up a level" like a
-filesystem's `..` convention.  A path element *may* be another expression
-(limited to functions) which evaluates to become the name or number or alias
-of a property.
+Paths always navigate deeper into the tree and have no concept of "up a level"
+like a filesystem's `..` convention.  A path element *may* be another
+expression which evaluates to become the name or number or alias of a
+property.
 
 In general, strings may only refer to object properties and integers may only
 refer to array elements.  This is particularly important when auto-vivifying a
 path; integers will create arrays and strings will create objects.
 However, the `STASH`, `CONST`, and `TEMP` namespaces permit a leading integer
-as a property name even though the namespaces aren't arrays, for the improved
-serialization size.  Negative numbers are available as aliases for the array
-element at `[array.length-X]`.  The value `false` is available as an alias
-for `length` of the current array, which is an element that doesn't exist but
-may be written, growing the array.
+as a property name (coerced to a string) even though the namespaces aren't
+arrays, for the improved serialization size.  Negative numbers are available
+as aliases for `[SUB, [LENGTH [...path_to_array]], n]` (the array element at
+`[array.length-X]`).  The value `false` is available as an alias for
+`[LENGTH [...path_to_array]]` of the current array, which is an element that
+doesn't exist but may be written, growing the array.
 (`-0` would be the ideal alias, but too many languages drop that distinction
-when decoding JSON)
-The values `null` and `true` may not appear in paths.
+when decoding JSON)  The values `null` and `true` may not appear in paths.
 
 ## Dates
 
