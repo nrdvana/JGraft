@@ -16,6 +16,9 @@ application doesn't need to interoperate with different host languages.
 (implementations allowing other host language types are responsible for
 defining equality, ordering, cloning, and serialization behavior for them,
 which is outside the scope of portable JGraft)
+While performing edits, JGraft additionally defines types for
+[dates and date-times](#dates), though these export back to JSON-compatible or
+application-configured data types before committing the edit.
 
 The JGraft data structure describes "actions" and "expressions" in addition
 to literal data.  Actions have the potential to mutate the tree or exhibit
@@ -34,12 +37,13 @@ indicates the operation and remaining elements become an argument list for it.
 The operation (first element) may be specified using either a name or numeric
 ID; the ID is useful for compact encoding in production, and the name is
 useful for development and debugging.
-In contexts allowing a mixture of data and expressions, array literal values
-get "escaped" by wrapping them with another array.  In other words, in the
-JSON representation of JGraft in a context that allows data and expressions,
-an array containing exactly one element which is also an array means a literal
-array having the elements of the inner array.  The elements may then
-recursively contain expressions or array literals by this convention.
+In [contexts](#contexts) allowing a mixture of data and expressions, array
+literal values get "escaped" by wrapping them with another array.
+In other words, in the JSON representation of JGraft in a context that allows
+data and expressions, an array containing exactly one element which is also an
+array means a literal array having the elements of the inner array.
+The elements may then recursively contain expressions or array literals by this
+convention.
 
 Implementations may choose to use host-language objects of some sort to
 represent actions and expressions at runtime, then perform the array encoding
@@ -51,6 +55,45 @@ application code interacts with is using objects and literal arrays, or the
 direct "arrays-are-special" representation of JGraft.
 The remainder of this specification uses the JSON form of actions and
 expressions, since the object model of a host language is left unspecified.
+
+## Dates
+
+Dates are a problematic domain to make a specification for.  JGraft tries to
+keep the implementation burden low, like not requiring timezone tables, but
+applications almost certainly want some integration with the date objects of
+the host language.  Meanwhile, JSON doesn't even define a notation for dates.
+
+JGraft takes an approach where dates and date-time values are represented by
+temporary objects that logically exist only within the JGraft implementation.
+They are created by the [`CASTDATE` function](#ex-castdate), and any operation
+that would write them into the target tree of data automatically exports them
+to a format of the application's choosing.  In the simplest case, the
+application provides host-language date objects in the target tree of data,
+the JGraft implementation uses those same objects, and no export steps are
+required when writing them back to the data tree.  In other cases, the
+application might be parsing ISO 8601 date strings from the tree of data and
+returning them to that format as they re-enter the target data, losing any
+metadata that would differentiate it from a plain string.  JGraft dates and
+date-times may be saved into the const, stash, and temporary namespaces
+without losing their metadata.  When exported as an "undo" JGraft, dates are
+represented by a `CASTDATE` expression.
+
+JGraft defines three distinct types: date, datetime, and timestamp.  They are
+considered immutable values, but expose virtual properties which may be
+referenced in [paths](#paths).  `date` lacks a time component, and has virtual
+properties of "year", "month" and "day", according to the rules of the
+Gregorian calendar and represented in their natural 1-based format.
+`datetime` additionaly has "hour", "minute" and "second" virtual properties,
+where `second` may be fractional to any numeric precision allowed by JSON and
+may also be a leap-second value (60).
+`timestamp` additionally has a `tz_offset` virtual property, which is a number
+of minutes offset from UTC.
+
+Since each of these is a different type, the usual rules apply when testing
+them: dissimilar types cannot "match" in a match expression, and the `LESS`,
+`LESSEQ`, `MIN`, and `MAX` expressions will fail with an `INVALID_OPERAND`
+error.  You can use the `CASTDATE` function to cast values to the desired
+precision for comparison.
 
 ## Namespaces
 
@@ -103,35 +146,99 @@ property.
 
 Every action and expression declares the context of each of its arguments.
 Contexts help reduce the verbosity of the encoding by giving more complex
-meaning to simpler JSON structures.  These are the three most common contexts:
+meaning to simpler JSON structures.
 
-  * Value context - This constructs a new value or tree of values.
-                    Non-object/non-arrays are literal values to appear in the
-                    constructed result.  Objects in the specification construct
-                    an object of the same properties where each property value
-                    is evaluated recursively.  Likewise for escaped arrays
-                    (an array within an array of one element) it constructs an
-                    array where each element of the specification is
-                    recursively evaluated to generate the value for that
-                    element of the result.
-                    Other arrays represent expressions, which will be evaluated
-                    and replaced with the return value of the expression.
-  * Match context - This determines whether the current node has a shape
-                    compatible with the specification.  Non-object/non-arrays
-                    match when the current node is the same type and compares
-                    equal per the JavaScript "===" operator.  Objects match
-                    when the current node is a non-Array object and every
-                    property specified recursively matches the value of the
-                    corresponding property of the current node.  Likewise,
-                    escaped arrays match when the current value is an array
-                    and the elements recursively match.  Other arrays
-                    represent expressions, which are handled specially
-                    depending on their type.
-  * Path context  - Non-object/non-arrays are interpreted as a single argument
-                    to a [`NODE` expression](#ex-node).  Arrays represent
-                    expressions, but they are restricted to path expressions,
-                    and may be further restricted to specific namespaces.
-                    Objects and escaped arrays are illegal in this context.
+### Value Context
+
+This constructs a new value or tree of values.
+
+  * Non-object/non-arrays are literal values to appear in the constructed
+    result.
+  * Objects in the specification construct an object of the same properties
+    where each property value is evaluated recursively.
+  * Escaped arrays (an array within an array of one element) likewise
+    construct an array where each element of the specification is recursively
+    evaluated to generate the value for that element of the result.
+  * Other arrays represent expressions, which will be evaluated and replaced
+    with the return value of the expression.
+
+Reference expressions used in value context may only refer to paths which
+exist.  Missing path properties generate an `INVALID_TARGET` error.
+
+### Match Context
+
+This determines whether the current node has a shape compatible with the
+specification structure.  The specification structure is recursively compared
+to the structure of the current node.  When subexpressions are encountered
+within the specification structure, they evaluate in the context of the
+sub-node being matched.
+
+  * Non-object/non-arrays match when the current node is the same type and
+    compares equal per the JavaScript "===" operator.
+  * Objects match when the current node is a non-Array object and every
+    property specified recursively matches the value of the corresponding
+    property of the current node.
+  * Escaped arrays match when the current value is an array and the elements
+    recursively match.
+  * Other arrays represent expressions, which are handled specially depending
+    on their type.
+  * [Dates](#dates) get special handling for equality; see that section for
+    details.
+
+Match context has two sub-contexts:
+
+  * IS    - objects/arrays must have exactly the properties specified.
+  * HAS   - objects/arrays must have at least the properties specified.
+
+### Regex Context
+
+Since the expressions available for general structure matching have so much
+overlap with regular expressions, regexes are treated as a variant of
+general matching.  First, the subject string is broken into a virtual array of
+characters (described below), and then the match expressions are applied to
+that virtual array with the following semantic variations:
+
+  * Numbers match against the unicode code point value
+  * One-character strings match against the current character
+  * Strings with more than one character implicitly become [`SEQ`](#ex-seq)
+    expressions, matching a sequence of characters
+  * Objects, escaped-arrays, and dates in the specification generate
+   `INVALID_OEPRAND`.
+  * Implementations may choose to support host-langauge Regex objects,
+    which match from the current position and consume characters according
+    to the host-langauge's engine.  (i.e. not necessarily the longest match)
+  * Referenced subexpressions get re-interpreted according to these rules.
+
+Character matching is defined over a sequence of Unicode code point values.
+It is left to implementations or host languages to determine (or provide
+configuration for) how input strings are converted to this sequence,
+including the treatment of malformed encodings and unpaired surrogates.
+For example, an implementation might reject malformed UTF-8 or strings
+containing unpaired surrogates, replace malformed input, or expose surrogate
+code points individually. These choices are outside the JGraft specification.
+
+JGraft character classes may include surrogate code point values
+(U+D800–U+DFFF). These can only match when the host's interpretation of the
+input string exposes corresponding values in the character sequence.
+
+In some cases, only a boolean result is required, and the match ends as soon
+as the expression is satisfied.  Other cases require finding the longest
+match, and run through every possibility of the match expression to see which
+is the longest.  If an expression is constructed from only "textbook regular"
+match expressions, an implementation can compile the expression into a DFA, or
+possibly a host-language regular expression for improved performance.
+Elaborate non-regualr match expressions may be used in regex context, but can
+cause a great deal of iteration and quickly run into resource limits.
+
+### Path Context
+
+  * Non-object/non-arrays are interpreted as a single argument to a
+    [`NODE` expression](#ex-node).
+  * Arrays represent expressions, but they are restricted to path expressions,
+    and may be further restricted to specific namespaces.
+  * Objects and escaped arrays are illegal in this context.
+
+### Other Contexts
 
 Other contexts may be defined by individual actions or expressions, usually
 in terms of providing arguments to an implied expression.
@@ -204,9 +311,7 @@ that is not visible *to the expressions*.
 When a match expression directly calls another match expression, it passes a
 hidden parameter of whether the context is "IS" (full equality) or "HAS"
 (partial equality), or "REGEX" (where literals match against a virtual array
-of characters/codepoints of a string).  It also updates the current node
-relative to the structural position of the inner match expression.
-Match expressions do not alter the current node when calling functions.
+of characters/codepoints of a string).
 Further, it consumes the boolean result of the inner match expression as an
 indication of whether the match succeeded.  This differs from a match
 expression calling a function, where the function's return value would be
@@ -232,31 +337,32 @@ Name                     | Type  | ID | Description
 [NUM](#ex-num)           | Match |  9 | Match numbers, optional ranges
 [BOOL](#ex-bool)         | Match | 10 | Match booleans
 [DATE](#ex-date)         | Match | 11 | Match date-like things
-[SEQ](#ex-seq)           | Match | 12 | Match a sequence of adjacent elements
-[REP](#ex-rep)           | Match | 13 | Match repeatedly on adjacent elements
-[START](#ex-start)       | Match | 14 | Match at first element of array
-[END](#ex-end)           | Match | 15 | Match at length of array
-[CHARS](#ex-chars)       | Match | 16 | Match to a set of characters
-[CASE](#ex-case)         | Fn    |    | If/else that returns a value
-[NOT](#ex-not)           | Fn    |    | Logical NOT of value exprs
-[AND](#ex-and)           | Fn    |    | Logical AND of value exprs
-[OR](#ex-or)             | Fn    |    | Logical OR of value exprs
-[CASTBOOL](#ex-castbool) | Fn    |    | Cast value to boolean
-[CASTNUM](#ex-castnum)   | Fn    |    | Cast value to number
-[CASTSTR](#ex-caststr)   | Fn    |    | Cast value to string
-[CASTDATE](#ex-castdate) | Fn    |    | Cast value to host date
-[SPLIT](#ex-split)       | Fn    |    | Split a string into an array
-[JOIN](#ex-join)         | Fn    |    | Join array into a string
-[LESS](#ex-less)         | Fn    |    | Less-than test
-[LESSEQ](#ex-lesseq)     | Fn    |    | Less-or-equal test
-[MIN](#ex-min)           | Fn    |    | Minimum of list
-[MAX](#ex-max)           | Fn    |    | Maximum of list
-[COALESCE](#ex-coalesce) | Fn    |    | First non-null value of list
-[ADD](#ex-add)           | Fn    |    | Add numbers
-[SUB](#ex-sub)           | Fn    |    | Subtract numbers
-[MUL](#ex-mul)           | Fn    |    | Multiply numbers
-[DIV](#ex-div)           | Fn    |    | Divide numbers
-[MOD](#ex-mod)           | Fn    |    | Calculate Modulus
+[WITH](#ex-with)         | Match | 12 | Capture references into TEMP namespace
+[SEQ](#ex-seq)           | Match | 13 | Match a sequence of adjacent elements
+[REP](#ex-rep)           | Match | 14 | Match repeatedly on adjacent elements
+[START](#ex-start)       | Match | 15 | Match at first element of array
+[END](#ex-end)           | Match | 16 | Match at length of array
+[CHARS](#ex-chars)       | Match | 17 | Match to a set of characters
+[CASE](#ex-case)         | Fn    | 50 | If/else that returns a value
+[NOT](#ex-not)           | Fn    | 51 | Logical NOT of value exprs
+[AND](#ex-and)           | Fn    | 52 | Logical AND of value exprs
+[OR](#ex-or)             | Fn    | 53 | Logical OR of value exprs
+[CASTBOOL](#ex-castbool) | Fn    | 54 | Cast value to boolean
+[CASTNUM](#ex-castnum)   | Fn    | 55 | Cast value to number
+[CASTSTR](#ex-caststr)   | Fn    | 56 | Cast value to string
+[CASTDATE](#ex-castdate) | Fn    | 57 | Cast value to host date
+[SPLIT](#ex-split)       | Fn    | 58 | Split a string into an array
+[JOIN](#ex-join)         | Fn    | 59 | Join array into a string
+[LESS](#ex-less)         | Fn    | 60 | Less-than test
+[LESSEQ](#ex-lesseq)     | Fn    | 61 | Less-or-equal test
+[MIN](#ex-min)           | Fn    | 62 | Minimum of list
+[MAX](#ex-max)           | Fn    | 63 | Maximum of list
+[COALESCE](#ex-coalesce) | Fn    | 64 | First non-null value of list
+[ADD](#ex-add)           | Fn    | 65 | Add numbers
+[SUB](#ex-sub)           | Fn    | 66 | Subtract numbers
+[MUL](#ex-mul)           | Fn    | 67 | Multiply numbers
+[DIV](#ex-div)           | Fn    | 68 | Divide numbers
+[MOD](#ex-mod)           | Fn    | 69 | Calculate Modulus
 
 To quickly understand how the types interact, consider these examples:
 
@@ -272,31 +378,33 @@ is consumed as the result for whether property 'a' matched.
 
     [IS, { "a": [NONE, { "b": 1 }] }]
     // implies [IS, { "a": [NONE, [IS, {"b": 1}]] }]
+    // !deep_equals(node.a, {b:1})
 
 In this case, the outer `IS` match expression passes `node.a` as the current
 node to the `NONE` expresison with `IS` context.  The `NONE` expression tests
 whether `node.a` is not exactly identical to `{b:1}`.
 
-    [IS, { "a": [NODE, 'b'] }]
+    [IS, [NODE,"a"], [NODE,"b"] }]
     // deep_equals(node.a, node.b)
 
-A ref expression within a match expression resolves the value from the same
-current node as the outer match action, because the current node only changes
-automatically when calling a match expression.  Then the value is used in the
-match expression as a literal to match against.  This `NODE` expression
-evaluates to `node.b`, and then the `IS` expression checks whether `node.a` is
-an identical tree to `node.b`.
+The `IS` and `HAS` expressions have a 2-argument form to specify both the
+pattern and the target to match.  In this case, `node.a` becomes the current
+node, and `node.b` becomes the fully-evaluated structure to match against.
+Return values from functions cannot contain expressions; arrays are considered
+literally.
 
     [IS, { "a": [OR, false, { b: 1 }] }]
-    // node.a === ( false || node.b === 1 )
+    // node.a === true
     // probably not what was intended
 
 In this example where someone probably meant to use `ANY` instead of `OR`,
 a match expression calls a function (non-match expression) and uses the return
-value as *a value to match against*.  Additionally, because it is a function,
-the current node does not change, so `{b: 1}` refers to `node.b`, not
-`node.a.b`.
+value as *a value to match against*.  Objects are considered true, so the
+result of `OR` is true and `node.a` is compared to true.
 
+    // This doesn't work:
+    [IS, { "a": [LESS, [CASTNUM], 8] }]
+    // This does:
     [IS, { "a": [IS, [LESS, [CASTNUM], 8], true] }]
     // (parseNumber(node.a) < 8) === true
 
@@ -305,8 +413,8 @@ simply use the two-argument form of `IS` or `HAS` to compare it to `true`.
 In this case, `LESS` is not a match expression so it can't be used directly
 within the structure of the outer `IS` in the intended manner.
 The inner `IS` compares two values instead of comparing one value to the
-current node.  The inner `IS` also causes the current node to change to
-`node.a` which is used by the `CASTNUM` expression.
+current node, and the return value gets consumed as the match result because
+`IS` is a match expression.
 
 ## Fuzzy Matching
 
@@ -334,35 +442,6 @@ implementations should follow these guidelines:
 
 Future versions of this specification may specify fuzzy matching in more
 detail as common useful strategies and antipatterns emerge.
-
-## Dates
-
-Dates are a problematic domain to make a specification for.  JGraft tries to
-keep the implementation burden low, like not requiring calendar math or
-timezone tables, but applications almost certainly want some integration with
-the date objects of the host language.  Meanwhile, JSON doesn't even define
-a notation for dates.
-
-JGraft takes an approach where dates and date-time values are represented by
-temporary objects that logically exist only within the JGraft implementation.
-They are created by the [`CASTDATE` function](#ex-castdate), and any operation
-that would write them into the target tree of data automatically exports them
-to a format of the application's choosing.  In the simplest case, the
-application provides host-language date objects in the target tree of data,
-the JGraft implementation uses those same objects, and no export steps are
-required when writing them back to the data tree.  In other cases, the
-application might be parsing ISO 8601 date strings from the tree of data and
-returning them to that format as they re-enter the target data, losing any
-metadata that would differentiate it from a plain string.  JGraft dates and
-date-times may be saved into the const, stash, and temporary namespaces
-without losing their metadata.  When exported as an "undo" JGraft, dates are
-represented by a `CASTDATE` expression.
-
-JGraft dates behave mostly the same as an object having fields `year`, `month`,
-`day`, `hour`, `minute`, `second`, and `timezone`.  However, they may be
-compared by the `LESS`, `LESSEQ`, `MIN`, and `MAX` expressions without an
-error.  JGraft dates are immutable; new values can be created by passing an
-argument list to `CASTDATE`.
 
 ## Errors
 
@@ -476,40 +555,49 @@ The algorithm when beginning a `JGRAFT` action is roughly:
         expresison that invokes it.
   - Set the `stash` namespace to a new empty object.
 
-### AT
+### <span id="act-at">AT</span>
 
     ['AT', path, subaction1, subaction2...]
+
+Change the current node to a sub-node.
 
 Navigate to a [path](#paths) within the current node, then execute all
 sub-actions with that node as the current node.  The path must exist or the
 graft operation fails with `INVALID_TARGET`.  The current node for an action
 may never reference data outside the input tree, so `path` is limited to `NODE`
-expressions.
+expressions.  The change to the current node is only visible within the scope
+of this action.
 
-### MATCH
+### <span id="act-match">MATCH</span>
 
     ['MATCH', match_spec, subaction1, subaction2...]
 
-Assert that the current node matches a [match specification](#contexts),
-then execute all sub-actions in sequence.  If it doesn't match, the graft
-operation will fail with `NO_MATCH`, unless the user has enabled
-[fuzzy matching](#fuzzy-matching) in which case the engine looks for nearby
-potential matches.  If a fuzzy match is successful, the alterations to the
-paths described in `match_spec` are likewise applied during all sub-actions.
+Execute actions on a node having the intended shape.
+
+Assert that the current node matches a [match specification](#match-context),
+then execute all sub-actions in sequence.  If it doesn't match (or throws an
+`INVALID_OPERAND` or `INVALID_TARGET`) the graft operation will fail with
+`NO_MATCH`, unless the user has enabled [fuzzy matching](#fuzzy-matching) in
+which case the engine looks for nearby potential matches.
+If a fuzzy match is successful, the alterations to the paths described in
+`match_spec` are likewise applied during all sub-actions.
 This is analogous to how unix `patch` applies "hunk at offset" by first
 searching for the matching lines then continuing as if they'd been specified
 for that location.
 
-### IF
+### <span id="act-if">IF</span>
 
     ['IF', match_spec1, action, else_action]
     ['IF', match_spec1, action1, match_spec2, action2... else_action]
 
-For each pair of (`match_spec`,`action`), test whether the current node
-matches.  If so, apply the action, else continue to the next pair.
+Conditionally apply actions.
+
+For each pair of (`match_spec`,`action`) processed in sequence, test whether
+the current node matches `match_spec`.  If so, apply the action and stop,
+else continue to the next pair.
 If the list ends with a single element, it is treated as an "else" action.
 Lacking an "else" action, the `IF` action completes successfully even if
-no sub-action was performed.  If the sub-action aborts with an error, the
+no sub-action was performed.  If the sub-action fails with an error, the
 `IF` action likewise fails.
 
 `IF` uses the same [fuzzy matching mechanism](#fuzzy-matching) as `MATCH`.
@@ -518,27 +606,27 @@ statement *without* additional fuzzy match alterations before trying them all
 again with fuzzy searching enabled.  Alterations inherited from a fuzzy match
 at a parent action will still be applied to both attempts.
 
-### COPY
+### <span id="act-copy">COPY</span>
 
     ['COPY', val_expr, path, val_expr1, path2, ...]
 
-For each pair of (`val_expr`, `path`), resolve any expressions in the value
-using by-value semantics, and then assign the resulting scalar or tree to the
-specified path.  `val_expr` is defined in "value context", and `path` is
-defined in "path context".  Each pair sees the effects of the previous
-assignment.
+Construct/clone values and assign them to paths.
+
+For each pair of (`val_expr`, `path`), resolve any expressions in `val_expr`
+(specified in [value context](#value-context)) then assign the resulting scalar
+or tree to the `path` (specified in [path context](#path-context)).
+Each pair sees the effects of the previous assignment.
 
 Reference expressions in the `val_expr` must exist, or the graft fails with
 `INVALID_TARGET`.  However, objects along the property path being assigned will
 be auto-vivified if they don't exist, but the action fails with `INVALID_TARGET`
-if it would need to convert a scalar, object, or array to an opposing type.
+if it would need to convert a scalar, object, or array to a different type.
 Recall that arrays are implied when an object path contains a number, and
 objects are implied when the path contains a string.
 To prevent inappropriate creation of sub-objects, use a containing `MATCH`
 directive that asserts the presence or absence of the structure as desired.
-Assigning to (or a path through) an array element greater than `length+1` does
-not auto-vivify and fails with `INVALID_TARGET`.
-(unlike JavaScript which would permit this)
+Unlike in JavaScript, assigning to (or a path through) an array element greater
+than `length+1` does not auto-vivify and fails with `INVALID_TARGET`.
 
 Examples:
 
@@ -559,7 +647,7 @@ Examples:
     ['COPY', [NODE,'b'], [STASH,0]]      // jgraft.stash['0']= clone(node.b);
     ['COPY', [CONST,'big_data'], 'b']    // node.b= clone(jgraft.const.big_data);
 
-### MOVE
+### <span id="act-move">MOVE</span>
 
     ['MOVE', src_path1, dst_path1]
     ['MOVE', src_path1, dst_path1, src_path2, dst_path2...]
@@ -567,25 +655,25 @@ Examples:
 Relocate subtrees from a source property to a destination property without
 copying them.
 
-For each pair of (`src_path`,`dst_path`), processed in sequence, set the
+For each pair of (`src_path`,`dst_path`) processed in sequence, set the
 destination to refer to the value of the source, then delete the leaf source
 property from its container.  The `src_path` must refer to a property that
 exists, and it is an error for `dst_path` to pass through the node the source
 path deleted from the tree, though it is not an error to arrive at the
 identical node to the source (essentially a no-op).
-`src_path` and `dst_path` are both "path context" with the exception that
-a literal `null` may be used as `src_path` to write a literal `null` to
-`dst_path` (which lets you preserve the existence of a property that would
-otherwise get deleted without needing a followup `COPY` action to fix it)
-or as `dst_path` as a way of requesting deletion of the property without
-preserving the value anywhere.
+`src_path` and `dst_path` are both [path context](#path-context) with the
+exception that a literal `null` may be used as `src_path` to write a literal
+`null` value to `dst_path` (which lets you preserve the existence of a
+property that would otherwise get deleted without needing a followup `COPY`
+action to fix it) or as `dst_path` as a way of requesting deletion of the
+property without preserving the value anywhere.
 
 When the source property is an element of an array, the deletion of the
 element implies that following elements will be shifted up to fill the gap.
 However, this shifting does not occur until after all pairs have been processed.
 Until then, the array element is made inaccessible to source paths, though a
-new value may be written into it, cancelling the deletion for that element.
-The queued deletions (along with the aspect of being inaccessible to source
+new value may be written into it which cancels the deletion for that element.
+The queued deletions (along with the metadata of being inaccessible to source
 paths) bind to the instance of the array, following it even if it moves to a
 different namespace.
 
@@ -616,15 +704,15 @@ Index  | Behavior
  0.5   | Queue insertion between 0 and 1
  1     | Overwrite element 1
  1.5   | Queue insertion after element 1 and before a potential element 2
- 2.5   | Fail with `INVALID_TARGET`, unless after defining element 2
  2     | Append immediately as element 2
+ 2.5   | Fail with `INVALID_TARGET`
  false | Append immediately as element 2
  -1    | Overwrite element 1
  -1.5  | Queue insertion at `0.5`
  -2    | Overwrite element 0
  -2.5  | Queue insertion at `-0.5`
- -3    | Fail with `INVALID_TARGET`, unless after defining element 2
- -3.5  | Fail with `INVALID_TARGET`, unless after defining element 2
+ -3    | Fail with `INVALID_TARGET`
+ -3.5  | Fail with `INVALID_TARGET`
 
 At the end of the `MOVE` action, every array instance where an insertion or
 deletion was queued gets conceptually rebuilt from the list of remaining
@@ -677,44 +765,45 @@ Examples:
             [TEMP,0],'x']]           // node.x= tmp['0'];
                                      // delete tmp['0'];
 
-### SPLICE
+### <span id="act-splice">SPLICE</span>
 
-    ['SPLICE', offset, count, replacement1, replacement2...]
+    ['SPLICE', array_elem_path, count, replacement1, replacement2...]
 
 Replace a span of an array, just like the splice function found in most
-programming languages.  The current node must be an array or the graft fails
-with `INVALID_TARGET`.  `offset` may be `false` as an alias for the length of
-the array, or negative to count backward from the end of the array where -1
-is the final element, but the resulting index must be within `[0..length]` or
-the graft fails with `INVALID_TARGET`.
-`count` is the number of elements to repalce.  Negative numbers are aliases
-for the count that would end just before element `length-N`, and `null` is an
-alias for `length-offset`.  The resulting count must be within
-`[0..length-offset]`.
+programming languages.  The `array_elem_path` must resolve to an element of
+an array (or to one-beyond-the-end insertion point of an array) or the graft
+fails with `INVALID_TARGET`.  `count` is the number of elements to repalce.
+Negative numbers are aliases for the count that would end just before element
+`length-N`, and `null` is an alias for `length-offset`.  The resulting count
+must be within `[0..length-offset]`.
 
-The replacement values (which may be paths) use the same specification as the
-values of the [`ASSIGN` action](#assign), and the copy-by-value semantics of
-the `ASSIGN` action with the exception that implementations may re-use trees
-from the deleted portion of the array if only one reference is preserved.
-All replacement values are resolved before starting the splice operation.
+The replacements are evaluated in [value context](#value-context).  If they
+contain reference expressions the nodes get deep-cloned as per the `COPY`
+action, but implementations may optimize this if they can determine that the
+reference will be the only remaining reference to a subtree of one of the
+array elements being deleted.  All replacement values are resolved before
+making any alteration to the target array.
 
-### SPLIT
+### <span id="act-split">SPLIT</span>
 
     ['SPLIT', split_spec, subaction1, subaction2...]
+
+Execute actions within a temporary array of substrings.
 
 This can only be applied at a string node, or it fails with `INVALID_TARGET`.
 It splits the string according to `split_spec` to create an array, then runs
 each sub-action on that array, then re-assembles the string from the elements
-of the array.  The separator and any trimmed characters are preserved to use
+of the array.  The separators and any trimmed characters are preserved to use
 when re-assembling the string; the generated array carries them as hidden
 metadata.  Actions that modify the array also modify the metadata in parallel
 as described below.
 
-The `split_spec` may be a simple string used as a verbatim separator, or it may
-be an object with a more elaborate specification:
+The `split_spec` may be a simple string used as a verbatim separator, a match
+expression to be evaluated in [regex longest-match context](#regex-context),
+or an object with a more elaborate specification:
 
     {"sep": ...,        // A string or regex to split on
-     "element": ...,    // A regex that must match prior to checking 'sep'
+     "element": ...,    // A regex that must match prior to testing for 'sep'
      "default": ...,    // The default separator used for joining new elements
      "keep": ...,       // Preserve the separator within the generated array
      "ltrim": ...,      // A string or regex to trim from start of elements
@@ -723,19 +812,15 @@ be an object with a more elaborate specification:
      "discard": bool,   // Don't preserve trimmed chars when re-assembling
     }
 
-Regular expressions are specified using either a host Regex object, or in the
-[portable JSON array notation](#regex) specified below.  The split operation
-iterates through the characters of the string looking for a match, and notes
-how many characters matched.  (When using the portable regular expressions,
-this will always be the longest match, but host language regex objects may
-behave differently and vary between versions of the host language)
-If you specify an `element` regex, a test for separator will only match when
-the element characters (from the end of the previous separator until the
-current match position) also match the `element` regex.   The `element` regex
-is implicitly anchored to the start and end of the element characters.
+The split operation iterates through the characters of the string looking for
+[the longest match](#regex-context) of the separator pattern.  If you specify
+an `element` regex, a test for separator will only match when the element
+characters (from the end of the previous separator until the current match
+position) also match the `element` pattern.   The `element` pattern is
+implicitly anchored to the start and end of the element characters.
 This gives you a way to pass over escape sequences without accidentally
-detecting a separator, and without adding the complexity of "look-behind" or
-"look-ahead" or capture groups to the portable regexes.
+detecting a separator, and without requiring the complexity of "look-behind"
+or "look-ahead" or capture groups in the separator pattern.
 
 A zero-length separator (including a successful zero-length regex match)
 is considered to match at every boundary between characters except the one
@@ -750,9 +835,8 @@ For example, the pattern `/a*/` applied to the string "baabca" results in:
 
     ['b', 'b',  'c', '']
 
-(Note that implementations may place limits on the resources consumed by a
-JGraft, and splitting a string into an array of individual characters is a
-quick way to reach those limits.)
+(Note that splitting a string into an array of individual characters is a
+quick way to reach a `RESOURCE_LIMIT` error)
 
 Once a separator is found, it uses the value of `keep` to determine what to do
 with it.  The default is to hide the separator from the resulting array but
@@ -777,7 +861,7 @@ If you want to permanently remove the trimmed characters, use `discard: true`.
 
 If the separators are not added to the array using `keep` they are stored in
 a parallel array of metadata associated with the array.  Likewise, trimmed
-characters are stored there.  As actions like `ASSIGN`, `MOVE`, and `SPLICE`
+characters are stored there.  As actions like `COPY`, `MOVE`, and `SPLICE`
 process the array, assignments from one element of the array to another carry
 the separator and trimmings to the new element.  Assignments of values from
 any other source (constants, a different array, etc) do not carry this
@@ -793,9 +877,7 @@ not used; if `sep` is a string then it also implies `default` and if `keep`
 is used then separators are not relevant to the join operation.
 
 Once all actions have been applied to the array, it gets reassembled into a
-string.  Each element must be a string, or it fails with `INVALID_TARGET`.
-(a particularly generous implementation might detect whether the non-string
-came unconditionally from the graft itself and report `INVALID_GRAFT` instead)
+string.  Each element must be a string, or it fails with `INVALID_OPERAND`.
 Each element gets any hidden trimmed characters re-added, and any hidden
 separator is appended only if there is a following element.  In order to get a
 "newline at the end of the file" the final element of the array needs to be an
@@ -820,7 +902,7 @@ This is the primary tool used to re-implement text diff/patch behavior:
       ],
     ]
 
-### LOG
+### <span id="act-log">LOG</span>
 
     ['LOG', level, message]
     ['LOG', level, message, data]
@@ -842,53 +924,27 @@ String | ID | Meaning
 "warn" |  1 | flagged for the user even if they didn't ask for details
 "fail" |  2 | a fatal error that ends the graft attempt with `NO_MATCH`
 
-`message` may be a literal string, or an array containing a path relative to
-the `const` namespace which resolves to a string.  The string should be
-generally printable, and may not contain unicode Surrogates, Noncharacters,
-or control characters (codepoints 0x00–0x1F and 0x80–0x9F).
+`message` is evaluated in [value context](#value-context).  It must resolve
+to a string and should be generally printable, and may not contain unicode
+Surrogates, Noncharacters, or control characters (codepoints 0x00–0x1F and
+0x80–0x9F).
 
-`data` is an optional literal value or path with the same rules as described
-for values in the `ASSIGN` action.  It provides data to the user relevant to
-the message.  This may be shown to the user in some form such as JSON, or
-inspected programmatically by code using a JGraft library.  If you want to
-provide multiple pieces of data you may first assemble an object structured
-as you like using an `ASSIGN` action to write to the `stash` namespace, and
-then reference that object in this action.  If the data is not being consumed
-immediately, implementations ensure it remains stable, such as deep-cloning
-it or setting up copy-on-write.  This is already handled if the standard
-operation of the engine is to shallow-clone the ancestors of each change.
+`data` is also evaluated in [value context](#value-context) but may resolve
+to any type of value.  It provides data to the user relevant to the message.
+This may be shown to the user in some form such as JSON, or inspected
+programmatically by code using a JGraft library.
+If the data is not being consumed immediately, implementations should ensure
+that it remains stable, such as deep-cloning it or setting up copy-on-write.
+This is already handled if the standard operation of the engine is to
+shallow-clone the ancestors of each change.
 
-## <span id="matching">Context Matching</span>
+## Expressions
 
-JGraft provides a rich collection of match specifications.  The matching
-system has its own collection of match functions specified as lisp-style
-arrays where the first element is a function name and the remaining elements
-are passed as arguments to that function, but scalars, objects, and array
-literals (specified using an array of one array) are used as shorthand for
-the `HAS` and `IS` functions.  `HAS` requires only specified properties to
-exist in the current node; `IS` requires that all properties match between
-the specification and current node.  `HAS` and `IS` establish a scope for
-how child nodes are interpreted.
+### Reference Expressions
 
-The following functions all implicitly operate on the current node and return
-a boolean of whether the current node passes the test:
+### Match Expressions
 
- Name      | ID | Description
------------|----|----------------------------------------------------------
- HAS       | 3  | Switch to partial matching
- IS        | 4  | Switch to exact matching
- NOT       | 0  | None of the conditions match at current node
- OR        | 1  | At least one condition matches at current node
- AND       | 2  | All conditions match at current node
- EXISTS    | 5  | Current node exists (including `null` values)
- BOOL      | 10 | Match any boolean
- NUM       | 11 | Match any number, or restricted range of numbers
- INT       | 8  | Match any integer, or restricted range of integers
- STR       | 7  | Match any string, or strings restricted by a regex
- ARRAY     | 9  | Match any array, or array with specified sub-range
- SPLIT     | 6  | Split a string to match against the resulting array
-
-### HAS
+#### <span id="ex-has">HAS</span>
 
     null                                node === null
     0                                   node === 0
