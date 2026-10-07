@@ -85,9 +85,16 @@ properties of "year", "month" and "day", according to the rules of the
 Gregorian calendar and represented in their natural 1-based format.
 `datetime` additionaly has "hour", "minute" and "second" virtual properties,
 where `second` may be fractional to any numeric precision allowed by JSON and
-may also be a leap-second value (60).
+may also be a leap-second value (0 <= second < 61).  Implementations don't
+need to check whether a leap second was historically valid; just preserve the
+field and compare it last during lessthan tests.  Implementations may need to
+hold the `second` value in a special object field if the host date objects
+don't support leap seconds or arbitrary precision.  JGraft instances should
+generally avoid *creating* datetimes with leap seconds, as they can't be
+exported in some host language encironments.
 `timestamp` additionally has a `tz_offset` virtual property, which is a number
-of minutes offset from UTC.
+of minutes offset from UTC.  `timestamp` references a specific point in time,
+and can be compared with timestamps from differing timezone offsets.
 
 Since each of these is a different type, the usual rules apply when testing
 them: dissimilar types cannot "match" in a match expression, and the `LESS`,
@@ -121,7 +128,7 @@ Several actions and expressions use the concept of a "path".  A path is a
 list of object properties, array indices, or aliases that descend into the tree
 of a namespace.
 
-In general, strings may only refer to object properties and numbers may only
+In general, strings may only refer to object properties and integers may only
 refer to array elements.  This is particularly important when auto-vivifying a
 path; integers will create arrays and strings will create objects.
 However, the `CONST`, `EXPR`, `STASH` and `TEMP` namespaces permit a leading
@@ -136,11 +143,15 @@ This position immediately after the final element may not be read, because no
 element exists there, but it may be written to append to the array.
 (`-0` would be the ideal alias, but too many languages drop that distinction
 when decoding JSON)  The values `null` and `true` may not appear in paths.
+Certain actions may extend path syntax for particular arguments; MOVE permits
+a half-integer as the final destination selector.  A unspecified or illegal
+type of literal value appearing in a path raises an `INVALID_GRAFT` error.
 
 Paths always navigate deeper into the tree and have no concept of "up a level"
 like a filesystem's `..` convention.  A path element *may* be another
 expression which evaluates to become the name or number or alias of a
-property.
+property; the computed value must conform to the same rules as literal path
+elements or it results in `INVALID_OPERAND`.
 
 ## Contexts
 
@@ -150,7 +161,8 @@ meaning to simpler JSON structures.
 
 ### Value Context
 
-This constructs a new value or tree of values.
+This constructs a new value or tree of values from a specification which is
+a mixture of structure and expressions.
 
   * Non-object/non-arrays are literal values to appear in the constructed
     result.
@@ -165,16 +177,23 @@ This constructs a new value or tree of values.
 Reference expressions used in value context may only refer to paths which
 exist.  Missing path properties generate an `INVALID_TARGET` error.
 
+The constructed value is logically a new tree, however implementations may
+re-use existing tree fragments so long as they can ensure that the result is
+not used in a way that could degrade the target data tree to a graph.
+Doing so likely involves a sub-context flag to indicate whether it is
+being stored in a mutable namespace or just referenced immutably.
+
 ### Match Context
 
 This determines whether the current node has a shape compatible with the
 specification structure.  The specification structure is recursively compared
-to the structure of the current node.  When subexpressions are encountered
-within the specification structure, they evaluate in the context of the
-sub-node being matched.
+to the structure of the current node.  As structural matching descends through
+objects or arrays, the current node is temporarily rebound to the
+corresponding target sub-node.  This rebinding applies to all expressions
+evaluated at that position, including functions and reference expressions.
 
   * Non-object/non-arrays match when the current node is the same type and
-    compares equal per the JavaScript "===" operator.
+    compares equal (defined below).
   * Objects match when the current node is a non-Array object and every
     property specified recursively matches the value of the corresponding
     property of the current node.
@@ -184,6 +203,15 @@ sub-node being matched.
     on their type.
   * [Dates](#dates) get special handling for equality; see that section for
     details.
+
+Scalar equality is defined as:
+  * `null`, `true`, and `false` are equal only to themselves.
+  * Numbers compare using the implementation's native representation of JSON
+    numbers after decoding.  JGraft does not specify behavior related to
+    floating point roundoff; see the [`NUM` expression](#ex-num) for a quick
+    way of checking whether a value is within a range.
+  * Strings compare codepoint-to-codepoint, though implementations may be
+    configurable in determining how an array of codepoints is generated.
 
 Match context has two sub-contexts:
 
@@ -203,11 +231,14 @@ that virtual array with the following semantic variations:
   * Strings with more than one character implicitly become [`SEQ`](#ex-seq)
     expressions, matching a sequence of characters
   * Objects, escaped-arrays, and dates in the specification generate
-   `INVALID_OEPRAND`.
+   `INVALID_OPERAND`.
   * Implementations may choose to support host-langauge Regex objects,
     which match from the current position and consume characters according
     to the host-langauge's engine.  (i.e. not necessarily the longest match)
-  * Referenced subexpressions get re-interpreted according to these rules.
+    Since the length of the match depends on the regex engine, this is also
+    very non-portable.
+  * Referenced subexpressions (via [`EXPR` expression](#ex-expr) )
+    get re-interpreted according to these rules.
 
 Character matching is defined over a sequence of Unicode code point values.
 It is left to implementations or host languages to determine (or provide
@@ -337,7 +368,7 @@ Name                     | Type  | ID | Description
 [NUM](#ex-num)           | Match |  9 | Match numbers, optional ranges
 [BOOL](#ex-bool)         | Match | 10 | Match booleans
 [DATE](#ex-date)         | Match | 11 | Match date-like things
-[WITH](#ex-with)         | Match | 12 | Capture references into TEMP namespace
+[WITH](#ex-with)         | Match | 12 | Scoped overrides to TEMP namespace
 [SEQ](#ex-seq)           | Match | 13 | Match a sequence of adjacent elements
 [REP](#ex-rep)           | Match | 14 | Match repeatedly on adjacent elements
 [START](#ex-start)       | Match | 15 | Match at first element of array
@@ -511,7 +542,7 @@ The following properties are currently defined:
   - writer: a string identifying the tool that authored the structure
   - comment: a free-form text comment string
   - const: an array declaring constants
-  - expr: an array declaring common expressions
+  - expr: an array declaring value context macros
 
 When exported to JSON, outer metadata should contain `v` (minimum version
 to correctly process the structure), and it should be at least as high as
@@ -538,17 +569,18 @@ The algorithm when beginning a `JGRAFT` action is roughly:
     - For each (`name`,`val_expr`) pair of elements in the `const` array,
       - `name` must be a single property string, or integer (which gets
         coerced to a string)
-      - `val_expr` may be a value or expression.
+      - `val_expr` may be a [value or expression](#value-context).
       - Set property `const[name]` to the value, after evaluating any
         expressions within.  `CONST` expressions evaluate according to the
         `const` namespace in its current state before this assignment. `STASH`
         expressions still refer to the parent scope's stash, if one exists.
   - If the metadata contains an `expr` property,
-    - Set the `expr` namespace to a shallow clone of the parent `expr` namespace
-    - For each (`name`,`expr`) pair of elements in the `expr` array,
+    - Set the `expr` namespace to a shallow clone of the parent `expr`
+      namespace, or empty object at the root.
+    - For each (`name`,`val_expr`) pair of elements in the `expr` array,
       - `name` must be a single property string, or integer (which gets
         coerced to a string)
-      - `expr` is anything valid for "value construction context"
+      - `val_expr` may be a [value or expression](#value-context).
       - Set property `expr[name]` to the value-construction structure *without*
         evaluating any of it.  In other words, it captures no context and paths
         like `NODE` or `TEMP` will be interpreted in the context of the `EXPR`
@@ -626,7 +658,7 @@ objects are implied when the path contains a string.
 To prevent inappropriate creation of sub-objects, use a containing `MATCH`
 directive that asserts the presence or absence of the structure as desired.
 Unlike in JavaScript, assigning to (or a path through) an array element greater
-than `length+1` does not auto-vivify and fails with `INVALID_TARGET`.
+than `length` does not auto-vivify and fails with `INVALID_TARGET`.
 
 Examples:
 
@@ -634,7 +666,7 @@ Examples:
     ['COPY', 5, [NODE, 0,'x']]           // node[0].x= 5;
     ['COPY', 6, [NODE, -1,'x']]          // node[node.length-1].x= 6;
     ['COPY', {x:6}, false]               // node[node.length]= { x: 6 };
-    ['COPY', ['b',0], [NODE, 'a',4]]     // node.b[0]= clone(node.a[4]);
+    ['COPY', [NODE,'a',4], [NODE,'b',0]] // node.b[0]= clone(node.a[4]);
     ['COPY', null, 'a']                  // node['a']= null;
     ['COPY', [NODE], 'a']                // node['a']= clone(node);
     ['COPY', [[1,2,3]], 'a']             // node.a= [1,2,3];
@@ -655,12 +687,15 @@ Examples:
 Relocate subtrees from a source property to a destination property without
 copying them.
 
-For each pair of (`src_path`,`dst_path`) processed in sequence, set the
-destination to refer to the value of the source, then delete the leaf source
-property from its container.  The `src_path` must refer to a property that
-exists, and it is an error for `dst_path` to pass through the node the source
-path deleted from the tree, though it is not an error to arrive at the
-identical node to the source (essentially a no-op).
+For each pair of (`src_path`,`dst_path`) processed in sequence, find the value
+of the source property, delete the leaf source property from its container,
+and then set the destination to refer to that value.
+The `src_path` must refer to a property that exists, and the `dst_path` must
+be validated to be conflict-free (with respect to auto-vivification) before
+any alteration to the target data is performed.  It is permitted to delete a
+source property and then immediately auto-vivify through that same property
+to create the destination.  If `src_path` and `dst_path` are the same, the
+pair are essentially a no-op.
 `src_path` and `dst_path` are both [path context](#path-context) with the
 exception that a literal `null` may be used as `src_path` to write a literal
 `null` value to `dst_path` (which lets you preserve the existence of a
@@ -675,7 +710,9 @@ Until then, the array element is made inaccessible to source paths, though a
 new value may be written into it which cancels the deletion for that element.
 The queued deletions (along with the metadata of being inaccessible to source
 paths) bind to the instance of the array, following it even if it moves to a
-different namespace.
+different namespace.  Implementations need to also consider that the array
+can get implicitly deleted from the tree if an ancestor node is overwritten or
+deleted.
 
 A second special case for arrays is that the final element of a path ending
 within an array may refer to a "half index" of the array, like 1.5.
@@ -941,6 +978,59 @@ shallow-clone the ancestors of each change.
 ## Expressions
 
 ### Reference Expressions
+
+#### <span id="ex-expr">EXPR</span>
+
+    [EXPR, name]
+
+Reference a pre-defined expression.
+
+The common expression namespace is populated by the [`JGRAFT` action](#act-jgraft).
+It is a flat namespace, so referencing one of the expressions uses only a
+single name rather than a path.  The other expression will be used as if it
+had been specified in place of this `EXPR` expression.  It is possible to
+set up infinite recursion using EXPR references, but likely to quickly run
+into `RESOURCE_LIMIT` errors.  Implementations are not expected to optimize
+tail-calls like a functional language would.
+
+#### <span id="ex-temp">TEMP</span>
+
+    [TEMP, path...]
+
+Reference data from the temporary namespace.
+
+The temporary namespace is local to the current action and may be further
+localized to the enclosing [`WITH` expression](#ex-with).
+If the first element of `path` is an integer, it will be coerced to a string.
+
+#### <span id="ex-stash">STASH</span>
+
+    [STASH, path...]
+
+Reference data from the stash namespace.
+
+The stash namespace is reset by every [`JGRAFT` action](#act-jgraft), and can
+receive data from `MOVE` and `COPY` actions which is shared with other actions
+until the end of the enclosing `JGRAFT` scope.
+If the first element of `path` is an integer, it will be coerced to a string.
+
+#### <span id="ex-const">CONST</span>
+
+    [CONST, path...]
+
+Reference data from the const namespace.
+
+The const namespace can only be initialized during a [`JGRAFT` action](#act-jgraft).
+If the first element of `path` is an integer, it will be coerced to a string.
+
+#### <span id="ex-node">NODE</span>
+
+    [NODE]           // the current node itself
+    [NODE, path...]  // data within the current node
+
+Reference data relative to the current node.
+
+The path may be empty to reference the current node itself.
 
 ### Match Expressions
 
