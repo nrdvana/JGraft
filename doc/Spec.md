@@ -56,7 +56,86 @@ direct "arrays-are-special" representation of JGraft.
 The remainder of this specification uses the JSON form of actions and
 expressions, since the object model of a host language is left unspecified.
 
-## Dates
+### Contexts
+
+Every action and expression declares the context of each of its arguments.
+Contexts help reduce the verbosity of the encoding by giving more complex
+meaning to simpler JSON structures.
+
+#### Value Context
+
+This constructs a new value or tree of values from a specification which is
+a mixture of structure and expressions.
+
+  * Non-object/non-arrays are literal values to appear in the constructed
+    result.
+  * Objects in the specification construct an object of the same properties
+    where each property value is evaluated recursively.
+  * Escaped arrays (an array within an array of one element) likewise
+    construct an array where each element of the specification is recursively
+    evaluated to generate the value for that element of the result.
+  * Other arrays represent expressions, which will be evaluated and replaced
+    with the return value of the expression.
+
+Reference expressions used in value context may only refer to paths which
+exist.  Missing path properties generate an `INVALID_TARGET` error.
+
+The constructed value is logically a new tree, however implementations may
+re-use existing tree fragments so long as they can ensure that the result is
+not used in a way that could degrade the target data tree to a graph.
+Doing so likely involves a sub-context flag to indicate whether it is
+being stored in a mutable namespace or just referenced immutably.
+
+#### Match Context
+
+This determines whether the current node has a shape compatible with the
+specification structure.
+
+  * Non-object/non-arrays describe literal values to be compared for equality
+    with the target.
+  * Objects and escaped arrays are considered structure to be matched.
+  * Other arrays represent expressions, which are handled specially depending
+    on their type.  Match expressions become part of the matching algorithm,
+    while all other expression types evaluate to a plain value and then use
+    the value as structure to match against.
+
+The section [Non-Regex Matching](#non-regex-matching) describes the process in
+detail.
+
+#### Regex Context
+
+Regular expressions are implemented using mostly the same specification
+structure as general matching, but operating on a virtual array of characters.
+
+  * One-character strings describe characters
+  * Strings with more than one character implicitly become [`SEQ`](#ex-seq)
+    expressions, matching a sequence of characters
+  * Numbers describe unicode codepoints
+  * Objects, escaped-arrays, and dates in the specification generate
+   `INVALID_OPERAND`.
+  * Referenced subexpressions (via [`EXPR`](#ex-expr) ) get re-interpreted
+    according to these rules.
+
+The section [Regex Matching](#regex-matching) describes the process in
+detail.
+
+#### Path Context
+
+[Paths](#paths) are used to refer to data within one of the
+[namespaces](#namespaces), and may be used for reading or writing.
+
+  * Non-object/non-arrays are interpreted as a single argument to a
+    [`NODE` expression](#ex-node).
+  * Arrays represent expressions, but they are restricted to path expressions,
+    and may be further restricted to specific namespaces.
+  * Objects and escaped arrays are illegal in this context.
+
+#### Other Contexts
+
+Other contexts may be defined by individual actions or expressions, usually
+in terms of providing arguments to an implied expression.
+
+### Dates
 
 Dates are a problematic domain to make a specification for.  JGraft tries to
 keep the implementation burden low, like not requiring timezone tables, but
@@ -153,127 +232,6 @@ expression which evaluates to become the name or number or alias of a
 property; the computed value must conform to the same rules as literal path
 elements or it results in `INVALID_OPERAND`.
 
-## Contexts
-
-Every action and expression declares the context of each of its arguments.
-Contexts help reduce the verbosity of the encoding by giving more complex
-meaning to simpler JSON structures.
-
-### Value Context
-
-This constructs a new value or tree of values from a specification which is
-a mixture of structure and expressions.
-
-  * Non-object/non-arrays are literal values to appear in the constructed
-    result.
-  * Objects in the specification construct an object of the same properties
-    where each property value is evaluated recursively.
-  * Escaped arrays (an array within an array of one element) likewise
-    construct an array where each element of the specification is recursively
-    evaluated to generate the value for that element of the result.
-  * Other arrays represent expressions, which will be evaluated and replaced
-    with the return value of the expression.
-
-Reference expressions used in value context may only refer to paths which
-exist.  Missing path properties generate an `INVALID_TARGET` error.
-
-The constructed value is logically a new tree, however implementations may
-re-use existing tree fragments so long as they can ensure that the result is
-not used in a way that could degrade the target data tree to a graph.
-Doing so likely involves a sub-context flag to indicate whether it is
-being stored in a mutable namespace or just referenced immutably.
-
-### Match Context
-
-This determines whether the current node has a shape compatible with the
-specification structure.  The specification structure is recursively compared
-to the structure of the current node.  As structural matching descends through
-objects or arrays, the current node is temporarily rebound to the
-corresponding target sub-node.  This rebinding applies to all expressions
-evaluated at that position, including functions and reference expressions.
-
-  * Non-object/non-arrays match when the current node is the same type and
-    compares equal (defined below).
-  * Objects match when the current node is a non-Array object and every
-    property specified recursively matches the value of the corresponding
-    property of the current node.
-  * Escaped arrays match when the current value is an array and the elements
-    recursively match.
-  * Other arrays represent expressions, which are handled specially depending
-    on their type.
-  * [Dates](#dates) get special handling for equality; see that section for
-    details.
-
-Scalar equality is defined as:
-  * `null`, `true`, and `false` are equal only to themselves.
-  * Numbers compare using the implementation's native representation of JSON
-    numbers after decoding.  JGraft does not specify behavior related to
-    floating point roundoff; see the [`NUM` expression](#ex-num) for a quick
-    way of checking whether a value is within a range.
-  * Strings compare codepoint-to-codepoint, though implementations may be
-    configurable in determining how an array of codepoints is generated.
-
-Match context has two sub-contexts:
-
-  * IS    - objects/arrays must have exactly the properties specified.
-  * HAS   - objects/arrays must have at least the properties specified.
-
-### Regex Context
-
-Since the expressions available for general structure matching have so much
-overlap with regular expressions, regexes are treated as a variant of
-general matching.  First, the subject string is broken into a virtual array of
-characters (described below), and then the match expressions are applied to
-that virtual array with the following semantic variations:
-
-  * Numbers match against the unicode code point value
-  * One-character strings match against the current character
-  * Strings with more than one character implicitly become [`SEQ`](#ex-seq)
-    expressions, matching a sequence of characters
-  * Objects, escaped-arrays, and dates in the specification generate
-   `INVALID_OPERAND`.
-  * Implementations may choose to support host-langauge Regex objects,
-    which match from the current position and consume characters according
-    to the host-langauge's engine.  (i.e. not necessarily the longest match)
-    Since the length of the match depends on the regex engine, this is also
-    very non-portable.
-  * Referenced subexpressions (via [`EXPR` expression](#ex-expr) )
-    get re-interpreted according to these rules.
-
-Character matching is defined over a sequence of Unicode code point values.
-It is left to implementations or host languages to determine (or provide
-configuration for) how input strings are converted to this sequence,
-including the treatment of malformed encodings and unpaired surrogates.
-For example, an implementation might reject malformed UTF-8 or strings
-containing unpaired surrogates, replace malformed input, or expose surrogate
-code points individually. These choices are outside the JGraft specification.
-
-JGraft character classes may include surrogate code point values
-(U+D800–U+DFFF). These can only match when the host's interpretation of the
-input string exposes corresponding values in the character sequence.
-
-In some cases, only a boolean result is required, and the match ends as soon
-as the expression is satisfied.  Other cases require finding the longest
-match, and run through every possibility of the match expression to see which
-is the longest.  If an expression is constructed from only "textbook regular"
-match expressions, an implementation can compile the expression into a DFA, or
-possibly a host-language regular expression for improved performance.
-Elaborate non-regualr match expressions may be used in regex context, but can
-cause a great deal of iteration and quickly run into resource limits.
-
-### Path Context
-
-  * Non-object/non-arrays are interpreted as a single argument to a
-    [`NODE` expression](#ex-node).
-  * Arrays represent expressions, but they are restricted to path expressions,
-    and may be further restricted to specific namespaces.
-  * Objects and escaped arrays are illegal in this context.
-
-### Other Contexts
-
-Other contexts may be defined by individual actions or expressions, usually
-in terms of providing arguments to an implied expression.
-
 ## Action Overview
 
 Actions describe the overall algorithm of the JGraft.  Each action dictates
@@ -339,14 +297,143 @@ during the matching process.  They *may* have a side effect of incrementing
 a resource counter that aborts the graft operation due to resource usage, but
 that is not visible *to the expressions*.
 
-When a match expression directly calls another match expression, it passes a
-hidden parameter of whether the context is "IS" (full equality) or "HAS"
-(partial equality), or "REGEX" (where literals match against a virtual array
-of characters/codepoints of a string).
-Further, it consumes the boolean result of the inner match expression as an
-indication of whether the match succeeded.  This differs from a match
-expression calling a function, where the function's return value would be
-used as a value to match against.
+### Non-Regex Matching
+
+The matching system compares the current node with a specification structure
+composed of literal data and/or subexpressions.  It has several flags that
+affect the behavior:
+
+  * `exact`   - whether unspecified properties/elements cause a match to fail.
+  * `longest` - whether match expressions that can match a variable number of
+                array elements need fully explored to find the longest match.
+
+It also has an extra stack of "array cursor" metadata that builds alongside
+the stack tracking the current node.  When matching elements of an array,
+a match expression will typically increment the array cursor on success, but
+some match expressions may consume more than one array element, or even zero.
+Also, it tracks the matches made by `REP` and `ANY` so that it can backtrack
+and continue testing other possibilities.
+
+So long as the matching system remains within plain structures or match
+expressions, it builds on the existing match state.  If the matching system
+encounters any other type of expression, it calls it as a function and uses
+the return value as a structure to match against.  If the called non-match
+expression in turn calls a match expression, the inner match expression begins
+a new match state and does not inherit anything from the ancestor aside from
+the current node.
+
+The baseline for a match is that nothing can compare equal unless it is the
+same type.  Plain objects can only match plain objects, arrays can only match
+arrays, and each type of scalar can only match that same type of scalar.
+For non-object non-array elements of the specification, matching checks for
+equality as follows:
+
+  * `null`, `true`, and `false` are equal only to themselves.
+  * Numbers compare using the implementation's native representation of JSON
+    numbers after decoding.  JGraft does not specify behavior related to
+    floating point roundoff; see the [`NUM` expression](#ex-num) for a quick
+    way of checking whether a value is within a range.
+  * Strings compare codepoint-to-codepoint, though implementations may be
+    configurable in determining how an array of codepoints is generated.
+  * `date` can only match `date`, and all fields must be identical.
+  * `datetime` can only match `datetime`, and all fields must be identical.
+  * `timestamp` can only match `timestamp`, and both must refer to the same
+    instant after adjusting for time zone offset.
+
+For an object `spec_obj` in the specification being compared to current node
+`data_obj`, the matching algorithm iterates the properties of `spec_obj` and
+temporarily sets the current node to the corresponding property of `data_obj`,
+even if no such property exists.  It then recursively tests the specification
+for that property.  This may succeed even on a nonexistent current node due to
+the [`NONE` expression](#ex-none).
+
+For an array `spec_ar` in the specification being compared to current node
+`data_ar`, the matching algorithm initializes an cursor on `spec_ar` and a
+different cursor on `data_ar` and begins iterating the expressions in
+`spec_ar`.  Basic structures consume one element of `data_ar` each, but
+match expressions may consume more or less.  The match algorithm keeps track
+of whether each match expression has more possibilities to iterate, and can
+backtrack to them if needed.  If the `longest` flag is set, it must iterate
+all possibilities to determine which matches the most elements, though it can
+stop if one combination matches the full array.
+
+#### Fuzzy Matching
+
+Implementations may offer a feature for looking for matches at a slightly
+different path than the one specified, such as by trying nearby array elements
+if the path named a specific array element.
+
+The exact algorithm for performing the search for a "fuzzy" match is dependent
+on the engine and parameters supplied by the user.  This specification leaves
+fuzzy matching open to experimentation by implementations.  However, all
+implementations should follow these guidelines:
+
+  * If a path referring to the source tree was altered to allow a match to
+    succeed, all access to the node(s) where the alteration(s) were made must
+    receive the same alteration, but only for actions (and their expressions)
+    under the scope of that match.
+  * The alteration to a path must be linked to the node (object or array)
+    such that if the node gets moved to a different path, the alteration
+    metadata now affects only the new path.
+    This includes moves to/from other namespaces like the stash.
+  * Alterations to a path must only apply *before* resolving aliases.
+    If a match expression using a negative array index is altered, it will
+    not have any effect on the same array element when specified as a positive
+    integer.
+  * Fuzzy matching may not be used in regular expression context.
+  * Implementations are strongly discouraged from attempting fuzzy matching on
+    an array where the specification could match a variable number of elements.
+    If the first pass had to test multiple possible match patterns on an array,
+    falling back to fuzzy matching is probably unwanted.
+  * Implementations are encouraged to restrict fuzzy matching to arrays/objects
+    where every property affected by an action was previously tested by its
+    containing `MATCH` action.  i.e. record every path that was tested during a
+    successful fuzzy match and then if the actions try to access any path
+    outside of those paths, abort the attempt and return `NO_MATCH` as if the
+    fuzzy match wasn't attempted.
+  * Implementations should not enable fuzzy matching by default.
+
+Future versions of this specification may specify fuzzy matching in more
+detail as common useful strategies and antipatterns emerge.
+
+### Regex Matching
+
+Regex matching can only begin when the current node is a string.
+The subject string is broken into a virtual array of characters, and then the
+match expressions are applied to that virtual array.
+Character matching is defined over a sequence of Unicode code point values.
+It is left to implementations or host languages to determine (or provide
+configuration for) how input strings are converted to this sequence,
+including the treatment of malformed encodings and unpaired surrogates.
+For example, an implementation might reject malformed UTF-8 or strings
+containing unpaired surrogates, replace malformed input, or expose surrogate
+code points individually. These choices are outside the JGraft specification.
+
+JGraft character classes may include surrogate code point values
+(U+D800–U+DFFF). These can only match when the host's interpretation of the
+input string exposes corresponding values in the character sequence.
+
+When matching against a virtual character array,
+
+  * Numbers match against the numeric value of codepoints.
+  * Strings of one character match against the character itself.
+  * Strings of multiple characters are interpreted as `SEQ` expressions.
+  * No other types can match anything within the virtual array of characters.
+  * If the current node is changed to something other than a virtual array
+    of characters (via 2-argument `HAS` or 2-argument `IS`), the algorithm
+    switches back to Non-Regex Matching for the duration of that scope.
+
+In some cases, only a boolean result is required, and the match ends as soon
+as the expression is satisfied.  Other cases require finding the longest
+match, and run through every possibility of the match expression to see which
+is the longest, though may end early if the whole string is consumed.  If an
+expression is constructed from only "textbook regular" match expressions, an
+implementation can compile the expression into a DFA, or possibly a
+host-language regular expression for improved performance.
+Elaborate non-regular match expressions may be used in regex context, but can
+cause a great deal of iteration and quickly run into resource limits.
+
+### Expression Summary
 
 The following expressions are available:
 
@@ -394,6 +481,8 @@ Name                     | Type  | ID | Description
 [MUL](#ex-mul)           | Fn    | 67 | Multiply numbers
 [DIV](#ex-div)           | Fn    | 68 | Divide numbers
 [MOD](#ex-mod)           | Fn    | 69 | Calculate Modulus
+
+### Expression Interaction
 
 To quickly understand how the types interact, consider these examples:
 
@@ -446,33 +535,6 @@ within the structure of the outer `IS` in the intended manner.
 The inner `IS` compares two values instead of comparing one value to the
 current node, and the return value gets consumed as the match result because
 `IS` is a match expression.
-
-## Fuzzy Matching
-
-The exact algorithm for performing the search for a "fuzzy" match is dependent
-on the engine and parameters supplied by the user.  This specification leaves
-fuzzy matching open to experimentation by implementations.  However, all
-implementations should follow these guidelines:
-
-  * If a path referring to the source tree was altered to allow a match to
-    succeed, all access to the node(s) where the alteration(s) were made must
-    receive the same alteration, but only for actions (and their expressions)
-    under the scope of that match.
-  * The alteration to a path must be linked to the node (object or array)
-    such that if the node gets moved to a different path, the alteration
-    metadata now affects only the new path.
-    This includes moves to/from other namespaces like the stash.
-  * Alterations to a path must only apply *before* resolving aliases.
-    If a match expression using a negative array index is altered, it will
-    not have any effect on the same array element when specified as a positive
-    integer.
-  * Implementations are encouraged to restrict fuzzy matching to arrays/objects
-    where every property affected by an action was previously tested by its
-    containing match expression.
-  * Implementations should not enable fuzzy matching by default.
-
-Future versions of this specification may specify fuzzy matching in more
-detail as common useful strategies and antipatterns emerge.
 
 ## Errors
 
@@ -991,7 +1053,7 @@ single name rather than a path.  The other expression will be used as if it
 had been specified in place of this `EXPR` expression.  It is possible to
 set up infinite recursion using EXPR references, but likely to quickly run
 into `RESOURCE_LIMIT` errors.  Implementations are not expected to optimize
-tail-calls like a functional language would.
+tail-calls like a functional language would (but are permitted to).
 
 #### <span id="ex-temp">TEMP</span>
 
@@ -1036,145 +1098,296 @@ The path may be empty to reference the current node itself.
 
 #### <span id="ex-has">HAS</span>
 
+    [HAS, match_spec]
+    [HAS, value_expr, match_spec]
+
+Match when the target has at least the properties described in `match_spec`.
+
+The `match_spec` argument is declared using [match context](#match-context)
+and the `value_expr` is declared using [value context](#value-context).
+In the 1-argument form, the value being compared is the current node.
+
+The `HAS` expresison is the default for match context; a `[HAS,...]`
+expression at the root of a match structure is redundant unless used in
+the 2-argument form to establish an alternate current node.
+
+Examples:
+
     null                                node === null
     0                                   node === 0
     'str'                               node === 'str'
+    [HAS, null]                         node === null
+    [HAS, 42]                           node === 42
     { a: 1 }                            node.a === 1
-    [OR, 1, 2]                          node === 1 || node === 2
-    { a: [EXISTS] }                     'a' in node
-    { a: [AND,[EXISTS],[NOT, null]] }   'a' in node && node.a !== null
     { a: [OR, [NOT,[EXISTS]], 1 }       !('a' in node) || node.a === 1
     { a: [[]] }                         isArray(node.a)
-    { a: [IS, [[]]] }                   isArray(node.a) && node.a.length == 0
-    { a: [IS, [[1,2]]] }                isArray(node.a) && node.a.length == 2
-                                        && node.a[0] === 1 && node.a[1] === 2
     { a: [ARRAY, 3, 6, 7] }             isArray(node.a) && node.a[3] === 6
-                                        && node.a[4] === 7
+                                          && node.a[4] === 7
+    [HAS, [TEMP,0], { a: 1 }]           temp['0'].a === 1
 
-This is the default function implied at the top of a match specification.
-It establishes a scope where the following rules apply:
+#### <span id="ex-is">IS</span>
 
-For scalars, this function is equivalent to JavaScript's `===` operator.
+    [IS, match_spec]
+    [IS, value_expr, match_spec]
 
-For objects, the current node must be an object, and each specified property
-which is not a function must match the same value on the current node
-according to `HAS`.  If a specified property is missing from the current node,
-a comparison is still attempted during which the current node is effectively
-an undefined value which doesn't compare equal to anything.  The comparison
-could still return true if it makes use of `NOT`.
+Match when the target has only the properties described in `match_spec`.
 
-Arrays are used to specify alternate match functions, and will receive a
-current node of whichever sub-property is being matched.  Literal arrays are
-specified as an array of one element holding the literal array.  They requiure
-the current node to be an array where each specified element matches according
-to `HAS`.  Like with objects, comparisons will be attempted for specification
-of elements beyond the end of the current node.
+The `match_spec` argument is [match context](#match-context) and the
+`value_expr` is [value context](#value-context).  In the 1-argument
+form, the value being compared is the current node.
+As described in the [section on expressions](#expression-overview), the 'IS'
+semantics are pased as a parameter to inner match expressions in every case
+where a match expression calls a match expression other than `HAS`.
+A match expression used as a direct child of a function expression resets to
+`HAS` semantics.
 
-Extra properties / array elements in the current node (beyond what was
-specified) are ignored.
+Examples:
 
-### IS
+    [IS, null]                          node === null
+    [IS, 8]                             node === 8
+    [IS, 'str']                         node === 'str'
+    [IS, {a:1}]                         is_deeply(node, {a:1})
+    [IS, [ANY, {a:1}, {b:1}]]           is_deeply(node, {a:1})
+                                         || is_deeply(node, {b:1})
+    [IS, [TEMP,0], {a:1}]               is_deeply(temp['0'], {a:1})
 
-    ['IS', match_spec...]
+#### <span id="ex-none">NONE</span>
 
-This is a variant of 'HAS' that forbids extra properties in the current node
-which were not in the specification object.  This sets up a scope where all
-contained non-functions are also interpreted as `IS` tests.
+    [NONE, match_expr...]
 
-The function can take additional arguments to perform an implied 'OR'.
+Match when the target does not match any of the [match-context](#match-context)
+expressions.
 
-### AND
+This is like the function [`NOT`](#ex-not), but with
+[match expression](#expression-overview) semantics rather than function
+expression semantics.  Note that for 
 
-    ['AND', match_spec, match_spec...]
+#### <span id="ex-any">ANY</span>
 
-All following patterns must match at the current node.  There must be at least
-two arguments.  Though side-effects should not be visible from matching,
-implementations should still adhere to short-circuiting behavior, testing the
-arguments in order and stoping at the first failure.
+    [ANY, match_expr...]
 
-### OR
+Match when the target matches any of the [match-context](#match-context)
+expressions.
 
-    ['OR', match_spec, match_spec...]
+This is like the function [`OR`](#ex-or), but with
+[match expression](#expression-overview) semantics rather than function
+expression semantics.
 
-Any one of the following patterns must match at the current node.  There must
-be at least two arguments.  Implementations should adhere to short-circuiting
-behavior in case side effects become visible, testing the arguments in order
-and stoping at the first success.
+#### <span id="ex-all">ALL</span>
 
-### NOT
+    [ALL, match_expr...]
 
-    ['NOT', match_spec]
-    ['NOT', match_spec, or_match_spec...]
+Match when the target matches all of the [match-context](#match-context)
+expressions.
 
-Matches when none of the arguments match at the current node.  When more than
-one argument is used, it behaves identical to `[NOT,[OR,...]]`.
+This is like the function [`AND`](#ex-and), but with
+[match expression](#expression-overview) semantics rather than function
+expression semantics.
 
-### EXISTS
+#### <span id="ex-exists">EXISTS</span>
 
-    ['EXISTS']
+    [EXISTS]
 
-True when the current node is defined, including when the value is `null`.
+Match when the current node exists, including the value `null`.
 
-### BOOL
+This is also particularly useful when negated as `[NONE,[EXISTS]]`.  As this
+implies, the matching system must consider property expressions even when the
+property doesn't exist on the target.
 
-    ['BOOL']
+#### <span id="ex-array">ARRAY</span>
 
-Return true if the current node is a boolean.  This is essentially just
-shorthand for `[OR, true, false]`, but slightly more performant.
+    [ARRAY]
+    [ARRAY, length]
+    [ARRAY, offset, match_spec1...]
 
-### NUM
-
-    ['NUM']
-    ['NUM', min, max]
-
-With no arguments, returns true if the current node is a number, including NaN
-and Inf.  Note that JSON-compatible data structures cannot contain these
-values, but they are included here for use with host language support.
-
-With two arguments, also verify that the number is within the range of
-`[min,max]` (inclusive).  `min` or `max` may be `null` to omit the respective
-test.  In contexts where infinity is available, positive and negative infinity
-may also be used for the `min` and `max` values.  In contexts where NaN is
-available, NaN may not specify a bound of the range, and declaring any range
-causes NaN values in the data to fail to match.
-
-### INT
-
-    ['INT']
-    ['INT', min, max]
-
-Same as `NUM` above, but rejects all non-integer values.  (the container used
-by the host language may be a float, so long as it has an integer value)
-
-### STR
-
-    ['STR']
-    ['STR', regex_spec]
-
-With no arguments, returns true if the current node is a string.
-
-You may specify a [regular expression](#regex) to additionally constrain which
-strings match.  The regex is not implicitly anchored.
-
-### ARRAY
-
-    ['ARRAY']
-    ['ARRAY', length]
-    ['ARRAY', offset, match_spec1, match_spec2...]
-
-With no arguments, this merely asserts that the current node is an array.
+With no arguments, this matches when the current node is an array.
 
 With one argument, it asserts the current node is an array with at least this
-number of elements in the scope of `HAS`, or exactly this number of elements
-in the scope of an `IS` function.
+number of elements in the context of `HAS`, or exactly this number of elements
+in the context of an `IS` expression.
 
-With more than one argument, this asserts that a range of the array matches
-the specification of the respective element, inheriting the `HAS` or `IS`
-scope.  The `offset` may be negative to count backward from the end of the
-array.
+With more than one argument, this asserts a sequence of matches (as per the
+[`SEQ` expression](#ex-seq)) starting at `offset`.  It is equivalent to the
+expressions:
+
+    // In 'HAS' match context:
+    [[ [REP,offset,offset,[EXISTS]], [SEQ, match_spec1...] ]]
+    // In 'IS' match context:
+    [[ [REP,offset,offset,[EXISTS]], [SEQ, match_spec1...], [END] ]]
+
+The `offset` may be negative to count backward from the end of the array.
 
     // Assert that the array ends with 'x', 'y', 'z'
-    ['ARRAY', -3, 'x', 'y', 'z']
+    [ARRAY, -3, 'x', 'y', 'z']
+
+#### <span id="ex-str">STR</span>
+
+    [STR]
+    [STR, regex_expr]
+
+With no arguments, this matches when the current node is a string.
+
+With one argument it asserts that the node is a string and matches a regular
+expression, specified in [regex context](#regex-context).  The regex is not
+implicitly anchored.  This expression is the primary way of invoking regular
+expression matching.
+
+#### <span id="ex-num">NUM</span>
+
+    [NUM]
+    [NUM, min, max]
+
+With no arguments, this matches when the current node is any JSON number,
+or additionally NaN and Inf if those extensions are relevant.
+
+With one or two arguments, also verify that `min <= node <= max`.
+`min` or `max` may be `null` to omit the respective test.
+In implementations where infinity or NaN are available, neither may be
+used as the range boundary.
+
+#### <span id="ex-bool">BOOL</span>
+
+    [BOOL]
+
+Match when the current node is a boolean.
+
+#### <span id="ex-date">DATE</span>
+
+    [DATE]
+
+Match when the current node is a valid input for the
+[`CASTDATE` expression](#ex-castdate).  See the details of that expression
+and also the [dates section](#dates) for details.
+
+#### <span id="ex-with">
+
+    [WITH, temp_path, value_expr, match_expr]
+    [WITH, temp_path0, val0, temp_path1, val1, ..., match_expr]
+
+Set up scoped overrides of the TEMP namespace before matching an expression.
+
+This performs one or more assignments into the TEMP namespace that are only
+visible for the duration of the `WITH` expression.  Each `temp_path` is
+declared in [path context](#path-context), restricted to paths of the temp
+namespace and with simple scalars referring to the root of the temp namespace
+rather than the current node.  Each `value_expr` is declared in
+[value context](#value-context) and evaluated before assignment.
+The `match_expr` is declared in [match context](#match-context) and the result
+is passed through as the result of the `WITH` expression while reverting the
+temp namespace to its previous state.
+
+The purpose of this expression is to capture values within the tree of the
+current node before descending into the tree with match expressions where they
+would no longer be accessible.
+
+#### <span id="ex-seq">SEQ</span>
+
+    [SEQ]
+    [SEQ, match_expr...]
+
+Match a series of array elements against a series of match expressions.
+
+This can only match when the current node is derived from a match cursor of an
+array.  It tests each `match_expr` in sequence, returning false if the match
+fails.  Each `match_expr` advances the array cursor as appropriate.  If it
+reaches the end of the list (which may be empty) without a match failure, it
+returns true.
+
+#### <span id="ex-rep">REP</span>
+
+    [REP, min, max, match_expr]
+
+Repeatedly match an expression against a series of array elements.
+
+`min` and `max` are [value context](#value-context) expressions which must
+evaluate to non-negative integers or the value `null`.  The value of `min`
+must be less than `max` if neither are null, but if `max` is 0 it is an alias
+for "same as min" to avoid repeating the expression for `min`.
+`match_expr` is a [match context](#match-context) expression.
+
+It tests `match_expr` up to `max` times or until the first failure or until
+the array cursor doesn't advance.  If `max` is `null` the upper limit of the
+iteration is determined by the resource limits set by the application.
+If the match fails and it has not met the `min` requirement, it returns false
+and resets the array cursor.  Otherwise it returns true.
+
+Regex Notation | REP notation
+---------------|--------------------------
+ `(...)*`      | [REP,0,null,...]
+ `(...)?`      | [REP,0,1,...]
+ `(...)+`      | [REP,1,null,...]
+ `(...){5}`    | [REP,5,0,...]
+ `(...){3,5}`  | [REP,3,5,...]
+
+#### <span id="ex-start">START</span>
+
+    [START]
+
+Match when the current node is derived from a match cursor of an array and the
+cursor is at its minimum value.
+
+#### <span id="ex-end">END</span>
+
+    [END]
+
+Match when the current node is derived from a match cursor of an array and the
+cursor is at its maximum value. (i.e one-beyond-the-end of the array)
+
+#### <span id="ex-chars">CHARS</span>
+
+    [CHARS, ...
+      true,                // include following elements
+      false,               // exclude following elements
+      "abcdef",            // 6 literal characters
+      "a","z",             // a range of characters to be added
+      "a",null,            // open-ended range
+      48,57,               // unicode codepoint range
+      [EXPR,name]          // reference a common CHARS expression
+
+Match when the current node is a character in the defined set.
+
+Boolean values switch between inclusion and exclusion.  The default is
+inclusion to an empty set.  If the first element is false, it instead becomes
+exclusion from the complete set of Unicode.  Further boolean values affect
+the elements that follow but do not themselves modify the set.
+
+A string of more than one character is considered a list of characters to
+include.  A single character begins an inclusive range of characters if the
+following element is also one character.  `null` may be used as an alias for
+the maximum Unicode character.  An integer is treated as a unicode codepoint
+value (and must fall within the valid unicode range).  Since integers and
+`null` represent single characters, they also begin or end ranges when
+possible.
+
+Finally, you may use an [`EXPR expression`](#ex-expr) to reference a `CHARS`
+expression from the common expression namespace.  It must resolve to exactly
+a `CHARS` expression; anything else results in `INVALID_OPERAND`.
+
+Examples:
+
+    // Regex /./
+    [CHARS, false, "\n"]
+
+    // Regex /./s
+    [CHARS, 0,null]
+    [CHARS, false]
+    
+    // Regex /[0-9]/
+    [CHARS, "0123456789"]
+    [CHARS, "0","9"]
+    [CHARS, 48,57]
+    [CHARS, "0",57]
+    
+    // Regex /[0-9a-zA-Z_.-]/
+    [CHARS, "0","9", "A","Z", "a","z", "_-."]
+    [CHARS, 0x30,0x39, 0x41,0x5A, 0x61,0x7A, "_-."]
+    
+    // "All printable but no punctuation"
+    // Regex /[^\P{Print}\p{Punct}]/
+    // (assuming you define these classes in the JGRAFT action)
+    [CHARS, [EXPR,"regex_Print"], false, [EXPR,"regex_Punct"]]
+
+### Function Expressions
 
 ### SPLIT
 
@@ -1247,132 +1460,4 @@ is specified as an array of property/value pairs to apply to the namespace, in
 order.  Integers are permitted as the property name (implicitly coerced to
 strings) since numeric iteration is the simplest thing to generate and
 integers encode more compactly in JSON than strings.
-
-Action Example:
-
-    ['JGRAFT',{
-      regexCommon: [
-        "word", ["[", 48, 57, 65, 90, 95, 95, 97...],
-        ...
-
-Function Example:
-
-    [{"common":["linebreak", ["|", "\n", "\r\n"]]}, ...]
-
-### Functions
-
-The functions are named according to their typical regex syntax:
-
-Function                | Description
-------------------------|-----------------------------------------------------
-`['', ...]`             | Sequence - match each element in order
-`[{}, ...]`             | Sequence with configuration
-`["^"]`                 | StartAnchor - Start of string
-`["$"]`                 | EndAnchor - End of string
-`["|", ... ]`           | Alternation - Match any one alternative
-`["[", ... ]`           | Charclass - A set of distinct characters
-`["{", min, max, ... ]` | Repetition - Match zero, one or more times
-`["&", name]`           | Ref - reference a common subexpression
-
-#### Sequence
-
-    ['', ...]
-    [config, ...]
-
-This is provided as a container for a list of other elements.  It may
-optionally begin with an object specifying configuration details:
-
-  - common: an array specifying [common subexpressions](#common-subexpressions)
-
-#### StartAnchor
-
-Matches only at the start of the string.
-
-#### EndAnchor
-
-Matches only at the end of the string.  (not right before a newline like regex
-engines often do)
-
-#### Alternation
-
-    ['|', this, or_that...]
-
-Match any one alternative.  Requires two or more parameters.  Each parameter
-may be a single string which must match exactly, or an array indicating a
-function.  The order of alternatives should not matter in theory, because the
-output is a simple boolean and does not track positional matches of the
-pattern components.
-Implementations which convert this specification to the host language's regex
-engine are free to attempt to re-order the alternatives in the order that
-yields the highest performance.
-
-#### Charset
-
-    ["[", ...
-    true,                // include following elements
-    false,               // exclude following elements
-    "abcdef",            // 6 literal characters
-    "a","z",             // a range of characters to be added
-    "a",null,            // open-ended range
-    48,58,               // unicode codepoint range
-    ['&',name]           // reference a named charset for inclusion/exclusion
-
-Define a set of characters.  Boolean values switch between inclusion and
-exclusion.  The default is inclusion to an empty set.  If the first element
-is false, it instead becomes exclusion from the complete set of Unicode.
-Further boolean values are allowed in order to exclude individual items from
-ranges, etc.
-When true or false values are encountered, it switches between inclusion
-and exclusion respectively.  A string of more than one character is considered
-a list of characters to include.  A string of one character begins a range if
-the following element is also one character (or number or `null`, for an
-open-ended range), otherwise it is interpreted as a single character to
-include or exclude.  A number is treated as a unicode codepoint value, and
-likewise begins or ends a range.  Finally, you may use `['&',name]` notation
-to reference a [common subexpression](#common-subexpressions), which must
-resolve to a charset definition.  (a name resolving to anything else results
-in `INVALID_GRAFT`)
-
-Examples:
-
-    // .
-    ["[", 0,null]
-    ["[", false]    // because it starts from the full set of chars
-                    // and removes nothing
-    
-    // [0-9]
-    ["[", "0123456789"]
-    ["[", "0", "9"]
-    ["[", 48, 57]
-    
-    // [0-9a-zA-Z_.-]
-    ["[", "0","9", "A","Z", "a","z", "_-."]
-    ["[", 0x30, 0x39, 0x41, 0x5A, 0x61, 0x7A, "_-."]
-    
-    // [^\n]
-    ["[", false, "\n"]
-
-#### Repetition
-
-    ["{", min, max, pattern...]
-
-The first two parameters specify the minimum and maximum repeat count for
-which all remaining parameters (the pattern components) must be found.
-`min` must be an integer greater or equal to zero, and `max` must be greater
-or equal to `min`, or `null` to enable unlimited matching.
-
-Regex Notation | Function notation
----------------|--------------------------
- `*`           | ['{',0,null,...]
- `?`           | ['{',0,1,...]
- `+`           | ['{',1,null,...]
- `{5}`         | ['{',5,5,...]
- `{3,5}`       | ['{',3,5,...]
-
-#### Ref
-
-    ["&", name]
-
-Inject the value of a common subexpression.  Name is a property name or path
-within the [common subexpression](#common-subexpressions) namespace.
 
