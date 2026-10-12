@@ -9,7 +9,7 @@ conditional edits where the change depends on the state of the target data.
 It is a data structure rather than a parsed language to make it easier to
 programmatically generate, combine fragments, extract fragments, and inspect.
 
-The data that JGraft operates on is defined using basic JSON-compatible types:
+JGraft is constructed of basic JSON-compatible data types:
 `null`, booleans, numbers, JSON-compatible strings, arrays, and objects.
 Implementations may include other native host-language data types if the
 application doesn't need to interoperate with different host languages.
@@ -74,8 +74,8 @@ a mixture of structure and expressions.
   * Escaped arrays (an array within an array of one element) likewise
     construct an array where each element of the specification is recursively
     evaluated to generate the value for that element of the result.
-  * Other arrays represent expressions, which will be evaluated and replaced
-    with the return value of the expression.
+  * Other arrays represent expressions, which will be evaluated to generate the
+    corresponding value for the result.
 
 Reference expressions used in value context may only refer to paths which
 exist.  Missing path properties generate an `INVALID_TARGET` error.
@@ -83,8 +83,6 @@ exist.  Missing path properties generate an `INVALID_TARGET` error.
 The constructed value is logically a new tree, however implementations may
 re-use existing tree fragments so long as they can ensure that the result is
 not used in a way that could degrade the target data tree to a graph.
-Doing so likely involves a sub-context flag to indicate whether it is
-being stored in a mutable namespace or just referenced immutably.
 
 #### Match Context
 
@@ -99,8 +97,7 @@ specification structure.
     while all other expression types evaluate to a plain value and then use
     the value as structure to match against.
 
-The section [Non-Regex Matching](#non-regex-matching) describes the process in
-detail.
+The section [Matching](#matching) describes the process in detail.
 
 #### Regex Context
 
@@ -110,9 +107,10 @@ structure as general matching, but operating on a virtual array of characters.
   * One-character strings describe characters
   * Strings with more than one character implicitly become [`SEQ`](#ex-seq)
     expressions, matching a sequence of characters
-  * Numbers describe unicode codepoints
-  * Objects, escaped-arrays, and dates in the specification generate
-   `INVALID_OPERAND`.
+  * Non-negative integers describe unicode codepoints
+  * Other numbers, objects, escaped-arrays, and dates in the specification
+    generate `INVALID_GRAFT`, or if they are the result of an expression they
+    generate `INVALID_OPERAND`.
   * Referenced subexpressions (via [`EXPR`](#ex-expr) ) get re-interpreted
     according to these rules.
 
@@ -152,7 +150,7 @@ the JGraft implementation uses those same objects, and no export steps are
 required when writing them back to the data tree.  In other cases, the
 application might be parsing ISO 8601 date strings from the tree of data and
 returning them to that format as they re-enter the target data, losing any
-metadata that would differentiate it from a plain string.  JGraft dates and
+metadata that would differentiate them from plain strings.  JGraft dates and
 date-times may be saved into the const, stash, and temporary namespaces
 without losing their metadata.  When exported as an "undo" JGraft, dates are
 represented by a `CASTDATE` expression.
@@ -166,8 +164,8 @@ Gregorian calendar and represented in their natural 1-based format.
 where `second` may be fractional to any numeric precision allowed by JSON and
 may also be a leap-second value (0 <= second < 61).  Implementations don't
 need to check whether a leap second was historically valid; just preserve the
-field and compare it last during lessthan tests.  Implementations may need to
-hold the `second` value in a special object field if the host date objects
+field and compare it last during less-than tests.  Implementations may need to
+hold the `second` value in an extra data field if the host date objects
 don't support leap seconds or arbitrary precision.  JGraft instances should
 generally avoid *creating* datetimes with leap seconds, as they can't be
 exported in some host language encironments.
@@ -178,12 +176,12 @@ and can be compared with timestamps from differing timezone offsets.
 Since each of these is a different type, the usual rules apply when testing
 them: dissimilar types cannot "match" in a match expression, and the `LESS`,
 `LESSEQ`, `MIN`, and `MAX` expressions will fail with an `INVALID_OPERAND`
-error.  You can use the `CASTDATE` function to cast values to the desired
+error.  You can use the `CASTDATE` function to cast values to the same
 precision for comparison.
 
 ## Namespaces
 
-Actions and expressions can make references to data in five namespaces:
+Actions and expressions can make references to data in six namespaces:
 
   * Current Node       - a tree of data supplied as input, implicitly
                          referenced by many expressions and directly by the
@@ -195,8 +193,11 @@ Actions and expressions can make references to data in five namespaces:
                          trees declared in the [`JGRAFT` action](#act-jgraft)
                          and referenced by the [`EXPR` expression](#ex-expr).
   * Stash              - a read/write tree of temporaries shared between
-                         actions in the scope of the same `JGRAFT` action
-                         which is referenced by the [`STASH` expression](#ex-stash).
+                         actions in the scope of the same `JGRAFT` action,
+                         referenced by the [`STASH` expression](#ex-stash).
+  * Match Captures     - a read-only tree of data captured by the named
+                         sequences in an enclosing `MATCH` or `IF` action,
+                         referenced by the [`CAP` expression](#ex-cap).
   * Temporaries        - a read/write tree of temporaries that only exists for
                          the duration of one action, referenced by the
                          [`TEMP` expression](#ex-temp).
@@ -250,7 +251,7 @@ facilitates transfer of values between actions.
 The primary intended workflow for JGraft is to use a `MATCH` or `IF` action to
 verify that the input data tree matches expectations (or find a matching
 location in the tree with some [fuzzy matching](#fuzzy-matching) ) and then
-within that use `COPY`, `MOVE` or other actions to alter the tree.
+within that use `COPY`, `MOVE`, or other actions to alter the tree.
 
 The list of actions is fairly concise:
 
@@ -283,8 +284,8 @@ Expressions are essentially "functions without visible side effects", though
 there are two special categories:
 
   * "Reference Expressions" reference a [path](#paths) within the input data
-    or one of the special namespaces JGraft offers, and can be both read and
-    written by actions.
+    or one of the special namespaces JGraft offers, and in some cases may be
+    written as well as read.
   * "Match Expressions" compare the current node to a structural pattern and
     return a boolean of whether it matched.  Match expressions have special
     behavior when calling other match expressions.
@@ -297,30 +298,38 @@ during the matching process.  They *may* have a side effect of incrementing
 a resource counter that aborts the graft operation due to resource usage, but
 that is not visible *to the expressions*.
 
-### Non-Regex Matching
+### Matching
 
 The matching system compares the current node with a specification structure
-composed of literal data and/or subexpressions.  It has several flags that
-affect the behavior:
+composed of literal data and/or subexpressions.  It operates on several pieces
+of scoped state:
 
-  * `exact`   - whether unspecified properties/elements cause a match to fail.
-  * `longest` - whether match expressions that can match a variable number of
-                array elements need fully explored to find the longest match.
+  * `exact` - whether unspecified properties/elements cause a match to fail.
+  * `regex` - whether the match is applied to a virtual array of characters.
+  * `sequence` - how expressions may match variable numbers of array elements.
 
-It also has an extra stack of "array cursor" metadata that builds alongside
-the stack tracking the current node.  When matching elements of an array,
-a match expression will typically increment the array cursor on success, but
-some match expressions may consume more than one array element, or even zero.
-Also, it tracks the matches made by `REP` and `ANY` so that it can backtrack
-and continue testing other possibilities.
+The `exact` flag is set for an expression subtree using the `IS` or `HAS`
+expressions.  The `sequence` mode is enabled with the [`SEQ`](#ex-seq),
+[`SEQMIN`](#ex-seqmin) or [`SEQMAX`](#ex-seqmax) expressions but is not
+inherited by subexpressions which match deeper into the data tree beyond the
+current array.  The `regex` flag is set by any expression declared in
+[regex context](#regex-context) such as within the [`STR` expression](#ex-str).
 
-So long as the matching system remains within plain structures or match
-expressions, it builds on the existing match state.  If the matching system
-encounters any other type of expression, it calls it as a function and uses
-the return value as a structure to match against.  If the called non-match
-expression in turn calls a match expression, the inner match expression begins
-a new match state and does not inherit anything from the ancestor aside from
-the current node.
+For all contiguous portions of the match specification composed of plain
+structures or match expressions, the matching algorithm continues building on
+the same match state.  If the match algorithm encounters an `EXPR` path
+expression, the referenced structure (which may contain expressions) becomes
+part of the current match specification and likewise continues building on the
+same match state.
+If the matching algorithm encounters any other type of expression, it evaluates
+it as a function and uses the resulting value (which may not contain
+expressions) as a literal structure to match against.
+If the function expression includes an inner match expression, the inner match
+expression begins a new match state independent of any ancestor match state.
+It retains the current node, but begins with default HAS semantics and no
+sequence context, and only gets regex context if matching against a virtual
+array of characters.  This is covered in more detail under
+[expression interaction](#expression-interaction).
 
 The baseline for a match is that nothing can compare equal unless it is the
 same type.  Plain objects can only match plain objects, arrays can only match
@@ -345,17 +354,91 @@ For an object `spec_obj` in the specification being compared to current node
 temporarily sets the current node to the corresponding property of `data_obj`,
 even if no such property exists.  It then recursively tests the specification
 for that property.  This may succeed even on a nonexistent current node due to
-the [`NONE` expression](#ex-none).
+the [`NONE` expression](#ex-none) which returns true when a pattern *doesn't*
+match.
 
-For an array `spec_ar` in the specification being compared to current node
-`data_ar`, the matching algorithm initializes an cursor on `spec_ar` and a
-different cursor on `data_ar` and begins iterating the expressions in
-`spec_ar`.  Basic structures consume one element of `data_ar` each, but
-match expressions may consume more or less.  The match algorithm keeps track
-of whether each match expression has more possibilities to iterate, and can
-backtrack to them if needed.  If the `longest` flag is set, it must iterate
-all possibilities to determine which matches the most elements, though it can
-stop if one combination matches the full array.
+For arrays in the specification, the matching algorithm takes steps identical
+to object-matching, iterating the array elements instead of object properties,
+and likewise fails in `exact` context if array elements exist which were not
+included in the specification.
+When sequence context is not involved, every element of the specification
+matches against one element of the data (or a nonexistent element at the end).
+However, if sequence context is involved with any element of the array, the
+array match is handled according to the rules described in
+[sequence matching](#sequence-matching).
+
+#### Sequence Matching
+
+Sequence matching is based on a regular language automata theme.  Expressions
+evaluated in sequence context (initiated implicitly by
+[regexes](#regex-matching) or by applying a [`SEQ`](#ex-seq) /
+[`SEQMIN`](#ex-seqmin) / [`SEQMAX` expression](#ex-seqmax) to array elements)
+have behavior defined in terms of "initial state" and "generated successor
+states", with the initial state being a position within [0,length] where a
+match needs to occur, and successor states being all the ways that the match
+can resolve successfully from that starting position.
+Implementations are likely to need to iterate the successor states as they look
+for an overall match for the array specification, but no specific order is
+required for this iteration and implementations are free to apply optimizations
+that eliminate impossible states or collapse redundant successor states.
+This also gives implementations the option to optimize things with a DFA
+compilation when the specification is composed purely of regular language
+constructs.
+
+Sequence context can be configured to resolve in one of three ways:
+
+  * boolean - Nothing needs to know which elements matched, and the
+              algorithm may terminate as soon as it finds any match.
+  * longest - The algorithm finds the greatest number of elements which can be
+              matched by the specification.
+  * shortest - The algorithm finds the fewest number of elements which can be
+              matched by the specification.
+
+Sequence context is only resolved in terms of the whole array, not as decisions
+within individual expressions or named sequences.  Various regex contexts will
+set either `boolean` or `longest` resolution.  When performing structural
+matches, the default is `boolean` unless any named sequences are found among
+the array element specifications.  Named sequences specify a `longest` or
+`shortest` preference for the subexpression itself.  Of all the final states of
+all sequence context expressions that can match the complete specification for
+the array, the algorithm chooses one according to these priorities:
+
+  * Longest overall or shortest overall, if initial mode was not `boolean`.
+  * For each named sequence N in order specified:
+    * Longest or shortest match according to its preference.
+  * For each named sequence N in order specified:
+    * Leftmost start of a match.
+
+Sequence context affects the behavior of several other match expressions:
+
+  * [`NONE`](#ex-none) becomes a zero-width assertion.
+  * [`ANY`](#ex-any) matches however many elements its subexpression does.
+  * [`ALL`](#ex-all) matches at least as many elements as required for all of
+    its subexpressions to match.  (see the expression description for details)
+  * [`REP`](#ex-rep) expressions are permitted.
+
+A `SEQMIN` / `SEQMAX` expression may only be used at the root of a match
+specification being applied to an array's elements, and a `SEQ` expresison may
+only initiate sequence context there (though `SEQ` may be used in any existing
+sequence context as a general way to specify a sequential matches).
+The restrictions on entering sequence context ensure that `NONE`, `ANY`, and
+`ALL` don't gain surprising semantics without directly requesting them, and the
+specific restriction on `SEQMIN` and `SEQMAX` ensures that named sequences are
+always referring to unambiguous ranges of array elements without needing to
+define an iteration order for testing alternatives or greedy semantics for
+every `REP` expression.  These restrictions are applied *after* replacing any
+common subexpression references.
+
+After a successful sequence-context match of an array, named sequences get
+recorded in an internal data structure of the match state.
+It is an error for two named sequences within the same match specification to
+share the same name.  Since all sequences will participate in the match, all
+named sequences will be defined by the end of the match.
+If the match was occurring as the test of a `MATCH` or `IF` action, a
+successful overall match makes each name available within the
+[capture namespace](#ex-cap) locally within its contained actions.
+If the match was occurring within a `CAPTURE` function, the named captures
+become the properties of the returned object.
 
 #### Fuzzy Matching
 
@@ -439,7 +522,8 @@ The following expressions are available:
 
 Name                     | Type  | ID | Description
 -------------------------|-------|----|----------------------------------------
-[EXPR](#ex-expr)         | Ref   | -4 | An element of the expression namespace
+[EXPR](#ex-expr)         | Ref   | -5 | An element of the common subexpressions
+[CAP](#ex-cap)           | Ref   | -4 | A path in the capture namespace
 [TEMP](#ex-temp)         | Ref   | -3 | A path in the temp namespace
 [STASH](#ex-stash)       | Ref   | -2 | A path in the stash namespace
 [CONST](#ex-const)       | Ref   | -1 | A path in the const namespace
@@ -457,10 +541,12 @@ Name                     | Type  | ID | Description
 [DATE](#ex-date)         | Match | 11 | Match date-like things
 [WITH](#ex-with)         | Match | 12 | Scoped overrides to TEMP namespace
 [SEQ](#ex-seq)           | Match | 13 | Match a sequence of adjacent elements
-[REP](#ex-rep)           | Match | 14 | Match repeatedly on adjacent elements
-[START](#ex-start)       | Match | 15 | Match at first element of array
-[END](#ex-end)           | Match | 16 | Match at length of array
-[CHARS](#ex-chars)       | Match | 17 | Match to a set of characters
+[SEQMAX](#ex-seqmax)     | Match | 14 | Named sequence, prefer longest match
+[SEQMIN](#ex-seqmin)     | Match | 15 | Named sequence, prefer shortest match
+[REP](#ex-rep)           | Match | 16 | Match repeatedly on adjacent elements
+[START](#ex-start)       | Match | 17 | Match at first element of array
+[END](#ex-end)           | Match | 18 | Match at length of array
+[CHARS](#ex-chars)       | Match | 19 | Match to a set of characters
 [CASE](#ex-case)         | Fn    | 50 | If/else that returns a value
 [NOT](#ex-not)           | Fn    | 51 | Logical NOT of value exprs
 [AND](#ex-and)           | Fn    | 52 | Logical AND of value exprs
@@ -469,18 +555,19 @@ Name                     | Type  | ID | Description
 [CASTNUM](#ex-castnum)   | Fn    | 55 | Cast value to number
 [CASTSTR](#ex-caststr)   | Fn    | 56 | Cast value to string
 [CASTDATE](#ex-castdate) | Fn    | 57 | Cast value to host date
-[SPLIT](#ex-split)       | Fn    | 58 | Split a string into an array
-[JOIN](#ex-join)         | Fn    | 59 | Join array into a string
-[LESS](#ex-less)         | Fn    | 60 | Less-than test
-[LESSEQ](#ex-lesseq)     | Fn    | 61 | Less-or-equal test
-[MIN](#ex-min)           | Fn    | 62 | Minimum of list
-[MAX](#ex-max)           | Fn    | 63 | Maximum of list
-[COALESCE](#ex-coalesce) | Fn    | 64 | First non-null value of list
-[ADD](#ex-add)           | Fn    | 65 | Add numbers
-[SUB](#ex-sub)           | Fn    | 66 | Subtract numbers
-[MUL](#ex-mul)           | Fn    | 67 | Multiply numbers
-[DIV](#ex-div)           | Fn    | 68 | Divide numbers
-[MOD](#ex-mod)           | Fn    | 69 | Calculate Modulus
+[CAPTURE](#ex-capture)   | Fn    | 58 | Match, then return captured sequences
+[SPLIT](#ex-split)       | Fn    | 59 | Split a string into an array
+[JOIN](#ex-join)         | Fn    | 60 | Join array into a string
+[LESS](#ex-less)         | Fn    | 61 | Less-than test
+[LESSEQ](#ex-lesseq)     | Fn    | 62 | Less-or-equal test
+[MIN](#ex-min)           | Fn    | 63 | Minimum of list
+[MAX](#ex-max)           | Fn    | 64 | Maximum of list
+[COALESCE](#ex-coalesce) | Fn    | 65 | First non-null value of list
+[ADD](#ex-add)           | Fn    | 66 | Add numbers
+[SUB](#ex-sub)           | Fn    | 67 | Subtract numbers
+[MUL](#ex-mul)           | Fn    | 68 | Multiply numbers
+[DIV](#ex-div)           | Fn    | 69 | Divide numbers
+[MOD](#ex-mod)           | Fn    | 70 | Calculate Modulus
 
 ### Expression Interaction
 
@@ -985,16 +1072,16 @@ add this element as desired.
 
 This is the primary tool used to re-implement text diff/patch behavior:
 
-    ['SPLIT',
-      { sep: ["|", "\n", "\r\n"], default: "\n", trim: ["{",0,null," "] },
-      ['MATCH',
-        ['ARRAY', 10,
+    [SPLIT,
+      { sep: [ANY, "\n", "\r\n"], default: "\n", trim: [CHARS," "] },
+      [MATCH,
+        [ARRAY, 10,
           "Line ten",
           "Line eleven",
           "Line twelve",
           "Line thirteen"
         ],
-        ["SPLICE", 11, 2,
+        [SPLICE, 11, 2,
           "New Line eleven"
           // no line 12
         ]
@@ -1130,16 +1217,24 @@ Examples:
     [IS, match_spec]
     [IS, value_expr, match_spec]
 
-Match when the target has only the properties described in `match_spec`.
+Match according to `HAS` but fail if the object/array contains unspecified
+properties.
+
+More precisely,
+
+  * Every property named by the specification must successfully match,
+    including against a nonexistent current node.
+  * Every property actually present in the target must have a corresponding
+    property in the specification.
 
 The `match_spec` argument is [match context](#match-context) and the
 `value_expr` is [value context](#value-context).  In the 1-argument
 form, the value being compared is the current node.
-As described in the [section on expressions](#expression-overview), the 'IS'
-semantics are pased as a parameter to inner match expressions in every case
-where a match expression calls a match expression other than `HAS`.
-A match expression used as a direct child of a function expression resets to
-`HAS` semantics.
+
+As described in the [matching section](#matching), the entire tree of match
+structure and match expressions within the `IS` expression inherit `IS`
+semantics unless overridden with a `HAS` expression, but a match expression
+used as a direct child of a function expression resets to `HAS` semantics.
 
 Examples:
 
@@ -1160,7 +1255,7 @@ expressions.
 
 This is like the function [`NOT`](#ex-not), but with
 [match expression](#expression-overview) semantics rather than function
-expression semantics.  Note that for 
+expression semantics.
 
 #### <span id="ex-any">ANY</span>
 
@@ -1171,7 +1266,8 @@ expressions.
 
 This is like the function [`OR`](#ex-or), but with
 [match expression](#expression-overview) semantics rather than function
-expression semantics.
+expression semantics.  When evaluated at an array cursor position, it can
+produce multiple successor cursor positions.
 
 #### <span id="ex-all">ALL</span>
 
@@ -1183,6 +1279,14 @@ expressions.
 This is like the function [`AND`](#ex-and), but with
 [match expression](#expression-overview) semantics rather than function
 expression semantics.
+
+In sequence context, each argument is treated as a constraint that must be
+satisfiable from the starting position; of the successor positions generated
+by each subexpressions, any that is less than the maximum of each
+subexpression's minimum position gets discarded, and all the rest are returned
+as potential successor positions.  In other words, the combined match extends
+at least as far as needed for the minimum requirement of each subexpression,
+up to the maximum matchable by any subexpression.
 
 #### <span id="ex-exists">EXISTS</span>
 
@@ -1230,11 +1334,14 @@ With no arguments, this matches when the current node is a string.
 With one argument it asserts that the node is a string and matches a regular
 expression, specified in [regex context](#regex-context).  The regex is not
 implicitly anchored.  This expression is the primary way of invoking regular
-expression matching.
+expression matching when the specific bounds of the match do not need to be
+known. It does not invoke "longest" semantics since it only need a boolean
+result.
 
 #### <span id="ex-num">NUM</span>
 
     [NUM]
+    [NUM, min]
     [NUM, min, max]
 
 With no arguments, this matches when the current node is any JSON number,
@@ -1259,26 +1366,26 @@ Match when the current node is a valid input for the
 [`CASTDATE` expression](#ex-castdate).  See the details of that expression
 and also the [dates section](#dates) for details.
 
-#### <span id="ex-with">
+#### <span id="ex-with">WITH</span>
 
-    [WITH, temp_path, value_expr, match_expr]
-    [WITH, temp_path0, val0, temp_path1, val1, ..., match_expr]
+    [WITH, temp_prop, value_expr, match_expr]
+    [WITH, temp_prop0, val0, temp_prop1, val1, ..., match_expr]
 
-Set up scoped overrides of the TEMP namespace before matching an expression.
+Set up a lexical overlay on the TEMP namespace.
 
-This performs one or more assignments into the TEMP namespace that are only
-visible for the duration of the `WITH` expression.  Each `temp_path` is
-declared in [path context](#path-context), restricted to paths of the temp
-namespace and with simple scalars referring to the root of the temp namespace
-rather than the current node.  Each `value_expr` is declared in
-[value context](#value-context) and evaluated before assignment.
+This sets one or more properties at the root of the TEMP namespace to new
+values that are only visible for the duration of the `WITH` expression.
+`temp_prop` may be any string or integer, but not an expression.
+Each `value_expr` is declared in [value context](#value-context) and evaluated
+before assignment.
 The `match_expr` is declared in [match context](#match-context) and the result
-is passed through as the result of the `WITH` expression while reverting the
-temp namespace to its previous state.
+is passed through as the result of the `WITH` expression.
 
 The purpose of this expression is to capture values within the tree of the
 current node before descending into the tree with match expressions where they
-would no longer be accessible.
+would no longer be accessible.  Since expressions have no side effects and the
+changes to TEMP are local to this expression, implementations are free to store
+references to other trees rather than deep-clonding the data.
 
 #### <span id="ex-seq">SEQ</span>
 
@@ -1288,34 +1395,32 @@ would no longer be accessible.
 Match a series of array elements against a series of match expressions.
 
 This can only match when the current node is derived from a match cursor of an
-array.  It tests each `match_expr` in sequence, returning false if the match
-fails.  Each `match_expr` advances the array cursor as appropriate.  If it
-reaches the end of the list (which may be empty) without a match failure, it
-returns true.
+array.  It produces all the successor cursor positions that can satisfy the
+sequence of `match_expr`, returning false if no position can satisfy them.
+It is permitted to have zero arguments, in which case it returns true and
+produces the successor cursor position of it's initial cursor position.
 
 #### <span id="ex-rep">REP</span>
 
     [REP, min, max, match_expr]
 
-Repeatedly match an expression against a series of array elements.
+Match repetitions of an expression against a series of array elements.
 
 `min` and `max` are [value context](#value-context) expressions which must
-evaluate to non-negative integers or the value `null`.  The value of `min`
-must be less than `max` if neither are null, but if `max` is 0 it is an alias
-for "same as min" to avoid repeating the expression for `min`.
+evaluate to integers.  The value of `min` must be non-negative.  The value of
+`max` may be -1 as an alias for infinity, or 0 as an alias for "same as min".
+Otherwise, `max` must have a value greater than `min`.
 `match_expr` is a [match context](#match-context) expression.
 
-It tests `match_expr` up to `max` times or until the first failure or until
-the array cursor doesn't advance.  If `max` is `null` the upper limit of the
-iteration is determined by the resource limits set by the application.
-If the match fails and it has not met the `min` requirement, it returns false
-and resets the array cursor.  Otherwise it returns true.
+This can only match when the current node is derived from a match cursor of an
+array.  It produces all the successor cursor positions that can satisfy a count
+of matches between `min` and `max`.
 
 Regex Notation | REP notation
 ---------------|--------------------------
- `(...)*`      | [REP,0,null,...]
+ `(...)*`      | [REP,0,-1,...]
  `(...)?`      | [REP,0,1,...]
- `(...)+`      | [REP,1,null,...]
+ `(...)+`      | [REP,1,-1,...]
  `(...){5}`    | [REP,5,0,...]
  `(...){3,5}`  | [REP,3,5,...]
 
@@ -1324,7 +1429,8 @@ Regex Notation | REP notation
     [START]
 
 Match when the current node is derived from a match cursor of an array and the
-cursor is at its minimum value.
+cursor is at its minimum value.  This is a zero-width assertion. (returns the
+input cursor position as the successor position)
 
 #### <span id="ex-end">END</span>
 
@@ -1332,6 +1438,7 @@ cursor is at its minimum value.
 
 Match when the current node is derived from a match cursor of an array and the
 cursor is at its maximum value. (i.e one-beyond-the-end of the array)
+This is a zero-width assertion.
 
 #### <span id="ex-chars">CHARS</span>
 
@@ -1361,7 +1468,7 @@ possible.
 
 Finally, you may use an [`EXPR expression`](#ex-expr) to reference a `CHARS`
 expression from the common expression namespace.  It must resolve to exactly
-a `CHARS` expression; anything else results in `INVALID_OPERAND`.
+a `CHARS` expression; anything else results in `INVALID_GRAFT`.
 
 Examples:
 
