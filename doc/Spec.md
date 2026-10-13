@@ -265,7 +265,7 @@ Name                  | ID | Description
 [MOVE](#act-move)     |  4 | Move existing values between properties
 [SPLICE](#act-splice) |  5 | Perform standard splice() on an array
 [SPLIT](#act-split)   |  6 | Split string into array, apply actions, re-join
-[LOG](#act-log)       | -2 | Emit diagnostic message and data
+[LOG](#act-log)       | 10 | Emit diagnostic message and data
 
 The `SPLICE` action is an optimization vs. `COPY` or `MOVE` for making
 changes to a range of an array.
@@ -377,6 +377,13 @@ have behavior defined in terms of "initial state" and "generated successor
 states", with the initial state being a position within [0,length] where a
 match needs to occur, and successor states being all the ways that the match
 can resolve successfully from that starting position.
+For every match expression where sequence context behavior is not specified,
+the successor state produced in sequence context is the position following the
+current element.  i.e. match expressions consume one element by default.
+Some expressions are simply described as "zero width assertions", which means
+they consume no elements and the successor position is identical to the initial
+position (and only if they match).
+
 Implementations are likely to need to iterate the successor states as they look
 for an overall match for the array specification, but no specific order is
 required for this iteration and implementations are free to apply optimizations
@@ -429,16 +436,23 @@ define an iteration order for testing alternatives or greedy semantics for
 every `REP` expression.  These restrictions are applied *after* replacing any
 common subexpression references.
 
-After a successful sequence-context match of an array, named sequences get
-recorded in an internal data structure of the match state.
-It is an error for two named sequences within the same match specification to
-share the same name.  Since all sequences will participate in the match, all
-named sequences will be defined by the end of the match.
-If the match was occurring as the test of a `MATCH` or `IF` action, a
-successful overall match makes each name available within the
-[capture namespace](#ex-cap) locally within its contained actions.
-If the match was occurring within a `CAPTURE` function, the named captures
-become the properties of the returned object.
+After a successful sequence-context match of an array, named sequences may
+get carried as annotations to the current match state.  The `capture_name` must
+not be currently defined in the match state, or it fails with `INVALID_GRAFT`.
+This process is skipped entirely if the current match state is within a `NONE`,
+`ANY`, or `REP` expression at a higher level of the match structure; i.e.
+anything that could make the capture conditional causes it to be excluded
+entirely.  This also means that the captures are not observable within these
+expressions, and the length preference of each sequence reverts to `boolean`.
+
+If the overall match succeeds, the captures are available as output.
+If the match was occurring as the test of a `MATCH` or `IF` action,
+the captures become the new state of the [capture namespace](#ex-cap) locally
+for its contained actions.  Captures from a parent action's match are no longer
+viisble, but could be copied to the `STASH` namespace if you need them in the
+inner scope.  If the match was occurring within a `CAPTURE` function, the named
+captures become the properties of the returned object.  The `CAPTURE` function
+has no effect on the capture namespace.
 
 #### Fuzzy Matching
 
@@ -483,7 +497,8 @@ detail as common useful strategies and antipatterns emerge.
 
 Regex matching can only begin when the current node is a string.
 The subject string is broken into a virtual array of characters, and then the
-match expressions are applied to that virtual array.
+match expressions are applied to that virtual array, with
+[sequence context](#matching) implicitly enabled.
 Character matching is defined over a sequence of Unicode code point values.
 It is left to implementations or host languages to determine (or provide
 configuration for) how input strings are converted to this sequence,
@@ -547,27 +562,32 @@ Name                     | Type  | ID | Description
 [START](#ex-start)       | Match | 17 | Match at first element of array
 [END](#ex-end)           | Match | 18 | Match at length of array
 [CHARS](#ex-chars)       | Match | 19 | Match to a set of characters
-[CASE](#ex-case)         | Fn    | 50 | If/else that returns a value
-[NOT](#ex-not)           | Fn    | 51 | Logical NOT of value exprs
-[AND](#ex-and)           | Fn    | 52 | Logical AND of value exprs
-[OR](#ex-or)             | Fn    | 53 | Logical OR of value exprs
-[CASTBOOL](#ex-castbool) | Fn    | 54 | Cast value to boolean
-[CASTNUM](#ex-castnum)   | Fn    | 55 | Cast value to number
-[CASTSTR](#ex-caststr)   | Fn    | 56 | Cast value to string
-[CASTDATE](#ex-castdate) | Fn    | 57 | Cast value to host date
-[CAPTURE](#ex-capture)   | Fn    | 58 | Match, then return captured sequences
-[SPLIT](#ex-split)       | Fn    | 59 | Split a string into an array
-[JOIN](#ex-join)         | Fn    | 60 | Join array into a string
-[LESS](#ex-less)         | Fn    | 61 | Less-than test
-[LESSEQ](#ex-lesseq)     | Fn    | 62 | Less-or-equal test
-[MIN](#ex-min)           | Fn    | 63 | Minimum of list
-[MAX](#ex-max)           | Fn    | 64 | Maximum of list
-[COALESCE](#ex-coalesce) | Fn    | 65 | First non-null value of list
-[ADD](#ex-add)           | Fn    | 66 | Add numbers
-[SUB](#ex-sub)           | Fn    | 67 | Subtract numbers
-[MUL](#ex-mul)           | Fn    | 68 | Multiply numbers
-[DIV](#ex-div)           | Fn    | 69 | Divide numbers
-[MOD](#ex-mod)           | Fn    | 70 | Calculate Modulus
+[CAPTURE](#ex-capture)   | Fn    | 50 | Match, then return captured sequences
+[LOCAL](#ex-local)       | Fn    | 51 | Scoped overrides to select namespaces
+[NOT](#ex-not)           | Fn    | 52 | Logical NOT of value exprs
+[AND](#ex-and)           | Fn    | 53 | Logical AND of value exprs
+[OR](#ex-or)             | Fn    | 54 | Logical OR of value exprs
+[LENGTH](#ex-length)     | Fn    | 55 | Return length of an array or string
+[SLICE](#ex-slice)       | Fn    | 56 | Return span of an array or string
+[CONCAT](#ex-concat)     | Fn    | 57 | Join spans of arrays or strings
+[REDUCE](#ex-reduce)     | Fn    | 58 | Combine array elements
+[FILTER](#ex-filter)     | Fn    | 59 | Select array elements
+[MAP](#ex-map)           | Fn    | 60 | Transform array elements
+[SPLIT](#ex-split)       | Fn    | 61 | Split a string into an array
+[PROPS](#ex-props)       | Fn    | 62 | Return properties of an object
+[MKOBJ](#ex-mkobj)       | Fn    | 63 | Construct an object from properties
+[CASE](#ex-case)         | Fn    | 64 | If/else that returns a value
+[CASTBOOL](#ex-castbool) | Fn    | 65 | Cast value to boolean
+[CASTNUM](#ex-castnum)   | Fn    | 66 | Cast value to number
+[CASTSTR](#ex-caststr)   | Fn    | 67 | Cast value to string
+[CASTDATE](#ex-castdate) | Fn    | 68 | Cast value to date/datetime/timestamp
+[LESS](#ex-less)         | Fn    | 69 | Less-than test
+[LESSEQ](#ex-lesseq)     | Fn    | 70 | Less-or-equal test
+[ADD](#ex-add)           | Fn    | 71 | Add numbers
+[SUB](#ex-sub)           | Fn    | 72 | Subtract numbers
+[MUL](#ex-mul)           | Fn    | 73 | Multiply numbers
+[DIV](#ex-div)           | Fn    | 74 | Divide numbers
+[MOD](#ex-mod)           | Fn    | 75 | Calculate Modulus
 
 ### Expression Interaction
 
@@ -1142,6 +1162,27 @@ set up infinite recursion using EXPR references, but likely to quickly run
 into `RESOURCE_LIMIT` errors.  Implementations are not expected to optimize
 tail-calls like a functional language would (but are permitted to).
 
+#### <span id="ex-cap">CAP</span>
+
+    [CAP, name]
+    [CAP, name, prop]
+
+Reference one of the [sequence capture results](#sequence-matching) from the
+parent `MATCH` or `IF` action.  This namespace is empty in any other scope.
+The name must exist or this returns `INVALID_OPERAND`.  `name` and `prop` are
+specified in value context, though they are not exactly a path since the
+namespace is not an arbitrary hierarchy.  `name` may be specified as an integer
+which is automatically coerced to a string.  The logical structure of each
+capture is:
+
+    {
+      pos:   // starting offset
+      len:   // number of elements matched
+      lim:   // pos + len
+    }
+
+and it may be used as the argument for [`SLICE`](#ex-slice).
+
 #### <span id="ex-temp">TEMP</span>
 
     [TEMP, path...]
@@ -1212,6 +1253,10 @@ Examples:
                                           && node.a[4] === 7
     [HAS, [TEMP,0], { a: 1 }]           temp['0'].a === 1
 
+In [sequence context](#sequence-matching), the successor state produced is the
+position following the current element, unless 2-argument form was used in
+which case it becomes a zero-width assertion.
+
 #### <span id="ex-is">IS</span>
 
     [IS, match_spec]
@@ -1257,6 +1302,11 @@ This is like the function [`NOT`](#ex-not), but with
 [match expression](#expression-overview) semantics rather than function
 expression semantics.
 
+In [sequence context](#sequence-matching), this is a zero-width assertion.
+Additionally, named captures within `NONE` expressions of the same match
+algorithm state (i.e. not new matches initiated by functions) are ignored,
+including those deeper in the structure.
+
 #### <span id="ex-any">ANY</span>
 
     [ANY, match_expr...]
@@ -1266,8 +1316,14 @@ expressions.
 
 This is like the function [`OR`](#ex-or), but with
 [match expression](#expression-overview) semantics rather than function
-expression semantics.  When evaluated at an array cursor position, it can
-produce multiple successor cursor positions.
+expression semantics.
+
+In [sequence context](#sequence-matching), the successor states produced by
+this expression are the union of all the successor states produced by its match
+expressions.
+Additionally, named captures within `ANY` expressions of the same match
+algorithm state (i.e. not new matches initiated by functions) are ignored,
+including those deeper in the structure.
 
 #### <span id="ex-all">ALL</span>
 
@@ -1280,13 +1336,16 @@ This is like the function [`AND`](#ex-and), but with
 [match expression](#expression-overview) semantics rather than function
 expression semantics.
 
-In sequence context, each argument is treated as a constraint that must be
-satisfiable from the starting position; of the successor positions generated
-by each subexpressions, any that is less than the maximum of each
-subexpression's minimum position gets discarded, and all the rest are returned
-as potential successor positions.  In other words, the combined match extends
-at least as far as needed for the minimum requirement of each subexpression,
-up to the maximum matchable by any subexpression.
+In [sequence context](#sequence-matching), each argument is treated as a
+constraint that must be satisfiable from the starting position.  The successor
+states are restricted to those which are at or beyond a position containing
+enough elements to satisfy all of the arguments.
+For example, if you combine an expression matching 1, 3, or 7 elements of the
+current array with an expression matching 2 or 4 elements, the first position
+containing enough elements to match both of them is position 2.  The returned
+successor states are then 2, 3, 4, and 7.  All of these states share the
+combined captured-sequence annotations of the subexpressions; the captures are
+not isolated to the successor states of the subexpression that generated them.
 
 #### <span id="ex-exists">EXISTS</span>
 
@@ -1310,19 +1369,26 @@ With one argument, it asserts the current node is an array with at least this
 number of elements in the context of `HAS`, or exactly this number of elements
 in the context of an `IS` expression.
 
-With more than one argument, this asserts a sequence of matches (as per the
-[`SEQ` expression](#ex-seq)) starting at `offset`.  It is equivalent to the
-expressions:
+With more than one argument, this asserts the current node is an array and
+tests a range of elements.  It is equivalent to an escaped array with
+initial `[EXISTS]` repeated `offset` times, and in `IS` context a following
+`[EXISTS]` repeated until the end of the array:
 
-    // In 'HAS' match context:
-    [[ [REP,offset,offset,[EXISTS]], [SEQ, match_spec1...] ]]
-    // In 'IS' match context:
-    [[ [REP,offset,offset,[EXISTS]], [SEQ, match_spec1...], [END] ]]
+    [ARRAY, 3, true]
+    // in HAS context is equivalent to
+    [[ [EXISTS], [EXISTS], [EXISTS], true ]]
+    // in IS context is equivalent to
+    [[ [EXISTS], [EXISTS], [EXISTS], true, [SEQ, [REP,0,-1,[EXISTS]] ] ]]
 
 The `offset` may be negative to count backward from the end of the array.
 
     // Assert that the array ends with 'x', 'y', 'z'
     [ARRAY, -3, 'x', 'y', 'z']
+
+This does not initialize sequence context.  It also does not participate in an
+existing sequence context because it descends further into the tree where a
+sequence context has not yet been initialized.  It matches only a single array,
+so the successor state is the position following the current element.
 
 #### <span id="ex-str">STR</span>
 
@@ -1334,9 +1400,11 @@ With no arguments, this matches when the current node is a string.
 With one argument it asserts that the node is a string and matches a regular
 expression, specified in [regex context](#regex-context).  The regex is not
 implicitly anchored.  This expression is the primary way of invoking regular
-expression matching when the specific bounds of the match do not need to be
-known. It does not invoke "longest" semantics since it only need a boolean
-result.
+expression matching on a string.  If you want to locate named capture bounds
+in a string, wrap this expression with the [`CAPTURE` function](#ex-capture).
+Captures within this regex *do* become available in the capture results of the
+match expression containing this `STR` expression, but subject to the normal
+capture-suppression rules when `ANY`, `REP`, or `NONE` are involved.
 
 #### <span id="ex-num">NUM</span>
 
@@ -1387,18 +1455,75 @@ would no longer be accessible.  Since expressions have no side effects and the
 changes to TEMP are local to this expression, implementations are free to store
 references to other trees rather than deep-clonding the data.
 
-#### <span id="ex-seq">SEQ</span>
+#### <span id="ex-seq">SEQ</span>, <span id="ex-seqmax">SEQMAX</span>, <span id="ex-seqmin">SEQMIN</span>
 
-    [SEQ]
     [SEQ, match_expr...]
+    [SEQMAX, capture_name, match_expr...]
+    [SEQMIN, capture_name, match_expr...]
 
-Match a series of array elements against a series of match expressions.
+Match a series of array elements against a series of match expressions,
+optionally expressing a preferred length strategy, and optionally capturing the
+range matched under the specified name.
 
-This can only match when the current node is derived from a match cursor of an
-array.  It produces all the successor cursor positions that can satisfy the
-sequence of `match_expr`, returning false if no position can satisfy them.
-It is permitted to have zero arguments, in which case it returns true and
-produces the successor cursor position of it's initial cursor position.
+To understand this expression, first read the
+[Sequence Matching](#sequence-matching) section.
+
+`match_expr...` is any list of match expressions, and may be an empty list.
+Using an empty sequence allows you to specify things like
+`[ANY, "foo", "bar", [SEQ]]` allowing the `ANY` expression to match zero
+elements, though the same could be achieved by wrapping the `ANY` with
+`[REP,0,1,...]`.
+
+The `SEQMAX` and `SEQMIN` expressions have an extra `capture_name` argument
+(specified in value context) that lets you name the sequence.  If not `null`
+(for an unnamed sequence with length preference) the name must be a string,
+but for encoding efficiency may be coerced from an integer.
+Beware that the name must be unique across any expression participating in the
+same match algorithm state, including arrays at different structural positions.
+However, also note that captures and length preferences are *ignored* when the
+current array occurs within `ANY`, `NONE`, or `REP` expressions at a parent
+structural level.  Within the same match state, a `SEQMIN` or `SEQMAX`
+occurring beneath these expressions behaves as an ordinary `SEQ`.
+
+The "min" vs. "max" designation records a preference for which match should be
+chosen if multiple match states are valid at the end of matching the array.
+They do *not* mean that the capture group will always maximze or minimize the
+elements matched during the algorithm, only that if multiple outcomes for
+matching an array are possible, the selection of the match should prefer longer
+matches or shorter matches for those sequences, giving precedence to the
+sequences in order they occur.  If the captures of the match are not being
+observed, the preference is ignored.
+
+Examples:
+
+For a subject of [1,2,3,4,5] in 'HAS' context:
+
+    [[ [SEQMIN, 1, [REP,0,-1,[NUM,0,3]] ],   // 0 or more [0..3]
+       [SEQMIN, 2, [REP,0,-1,[NUM,0,5]] ]    // 0 or more [0..5]
+    ]]
+
+The captures are zero elements for each, because the initial position is a
+valid final position, and the preference for both matching the fewest elements
+selects this as the best match.
+
+For the same subject in 'IS' context, the expression is implicitly:
+
+    [[ [SEQMIN, 1, [REP,0,-1,[NUM,0,3]] ],   // 0 or more [0..3]
+       [SEQMIN, 2, [REP,0,-1,[NUM,0,5]] ],   // 0 or more [0..5]
+       [END]
+    ]]
+
+This results in an empty capture 1 and all elements in capture 2, because out
+of the final states which can reach the end of the array, sequence 1
+gets priority on a minimal length.  When you change both to `SEQMAX`,
+
+    [[ [SEQMAX, 1, [REP,0,-1,[NUM,0,3]] ],   // 0 or more [0..3]
+       [SEQMAX, 2, [REP,0,-1,[NUM,0,5]] ],   // 0 or more [0..5]
+       [END]
+    ]]
+
+the final state with the most elements for sequence 1 is a split of
+`[1,2,3]` / `[4,5]`.
 
 #### <span id="ex-rep">REP</span>
 
@@ -1409,12 +1534,12 @@ Match repetitions of an expression against a series of array elements.
 `min` and `max` are [value context](#value-context) expressions which must
 evaluate to integers.  The value of `min` must be non-negative.  The value of
 `max` may be -1 as an alias for infinity, or 0 as an alias for "same as min".
-Otherwise, `max` must have a value greater than `min`.
+Otherwise, `max` must have a value greater or equal than `min`.
 `match_expr` is a [match context](#match-context) expression.
 
-This can only match when the current node is derived from a match cursor of an
-array.  It produces all the successor cursor positions that can satisfy a count
-of matches between `min` and `max`.
+This expression is illegal outside of [sequence context](#matching).
+It produces all the successor cursor positions that can satisfy a count of
+matches of the expression between `min` and `max`.
 
 Regex Notation | REP notation
 ---------------|--------------------------
@@ -1428,17 +1553,19 @@ Regex Notation | REP notation
 
     [START]
 
-Match when the current node is derived from a match cursor of an array and the
-cursor is at its minimum value.  This is a zero-width assertion. (returns the
-input cursor position as the successor position)
+Match when the current node (or array cursor) refers to the first element of
+the array.
+
+In [sequence context](#sequence-matching), this is a zero-width assertion.
 
 #### <span id="ex-end">END</span>
 
     [END]
 
-Match when the current node is derived from a match cursor of an array and the
-cursor is at its maximum value. (i.e one-beyond-the-end of the array)
-This is a zero-width assertion.
+Match when the current node (or array cursor) is past the final element of the
+array.
+
+In [sequence context](#sequence-matching), this is a zero-width assertion.
 
 #### <span id="ex-chars">CHARS</span>
 
@@ -1496,75 +1623,361 @@ Examples:
 
 ### Function Expressions
 
-### SPLIT
+#### <span id="ex-capture">CAPTURE</span>
+
+    [CAPTURE, ...]
+
+Match, then return captured sequences.
+
+#### <span id="ex-local">LOCAL</span>
+
+    [LOCAL, prop, value_expr, return_value_expr]
+    [LOCAL, prop0, val0, prop1, val1, ..., return_value_expr]
+
+Set up a lexical overlay on the TEMP namespace or override the current node,
+then evaluate `return_value_expr` and return that value.
+
+This is very similar to the [`WITH` expression](#ex-with), but as a function
+rather than a match expression.  Additionally, it permits `prop` to be the
+expression `[NODE]` to override the current node.  Changes made by each `prop`
+/ `val` pair are visible to the evaluation of subsequent pairs.  After
+evaluating `return_value_expr`, the TEMP namespace and current node revert to
+their previous state.
+
+The `prop` argument may not be a deeper path into a namespace.  This
+restriction may be relaxed in a future version.
+
+#### <span id="ex-not">NOT</span>
+
+    [NOT, value_expr...]
+
+Logical NOT ("NOR", really) of one or more value expressions.
+
+Each value expression must evaluate to a boolean, or the expression fails with
+`INVALID_OPERAND`.
+
+#### <span id="ex-and">AND</span>
+
+    [AND, value_expr...]
+
+Logical AND of one or more value expressions.
+
+Each value expression must evaluate to a boolean, or the expression fails with
+`INVALID_OPERAND`.
+
+#### <span id="ex-or">OR</span>
+
+    [OR, value_expr...]
+
+Logical OR of one or more value expressions.
+
+Each value expression must evaluate to a boolean, or the expression fails with
+`INVALID_OPERAND`.
+
+#### <span id="ex-length">LENGTH</span>
+
+    [LENGTH, value_expr]
+
+Return the length of an array or string.
+
+The value expression must resolve to an array or a string.  The length of a
+string is determined by the same rules that break a string into an array of
+characters, which may differ from the host language's concept of "length".
+
+#### <span id="ex-slice">SLICE</span>
+
+    [SLICE, value_expr, ofs]
+    [SLICE, value_expr, ofs, len]
+    [SLICE, value_expr, config_obj]
+    // Where config_obj is of the form:
+    // { ofs: N, len: N, lim: N }
+    // requiring at least one of these properties.
+
+Return a span of an array or string.
+
+All parameters are [value context](#value-context) expressions.
+The `value_expr` argument must evaluate to a string or array.
+The `ofs` argument must be an integer, and may be negative to count
+backwards from the `LENGTH` of the target value.  The `len` argument must
+also be an integer, and may also be negative to count backward from the
+`LENGTH` of the value in which case it represents the a limiting offset.
+In the third form, a `config_obj` may be used to pass values for the starting
+offset, count of elements, or limiting offset.  The properties of the object
+may not be negative, and if all three are given, they must agree such that
+`ofs + len == lim`.  When one property is absent, it is derived from the other two using that
+equality.  When two are absent, `ofs` defaults to 0, or `lim` defaults to
+`LENGTH` to provide a second parameter.  After normalizing negative arguments,
+the parameters must obey the relation `0 <= offset <= limit <= LENGTH(value)`.
+Any violation of these requirements generates `INVALID_OPERAND`.
+(it could also conceivably be `INVALID_TARGET` or `INVALID_GRAFT`, but it's too
+hard to decide the actual nature of the error at runtime)
+
+#### <span id="ex-concat">CONCAT</span>
+
+    [CONCAT, value_expr1, ...]
+
+Concatenate spans of arrays or strings into a larger array or string.
+
+All arguments must evaluate to the same type, or this generates
+`INVALID_OPERAND`.  If they are all strings, they get joined into a string.
+If they are all arrays, a new array of the combined lists of elements is
+returned.
+
+#### <span id="ex-reduce">REDUCE</span>
+
+    [REDUCE, array_expr, initial_value, reduce_expr, temp_prop]
+    [REDUCE, array_expr, initial_value, reduce_expr, temp_prop, idx_prop]
+
+Combine the elements of an array into a result value.
+
+The `array_expr` and `initial_value` arguments are specified in value context.
+`array_expr` must evaluate to an array.  `initial_value` may be any type.
+`temp_prop` and `idx_prop` are single property names of the TEMP namespace,
+but may also be numbers that get coerced to strings.
+`reduce_expr` is specified in value context, but is not evaluated immediately.
+
+The `initial_value` is evaluated prior to any state changes, and becomes the
+accumulator value.  For each element of the `array_expr`, the current node is
+set to alias the array element, and the TEMP namespace property `temp_prop` is
+set to alias the accumulator, and `reduce_expr` is evaluated.  The changes to
+the current node and TEMP namespace are only visible for the duration of
+evaluating this expression.  The return value of `reduce_expr` is kept as the
+new accumulator value.  After all array elements have been processed, the
+accumulator value is returned as the result of the REDUCE expression.
+
+In the second form, specifying `idx_prop` overrides a second TEMP namespace
+property to hold the array index of the current node on each evaluation of
+`reduce_expr`.
+
+`REDUCE` can actually be implemented using more basic expressions, but is
+provided for efficiency and to reduce the chance of exceeding `RESOURCE_LIMIT`
+from recursive behavior.  Minimalist implementations should not fall back to an
+internal common subexpression of `REDUCE` if it would make a graft more likely
+to hit resource limits than a proper REDUCE implementation.
+
+#### <span id="ex-filter">FILTER</span>
+
+    [FILTER, array_expr, match_expr]
+
+Select matching elements from an array.
+
+The `array_expr` is value context and the `match_expr` is match context.
+First, the `array_expr` is evaluated, and the result must be an array.
+Then each element is set as the current node while evaluating `match_expr`.
+The ones that match become part of the returned array, in the same order they
+appeared in the original array.
+
+#### <span id="ex-map">MAP</span>
+
+    [MAP, array_expr, value_expr]
+
+Transform each element of an array to produce a new array.
+
+The `array_expr` and `value_expr` arguments are defined in value context,
+though `value_expr` is not evaluated immediately.  First, `array-expr` is
+evaluated and must result in an array.  Then for each element of `array_expr`,
+the current node is changed to reference it, and `value_expr` is evaluated in
+that context.  The list of returned values from each `value_expr` become the
+array returned by `MAP`, one per original array element, in order.
+
+If you need to replace one element with a differing number of elements you
+need to use `REDUCE`, which may construct an array in its accumulator.
+
+#### <span id="ex-split">SPLIT</span>
 
     ['SPLIT', split_spec, match_spec]
 
-Matches when the current node is a string that, when split into an array of
-strings, matches the `match_spec` argument.
-This uses the same `split_spec` as the `SPLIT` action.
-The match against the array is also subject to fuzzy matching.
+Split a string into an array.
 
-## <span id="regex">Regular Expressions</span>
+This is the same (rather involved) algorithm as the
+[`SPLIT` action](#act-split) but returns the array instead of performing
+actions on the array, and discards any metdata about separators or trimmings
+that the `SPLIT` action would have used to reconstruct a string.
 
-If the host language has direct support for objects encapsulating a regular
-expression, and JSON serialization is not required, you may use those objects
-in any parameter that allows regular expressions, to take advantage of the
-full power and capabilities of your host language.
+#### <span id="ex-props">PROPS</span>
 
-If you need to portably serialize the JGraft, the regular expressions may be
-specified as (you guessed it) lisp-style structure describing the pattern.
-Think of it as a pre-parsed regular expression.  The notation is not intended
-to be written by hand, but aims to be readable enough for debugging.
+    [PROPS, object_expr]
+    [PROPS, object_expr, 1]
+    [PROPS, object_expr, 2]
 
-Implementations can try to flatten this structure into the syntax relevant for
-the host language's regex engine, or just directly implement the character-
-matching engine, which may actually be easier.
-The capabilities of this regular expression specification are intentionally
-limited to improve the odds that each host language can compile it into the
-host's native regexes, and textbook "regular" so that they give a clean
-definition for "longest match".
-In particular, it does not deal with case insensitivity, unicode databases,
-back-references, or sub-pattern captures, and does not need to worry about
-concepts like "greedy" matching.
-This does require that implementations be able to perform finite automata
-semantics for the longest match, which is an easy fit for the standard C
-library, but a bit harder for engines like JavaScript, Python, or Perl
-which match according to a predictable backtracking order.
+Return the properties of an object in various forms.
 
-Character matching is defined over a sequence of Unicode code point values.
-It is left to implementations or host languages to determine (or provide
-configuration for) how input strings are converted to this sequence,
-including the treatment of malformed encodings and unpaired surrogates.
-For example, an implementation might reject malformed UTF-8 or strings
-containing unpaired surrogates, replace malformed input, or expose surrogate
-code points individually. These choices are outside the JGraft specification.
+`object_expr` is specified in value-context and must resolve to an object.
+In the first form, the property names of an object are returned as one array.
+In the second form, the return value is an array where each element is an array
+of `[propertyname, value]`.  In the third form, the return value is an array of
+two arrays where the first array holds property names and the second array
+holds property values.  No order is specified for the properties, other than
+that in the second form the list of names and list of values must follow the
+same property order.
 
-JGraft character classes may include surrogate code point values
-(U+D800–U+DFFF). These can only match when the host's interpretation of the
-input string exposes corresponding values in the character sequence.
+#### <span id="ex-mkobj">MKOBJ</span>
 
-### Common Subexpressions
+    [MKOBJ, name_expr, val_expr, ...]            // string, string, ...
+    [MKOBJ, name_array_expr, value_array_expr ]  // [name,...], [val,...]
+    [MKOBJ, prop_array_expr ]                    // [ [name,val], ... ]
 
-There is a "common subexpression" namespace available to the regular
-expressions.  This helps make up for the lack of built-in unicode tables and
-case insensitivity and general verbosity of the JGraft regex structure.
-The common subexpression namespace is a simple key/value store where the key
-is a string of printable ASCII or non-ASCII unicode and the value is any
-structure that can be interpreted as a valid JGraft regular expression.
+Construct an object from properties.
 
-When references are made to common subexpressions, they are resolved as if
-the referenced structure had been specified in-line.  Subexpressions cannot
-contain cyclic references.  In particular, if a common subexpression is
-specified using a reference, the reference must already exist and gets
-resolved immediately.
+All arguments are specified in value context.
+In the first form, a list of pairs of `name_expr` and `val_expr` each become a
+property of the created object.  At least one pair must be given in this form.
+In the second form, recognized by two array arguments, the names are provided
+in one array and the values are provided in a second array.
+In the third form, recognized by one array argument, the array holds one
+element for each property which is an array of `[name,val]`.
 
-The initial value of the common expression namespace can be supplied by an
-enclosing ['JGRAFT' actions](#jgraft) via the metadata property
-`regexCommon`.  Temporary overrides can also be specified via regex Sequence
-functions that begin with a `{}` configuration block.  In both cases, the list
-is specified as an array of property/value pairs to apply to the namespace, in
-order.  Integers are permitted as the property name (implicitly coerced to
-strings) since numeric iteration is the simplest thing to generate and
-integers encode more compactly in JSON than strings.
+In all cases, the names must evaluate to srings, and it is an error for any two
+names to be identical strings.
+
+#### <span id="ex-case">CASE</span>
+
+    [CASE, match_expr, value_expr, else_value_expr]
+    [CASE, match_expr0, value_expr0, match1, val1, ... else_val]
+
+Like the [`IF` action](#act-if), but return the evaluated `value_expr` of the
+first successful `match_expr`.
+
+Because [match context](#contexts) lets a plain value describe a HAS match
+against the current node, this can be an efficient way to choose an expression
+based on its value.  If the value you want to compare is not the current node,
+you can temporarily set it up as the current node with [`LOCAL`](#ex-local).
+
+#### <span id="ex-castbool">CASTBOOL</span>
+
+    [CASTBOOL, value_expr]      // strict
+    [CASTBOOL, value_expr, 0]   // strict
+    [CASTBOOL, value_expr, 1]   // relaxed
+
+Cast a value to boolean.
+
+Boolean values always pass through.  With strict casting, only integers 1 and 0
+and strings "true" and "false" may be cast to booleans, and every other value
+generates `INVALID_OPERAND`.  With relaxed casting, empty string and `null`
+additionally become false and every other value becomes true, and only the
+nonexistent value produced during matching generates `INVALID_OPERAND`.
+
+#### <span id="ex-castnum">CASTNUM</span>
+
+    [CASTNUM, value_expr]
+
+Cast a value to a number.
+
+Numeric values always pass through.  Any string composed of digits which parses
+as a valid number according to JavaScript syntax also become a number.  Every
+other value generates `INVALID_OPERAND`.
+
+#### <span id="ex-caststr">CASTSTR</span>
+
+    [CASTSTR, value_expr]
+
+Cast a value to a string.
+
+String values always pass through.  Numbers stringify to the same string that
+a JSON encoder would produce.  Every other value generates `INVALID_OPERAND`.
+
+#### <span id="ex-castdate">CASTDATE</span>
+
+    [CASTDATE, value_expr]
+
+Cast a value to a JGraft date, datetime, or timestamp.
+
+
+
+#### <span id="ex-less">LESS</span>
+
+    [LESS, expr_a, expr_b]
+
+Perform a less-than comparison.
+
+Both arguments must evaluate to the same type, or this generates
+`INVALID_OPERAND`.
+
+On booleans, `false` compares less than `true`.
+
+On numbers, this performs a numeric comparison according to the host language,
+however comparisons using host extensions of NaN should generate
+`INVALID_OPERAND`.
+
+On strings, this performs a character-by-character comparison on the codepoint
+values, using the same string-to-characters algorithm as configured for regular
+expressions.
+
+On arrays, this performs an element-by-element `LESS` test in the order of the
+elements.  If it makes it to the end of one array before the other, that array
+is considered the lesser of the two.
+
+On dates and datetimes, the fields are compared in sequence largest-to-smallest
+as if they were an array of those values.  On timestamps the timezone offset is
+applied first before comparing logical instants.
+
+All other types (e.g. objects) generate `INVALID_OPERAND`.  If it does not
+fail, the result is always a boolean.
+
+#### <span id="ex-lesseq">LESSEQ</span>
+
+    [LESSEQ, ...]
+
+Perform a less-than-or-equal comparison.
+
+This is the same as `LESS` but also returns true if the values are equal.
+
+#### <span id="ex-add">ADD</span>
+
+    [ADD, value_expr1...]
+    [ADD, array_expr]
+
+Add numbers.
+
+Arguments are described in value context.  All `value_expr` arguments must
+evaluate to numbers, though the numbers may also be provided as a single array
+argument.  The result is the host language's addition of those numbers, except
+if the implementation is not configured to allow `Inf` and `NaN` then a result
+of those value must cause the expression to fail with `INVALID_OPERAND`.
+
+#### <span id="ex-sub">SUB</span>
+
+    [SUB, value_expr1, value_expr2]
+
+Subtract numbers.
+
+Arguments are described in value context.  There must be exactly 2 arguments
+and they must evaluate to numbers.  The result is the host language's
+subtraction of the numbers, except if the implementation is not configured to
+allow `Inf` and `NaN` then a result of those value must cause the expression
+to fail with `INVALID_OPERAND`.
+
+#### <span id="ex-mul">MUL</span>
+
+    [MUL, value_expr1...]
+    [MUL, array_expr]
+
+Multiply numbers.
+
+Arguments are described in value context.  All `value_expr` arguments must
+evaluate to numbers, though the numbers may also be provided as a single array
+argument.  The result is the host language's multiplication of those numbers,
+except if the implementation is not configured to allow `Inf` and `NaN` then a
+result of those value must cause the expression to fail with `INVALID_OPERAND`.
+
+#### <span id="ex-div">DIV</span>
+
+    [DIV, value_expr1, value_expr2]
+
+Divide numbers.
+
+Arguments are described in value context and must evaluate to numbers.
+The result is the host language's multiplication of those numbers, with
+division by zero triggering `INVALID_OPERAND`, and a result of `Inf` or `NaN`
+when not configured to allow these must also fail with `INVALID_OPERAND`.
+
+#### <span id="ex-mod">MOD</span>
+
+    [MOD, value_expr1, value_expr2]
+
+Calculate a modulus.
+
+Arguments are described in value context and must evaluate to numbers.
+The result is the modulus in the range `[0..value_expr2)` or `(value_expr2..0]`
+if `value_expr2` was negative.
 
