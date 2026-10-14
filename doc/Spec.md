@@ -56,11 +56,11 @@ direct "arrays-are-special" representation of JGraft.
 The remainder of this specification uses the JSON form of actions and
 expressions, since the object model of a host language is left unspecified.
 
-### Contexts
+### Argument Contexts
 
 Every action and expression declares the context of each of its arguments.
-Contexts help reduce the verbosity of the encoding by giving more complex
-meaning to simpler JSON structures.
+Argument Contexts help reduce the verbosity of the encoding by giving more
+complex meaning to simpler JSON structures.
 
 #### Value Context
 
@@ -130,8 +130,8 @@ detail.
 
 #### Other Contexts
 
-Other contexts may be defined by individual actions or expressions, usually
-in terms of providing arguments to an implied expression.
+Other argument contexts may be defined by individual actions or expressions,
+usually in terms of providing arguments to an implied expression.
 
 ### Dates
 
@@ -175,9 +175,9 @@ and can be compared with timestamps from differing timezone offsets.
 
 Since each of these is a different type, the usual rules apply when testing
 them: dissimilar types cannot "match" in a match expression, and the `LESS`,
-`LESSEQ`, `MIN`, and `MAX` expressions will fail with an `INVALID_OPERAND`
-error.  You can use the `CASTDATE` function to cast values to the same
-precision for comparison.
+and `LESSEQ` expressions will fail with an `INVALID_OPERAND` error.
+You can use the `CASTDATE` function to cast values to the same precision for
+comparison.
 
 ## Namespaces
 
@@ -201,6 +201,17 @@ Actions and expressions can make references to data in six namespaces:
   * Temporaries        - a read/write tree of temporaries that only exists for
                          the duration of one action, referenced by the
                          [`TEMP` expression](#ex-temp).
+
+Each tree logically owns its own data and is strictly a tree for all purposes
+of JGraft actions and expressions.  However, so long as a tree can only be
+read from (the read-only namespaces, and the effectively read-only environment
+while evaluating expressions, which are not permitted to have side effects)
+implementations are permitted to share subtrees within and across namespaces,
+making the namespaces technically acyclic graphs.
+The expression language has no means to observe that two read-only objects or
+arrays are the same entity, however, so authors of JGraft can still consider
+the namespaces to always be trees.  Application code interacting with the
+JGraft state may be able to tell the difference, though.
 
 ## Paths
 
@@ -411,9 +422,9 @@ all sequence context expressions that can match the complete specification for
 the array, the algorithm chooses one according to these priorities:
 
   * Longest overall or shortest overall, if initial mode was not `boolean`.
-  * For each named sequence N in order specified:
+  * For each sequence N having a length preference, in order specified:
     * Longest or shortest match according to its preference.
-  * For each named sequence N in order specified:
+  * For each sequence N having a length preference, in order specified:
     * Leftmost start of a match.
 
 Sequence context affects the behavior of several other match expressions:
@@ -479,9 +490,9 @@ implementations should follow these guidelines:
     integer.
   * Fuzzy matching may not be used in regular expression context.
   * Implementations are strongly discouraged from attempting fuzzy matching on
-    an array where the specification could match a variable number of elements.
-    If the first pass had to test multiple possible match patterns on an array,
-    falling back to fuzzy matching is probably unwanted.
+    an array involving sequence context.  The sequence matching feature is
+    capable enough to make fuzzy matching unnecessary, so falling back to fuzzy
+    matching is probably unwanted.
   * Implementations are encouraged to restrict fuzzy matching to arrays/objects
     where every property affected by an action was previously tested by its
     containing `MATCH` action.  i.e. record every path that was tested during a
@@ -515,7 +526,8 @@ When matching against a virtual character array,
 
   * Numbers match against the numeric value of codepoints.
   * Strings of one character match against the character itself.
-  * Strings of multiple characters are interpreted as `SEQ` expressions.
+  * Strings of zero or multiple characters are interpreted as `SEQ` expressions
+    with empty string meaning an empty sequence.
   * No other types can match anything within the virtual array of characters.
   * If the current node is changed to something other than a virtual array
     of characters (via 2-argument `HAS` or 2-argument `IS`), the algorithm
@@ -611,7 +623,7 @@ In this case, the outer `IS` match expression passes `node.a` as the current
 node to the `NONE` expresison with `IS` context.  The `NONE` expression tests
 whether `node.a` is not exactly identical to `{b:1}`.
 
-    [IS, [NODE,"a"], [NODE,"b"] }]
+    [IS, [NODE,"a"], [NODE,"b"] ]
     // deep_equals(node.a, node.b)
 
 The `IS` and `HAS` expressions have a 2-argument form to specify both the
@@ -620,14 +632,15 @@ node, and `node.b` becomes the fully-evaluated structure to match against.
 Return values from functions cannot contain expressions; arrays are considered
 literally.
 
-    [IS, { "a": [OR, false, { b: 1 }] }]
+    [IS, { "a": [OR, [NOT, [EXISTS]], true] }]
     // node.a === true
     // probably not what was intended
 
-In this example where someone probably meant to use `ANY` instead of `OR`,
-a match expression calls a function (non-match expression) and uses the return
-value as *a value to match against*.  Objects are considered true, so the
-result of `OR` is true and `node.a` is compared to true.
+In this example where someone probably meant to use `ANY` instead of `OR` and
+`NONE` instead of `NOT`, a match expression calls a function (non-match
+expression) and uses the return value as *a value to match against*.
+`EXISTS` returns `true`, `NOT` negates it to `false`, and `OR` returns
+`true || false` so `node.a` is compared to `true`.
 
     // This doesn't work:
     [IS, { "a": [LESS, [CASTNUM], 8] }]
@@ -856,27 +869,39 @@ Examples:
 Relocate subtrees from a source property to a destination property without
 copying them.
 
-For each pair of (`src_path`,`dst_path`) processed in sequence, find the value
-of the source property, delete the leaf source property from its container,
-and then set the destination to refer to that value.
-The `src_path` must refer to a property that exists, and the `dst_path` must
-be validated to be conflict-free (with respect to auto-vivification) before
-any alteration to the target data is performed.  It is permitted to delete a
-source property and then immediately auto-vivify through that same property
-to create the destination.  If `src_path` and `dst_path` are the same, the
-pair are essentially a no-op.
+For each pair of (`src_path`,`dst_path`) processed in sequence:
+
+  1. Resolve any expressions with the paths to establish concrete property
+     chains.
+  2. Verify the source exists and that the destination can be written in the
+     state that would exist after removing the source, taking auto-vivification
+     into account.
+  3. Delete/detach the source value from its container.
+  4. Assign/attach the subtree or value to the destination.
+  5. Record any deferred array operations that are required.
+
+It is permitted to delete a source property and then immediately auto-vivify
+through that same property to create the destination.  If `src_path` and
+`dst_path` are the same, the pair are essentially a no-op.
 `src_path` and `dst_path` are both [path context](#path-context) with the
 exception that a literal `null` may be used as `src_path` to write a literal
 `null` value to `dst_path` (which lets you preserve the existence of a
 property that would otherwise get deleted without needing a followup `COPY`
 action to fix it) or as `dst_path` as a way of requesting deletion of the
-property without preserving the value anywhere.
+property without preserving the value anywhere.  `MOVE` pairs may delete the
+current node, but must replace it with something by the end of the action.
+This has the consequence that a move action executed in full never performs
+a deletion on a parent container, though it may rewrite a property of a parent.
 
 When the source property is an element of an array, the deletion of the
 element implies that following elements will be shifted up to fill the gap.
-However, this shifting does not occur until after all pairs have been processed.
-Until then, the array element is made inaccessible to source paths, though a
-new value may be written into it which cancels the deletion for that element.
+However, this shifting and the corresponding change to `LENGTH` does not occur
+until after all pairs have been processed.
+Attempts to access an array element pending deletion fail with
+`INVALID_OPERAND`, including expressions like `SLICE` that attempt to clone
+every element in a span of an array.  The deleted element may still be used as
+a move destination, and writing a new value to it (or through it) also cancels
+the deletion for that element.
 The queued deletions (along with the metadata of being inaccessible to source
 paths) bind to the instance of the array, following it even if it moves to a
 different namespace.  Implementations need to also consider that the array
@@ -887,7 +912,7 @@ A second special case for arrays is that the final element of a path ending
 within an array may refer to a "half index" of the array, like 1.5.
 Values written to half-index elements get queued for insertion, to be applied
 during the same process that performs deletions at the end of the `MOVE`
-action.
+action.  They also have no immediate effect on `LENGTH`.
 Elements written to a half-index are inaccessible from any namespace; you
 cannot subsequently use them as source paths, nor write through them to deeper
 sub-paths, nor auto-vivify through them.  If you need to modify a value that
@@ -919,6 +944,10 @@ Index  | Behavior
  -2.5  | Queue insertion at `-0.5`
  -3    | Fail with `INVALID_TARGET`
  -3.5  | Fail with `INVALID_TARGET`
+
+In that chart, "append immediately" *does* imply an immediate change to the
+array `LENGTH` which is seen by subsequent pairs and used to interpret negative
+aliases.
 
 At the end of the `MOVE` action, every array instance where an insertion or
 deletion was queued gets conceptually rebuilt from the list of remaining
@@ -1061,7 +1090,7 @@ and you can (exclusive to the others) specify `trim` to set them both to the
 same value.  `ltrim` is implicitly anchored to the start of the element string,
 and `rtrim` is implicitly anchored to the end, allowing a common value for
 `trim`.  The longest match of `ltrim` gets removed first, followed by removing
-the longest match of `trtim` from the remainder, to resolve cases where the
+the longest match of `rtrim` from the remainder, to resolve cases where the
 trimming could overlap.
 If you want to permanently remove the trimmed characters, use `discard: true`.
 
@@ -1076,7 +1105,12 @@ separator of that element remains.  Deletions on the array perform a parallel
 deletion on the metadata array, and every insert operation clones the
 separator of the previous element (and if none, the following element) such
 that every element continues to have a defined separator.  Trimmings do not
-get cloned.
+get cloned.  To be clear, this metadata is *attached to the array* and not
+the strings within it.  It can only be copied when the source and destination
+are observed to be elements of the same metadata-bearing array, or an array
+that was derived from the same instance of `SPLIT` with e.g. `SLICE`.
+Once a `SPLIT` action ends, any metadata associated with it becomes irrelevant
+to future actions or expressions and can be discarded.
 If the array becomes empty at any point, the separator reverts to `default`.
 `default` must be specified when `sep` is a regular expression and `keep` is
 not used; if `sep` is a string then it also implies `default` and if `keep`
@@ -1093,7 +1127,7 @@ add this element as desired.
 This is the primary tool used to re-implement text diff/patch behavior:
 
     [SPLIT,
-      { sep: [ANY, "\n", "\r\n"], default: "\n", trim: [CHARS," "] },
+      { sep: [ANY, "\n", "\r\n"], default: "\n", trim: [REP,0,-1," "] },
       [MATCH,
         [ARRAY, 10,
           "Line ten",
@@ -1107,6 +1141,16 @@ This is the primary tool used to re-implement text diff/patch behavior:
         ]
       ],
     ]
+
+There are at least two ways that implementations can deal with the metadata
+requirements of `SPLIT`: create tree nodes of "array with metadata" and then
+ensure those get flattened to regular arrays before potentially storing them
+into the target tree of data, or record the metadata as inside-out properties
+of an array keyed to the array's memory address or similar identity.  In both
+cases, the metadata should get cloned any time an array gets cloned, including
+value-construction context.  Metadata tied to the array should also copy
+through array expressions that imply a pass-through of original elements,
+specifically `SLICE`, `CONCAT`, and `FILTER`.
 
 ### <span id="act-log">LOG</span>
 
@@ -1133,7 +1177,7 @@ String | ID | Meaning
 `message` is evaluated in [value context](#value-context).  It must resolve
 to a string and should be generally printable, and may not contain unicode
 Surrogates, Noncharacters, or control characters (codepoints 0x00–0x1F and
-0x80–0x9F).
+0x7F–0x9F).
 
 `data` is also evaluated in [value context](#value-context) but may resolve
 to any type of value.  It provides data to the user relevant to the message.
@@ -1168,15 +1212,15 @@ tail-calls like a functional language would (but are permitted to).
     [CAP, name, prop]
 
 Reference one of the [sequence capture results](#sequence-matching) from the
-parent `MATCH` or `IF` action.  This namespace is empty in any other scope.
-The name must exist or this returns `INVALID_OPERAND`.  `name` and `prop` are
-specified in value context, though they are not exactly a path since the
-namespace is not an arbitrary hierarchy.  `name` may be specified as an integer
-which is automatically coerced to a string.  The logical structure of each
-capture is:
+most recent ancestor `MATCH` or `IF` action.  This namespace is empty in any
+other scope. The name must exist or this returns `INVALID_OPERAND`.
+`name` and `prop` are specified in value context, though they are not exactly
+a path since the namespace is not an arbitrary hierarchy.  `name` may be
+specified as an integer which is automatically coerced to a string.
+The logical structure of each capture is:
 
     {
-      pos:   // starting offset
+      ofs:   // starting offset
       len:   // number of elements matched
       lim:   // pos + len
     }
@@ -1185,16 +1229,19 @@ and it may be used as the argument for [`SLICE`](#ex-slice).
 
 #### <span id="ex-temp">TEMP</span>
 
-    [TEMP, path...]
+    [TEMP, prop, ...]
 
 Reference data from the temporary namespace.
 
 The temporary namespace is local to the current action and may be further
-localized to the enclosing [`WITH` expression](#ex-with).
-If the first element of `path` is an integer, it will be coerced to a string.
+localized by an ancestor [`WITH`](#ex-with) or [`LOCAL`](#ex-local)
+expression.
+If the first `prop` argument is an integer, it will be coerced to a string.
+The root of the TEMP namespace itself cannot be read or written.
 
 #### <span id="ex-stash">STASH</span>
 
+    [STASH]          // the entire namespace as an object
     [STASH, path...]
 
 Reference data from the stash namespace.
@@ -1206,6 +1253,7 @@ If the first element of `path` is an integer, it will be coerced to a string.
 
 #### <span id="ex-const">CONST</span>
 
+    [CONST]          // the entire namespace as an object
     [CONST, path...]
 
 Reference data from the const namespace.
@@ -1247,7 +1295,7 @@ Examples:
     [HAS, null]                         node === null
     [HAS, 42]                           node === 42
     { a: 1 }                            node.a === 1
-    { a: [OR, [NOT,[EXISTS]], 1 }       !('a' in node) || node.a === 1
+    { a: [ANY, [NONE,[EXISTS]], 1] }    !('a' in node) || node.a === 1
     { a: [[]] }                         isArray(node.a)
     { a: [ARRAY, 3, 6, 7] }             isArray(node.a) && node.a[3] === 6
                                           && node.a[4] === 7
@@ -1316,7 +1364,7 @@ expressions.
 
 This is like the function [`OR`](#ex-or), but with
 [match expression](#expression-overview) semantics rather than function
-expression semantics.
+expression semantics.  It requires at least one argument.
 
 In [sequence context](#sequence-matching), the successor states produced by
 this expression are the union of all the successor states produced by its match
@@ -1334,18 +1382,32 @@ expressions.
 
 This is like the function [`AND`](#ex-and), but with
 [match expression](#expression-overview) semantics rather than function
-expression semantics.
+expression semantics.  It requires at least one argument.
 
 In [sequence context](#sequence-matching), each argument is treated as a
-constraint that must be satisfiable from the starting position.  The successor
-states are restricted to those which are at or beyond a position containing
-enough elements to satisfy all of the arguments.
-For example, if you combine an expression matching 1, 3, or 7 elements of the
-current array with an expression matching 2 or 4 elements, the first position
-containing enough elements to match both of them is position 2.  The returned
-successor states are then 2, 3, 4, and 7.  All of these states share the
-combined captured-sequence annotations of the subexpressions; the captures are
-not isolated to the successor states of the subexpression that generated them.
+constraint that must be satisfiable from the starting position.
+The output successor positions are the combined set of argument successor
+positions greater or equal to any of the successor positions of every other
+argument.  In other words, it returns any successor position containing at
+least enough elements to satisfy all of the other arguments.
+For each output successor position, each argument contributes the successful
+successor having the greatest position less than or equal to the output
+position.  Any capture annotations produced by structural sub-matches of that
+argument accompany that successor.  Note that sequence captures for the current
+array cannot originate within the ALL itself, due to the placement restrictions
+on `SEQMIN` and `SEQMAX`.
+
+For a much-needed example, if you combine an expression matching 1, 3, or 7
+elements of the current array with an expression matching 2 or 4 elements, the
+first position containing enough elements to match both of them is position 2.
+The returned successor states are then 2, 3, 4, and 7.
+Suppose the first expression captures a sequence named "A" in its subtree and
+the second expression captures a sequence named "B" in its subtree.  At output
+successor state 2, capture "A" comes from the first expression's successor
+state at 1 and capture "B" comes from the second expression's successor state
+at 2.  At output successor state 3 capture "A" comes from the first
+expression's successor state 3 and capture "B" comes from the second
+expression's successor state 2.
 
 #### <span id="ex-exists">EXISTS</span>
 
@@ -1370,9 +1432,10 @@ number of elements in the context of `HAS`, or exactly this number of elements
 in the context of an `IS` expression.
 
 With more than one argument, this asserts the current node is an array and
-tests a range of elements.  It is equivalent to an escaped array with
-initial `[EXISTS]` repeated `offset` times, and in `IS` context a following
-`[EXISTS]` repeated until the end of the array:
+that a subset of its elements match, even in `IS` context.
+It is equivalent to an escaped array with initial `[EXISTS]` repeated `offset`
+times, and in `IS` context a following `[EXISTS]` repeated until the end of
+the array:
 
     [ARRAY, 3, true]
     // in HAS context is equivalent to
@@ -1385,10 +1448,12 @@ The `offset` may be negative to count backward from the end of the array.
     // Assert that the array ends with 'x', 'y', 'z'
     [ARRAY, -3, 'x', 'y', 'z']
 
-This does not initialize sequence context.  It also does not participate in an
-existing sequence context because it descends further into the tree where a
-sequence context has not yet been initialized.  It matches only a single array,
-so the successor state is the position following the current element.
+The `ARRAY` expression does not initiate sequence context for its arguments,
+though `SEQ`-family subexpressions may be used to do so.  It also does
+not participate in an existing sequence context because it descends further
+into the tree where a sequence context has not yet been initialized.
+It matches only a single array, so the successor state is the position
+following the current element.
 
 #### <span id="ex-str">STR</span>
 
@@ -1397,9 +1462,12 @@ so the successor state is the position following the current element.
 
 With no arguments, this matches when the current node is a string.
 
-With one argument it asserts that the node is a string and matches a regular
-expression, specified in [regex context](#regex-context).  The regex is not
-implicitly anchored.  This expression is the primary way of invoking regular
+With one argument (specified in [regex context](#regex-context) ) it asserts
+that the node is a string and matches a regular expression.  The regex is not
+implicitly anchored and will iterate through the characters of the string
+looking for the "leftmost" match.  (engines may be optimized to perform
+different search strategies so long as they derive the same leftmost match)
+This expression is the primary way of invoking regular
 expression matching on a string.  If you want to locate named capture bounds
 in a string, wrap this expression with the [`CAPTURE` function](#ex-capture).
 Captures within this regex *do* become available in the capture results of the
@@ -1416,7 +1484,7 @@ With no arguments, this matches when the current node is any JSON number,
 or additionally NaN and Inf if those extensions are relevant.
 
 With one or two arguments, also verify that `min <= node <= max`.
-`min` or `max` may be `null` to omit the respective test.
+`min` or `max` may be `null` (or absent) to omit the respective test.
 In implementations where infinity or NaN are available, neither may be
 used as the range boundary.
 
@@ -1445,15 +1513,16 @@ This sets one or more properties at the root of the TEMP namespace to new
 values that are only visible for the duration of the `WITH` expression.
 `temp_prop` may be any string or integer, but not an expression.
 Each `value_expr` is declared in [value context](#value-context) and evaluated
-before assignment.
-The `match_expr` is declared in [match context](#match-context) and the result
-is passed through as the result of the `WITH` expression.
+before assignment.  Assignments are visible to subsequent `value_expr`
+arguments and then to the `match_expr` argument.  The `match_expr` is declared
+in [match context](#match-context) and the result is passed through as the
+result of the `WITH` expression.
 
 The purpose of this expression is to capture values within the tree of the
 current node before descending into the tree with match expressions where they
 would no longer be accessible.  Since expressions have no side effects and the
 changes to TEMP are local to this expression, implementations are free to store
-references to other trees rather than deep-clonding the data.
+references to other trees rather than deep-cloning the data.
 
 #### <span id="ex-seq">SEQ</span>, <span id="ex-seqmax">SEQMAX</span>, <span id="ex-seqmin">SEQMIN</span>
 
@@ -1485,14 +1554,25 @@ current array occurs within `ANY`, `NONE`, or `REP` expressions at a parent
 structural level.  Within the same match state, a `SEQMIN` or `SEQMAX`
 occurring beneath these expressions behaves as an ordinary `SEQ`.
 
-The "min" vs. "max" designation records a preference for which match should be
-chosen if multiple match states are valid at the end of matching the array.
-They do *not* mean that the capture group will always maximze or minimize the
+The `capture_name` is defined as an expression to deal with cases where a
+common subexpression (called with `EXPR`) wants to performs a capture, but
+might need to be applied multiple times to the same tree.  Using the `WITH`
+expression to set a prefix in the TEMP namespace, the common subexpression can
+then generate different capture names at each call site.  The `capture_name`
+expression may not make use of the current node; the current node is treated
+as nonexistent while evaluating `capture_name`.  The evaluation of
+`capture_name` happens at the beginning of the sequence matching algorithm for
+a specific array, but they are not evaluated at all if the captures for that
+array are not observable (i.e. boolean sequence context).
+
+The "min" vs. "max" designation indicates a preference for which match should
+be chosen if multiple match states are valid at the end of matching the array.
+They do *not* mean that the capture group will always maximize or minimize the
 elements matched during the algorithm, only that if multiple outcomes for
 matching an array are possible, the selection of the match should prefer longer
 matches or shorter matches for those sequences, giving precedence to the
-sequences in order they occur.  If the captures of the match are not being
-observed, the preference is ignored.
+sequences in order they occur.  If the captures of the match are unobservable,
+the implementation may skip resolving the preferred match.
 
 Examples:
 
@@ -1553,19 +1633,20 @@ Regex Notation | REP notation
 
     [START]
 
-Match when the current node (or array cursor) refers to the first element of
-the array.
+Match when the current node refers to the first element of an array.
 
-In [sequence context](#sequence-matching), this is a zero-width assertion.
+In [sequence context](#sequence-matching), this is a zero-width assertion
+based on the array cursor.
 
 #### <span id="ex-end">END</span>
 
     [END]
 
-Match when the current node (or array cursor) is past the final element of the
-array.
+Match when the current node is the undefined element beyond the final element
+of its containing array.
 
-In [sequence context](#sequence-matching), this is a zero-width assertion.
+In [sequence context](#sequence-matching), this is a zero-width assertion
+based on the array cursor.
 
 #### <span id="ex-chars">CHARS</span>
 
@@ -1625,9 +1706,17 @@ Examples:
 
 #### <span id="ex-capture">CAPTURE</span>
 
-    [CAPTURE, ...]
+    [CAPTURE, match_expr]
 
 Match, then return captured sequences.
+
+This function invokes the matching algorithm using the match-context
+`match_expr`, which may be any expression including 2-argument IS or HAS
+which match against a value other than the current node.  If the match fails,
+this expression returns `false`.  If the match succeeds, it returns the capture
+namespace produced by the match engine as an object where each named sequence
+capture is a property of the object, with values of the form returned by
+[`CAP`](#ex-cap).  The actual [capture namespace](#namespaces) is unaffected.
 
 #### <span id="ex-local">LOCAL</span>
 
@@ -1638,23 +1727,21 @@ Set up a lexical overlay on the TEMP namespace or override the current node,
 then evaluate `return_value_expr` and return that value.
 
 This is very similar to the [`WITH` expression](#ex-with), but as a function
-rather than a match expression.  Additionally, it permits `prop` to be the
-expression `[NODE]` to override the current node.  Changes made by each `prop`
-/ `val` pair are visible to the evaluation of subsequent pairs.  After
-evaluating `return_value_expr`, the TEMP namespace and current node revert to
-their previous state.
+rather than a match expression.  The `prop` arguments are either a string
+(or number which gets coerced to string) naming a TEMP namespace root property,
+or the special value `null` to request a lexical override of the current node.
+Changes made by each `prop` / `val` pair are visible to the evaluation of
+subsequent pairs.  After evaluating `return_value_expr`, the TEMP namespace and
+current node revert to their previous state.
 
-The `prop` argument may not be a deeper path into a namespace.  This
-restriction may be relaxed in a future version.
-
-#### <span id="ex-not">NOT</span>
-
-    [NOT, value_expr...]
-
-Logical NOT ("NOR", really) of one or more value expressions.
-
-Each value expression must evaluate to a boolean, or the expression fails with
-`INVALID_OPERAND`.
+The `prop` argument is restricted to the root of the TEMP namespace or the
+current node pointer.  Combined with the restriction that the path of `[TEMP]`
+itself is not a valid reference, it ensures that the changes cannot be seen in
+any other namespace or path within the TEMP namespace.  The TEMP namespace may
+hold references to other trees temporarily, but nothing can hold a reference to
+the root of the TEMP namespace.
+Likewise, rebinding the current node does not modify, replace, or otherwise
+write through any reference in the target tree or another namespace.
 
 #### <span id="ex-and">AND</span>
 
@@ -1662,8 +1749,13 @@ Each value expression must evaluate to a boolean, or the expression fails with
 
 Logical AND of one or more value expressions.
 
-Each value expression must evaluate to a boolean, or the expression fails with
-`INVALID_OPERAND`.
+Each evaluated expression must evaluate to a boolean, or the expression fails
+with `INVALID_OPERAND`.
+
+Each argument is evaluated in sequence, stopping after the first false value
+or error raised.  This means later arguments may contain expressions that
+trigger errors so long as a previous argument evaluating false guards against
+reaching the later argument.
 
 #### <span id="ex-or">OR</span>
 
@@ -1671,8 +1763,17 @@ Each value expression must evaluate to a boolean, or the expression fails with
 
 Logical OR of one or more value expressions.
 
-Each value expression must evaluate to a boolean, or the expression fails with
-`INVALID_OPERAND`.
+Like `AND`, each argument is evaluated in sequence, and must evaluate to a
+boolean.  Evaluation stops after the first true value or error raised.
+
+#### <span id="ex-not">NOT</span>
+
+    [NOT, value_expr...]
+
+Logical NOT ("NOR", really) of one or more value expressions.
+
+Like `AND`, each argument is evaluated in sequence, and must evaluate to a
+boolean.  Evaluation stops after the first true value or error raised.
 
 #### <span id="ex-length">LENGTH</span>
 
@@ -1700,7 +1801,7 @@ The `value_expr` argument must evaluate to a string or array.
 The `ofs` argument must be an integer, and may be negative to count
 backwards from the `LENGTH` of the target value.  The `len` argument must
 also be an integer, and may also be negative to count backward from the
-`LENGTH` of the value in which case it represents the a limiting offset.
+`LENGTH` of the value in which case it represents a limiting offset.
 In the third form, a `config_obj` may be used to pass values for the starting
 offset, count of elements, or limiting offset.  The properties of the object
 may not be negative, and if all three are given, they must agree such that
@@ -1712,11 +1813,25 @@ Any violation of these requirements generates `INVALID_OPERAND`.
 (it could also conceivably be `INVALID_TARGET` or `INVALID_GRAFT`, but it's too
 hard to decide the actual nature of the error at runtime)
 
+Examples:
+
+    // For NODE of [0,1,2,3,4,5,6]
+    [SLICE, [NODE], 3]                    -> [3,4,5,6]
+    [SLICE, [NODE], -1]                   -> [6]
+    [SLICE, [NODE], 3, 1]                 -> [3]
+    [SLICE, [NODE], 3, -1]                -> [3,4,5]
+    [SLICE, [NODE], {ofs: 3}]             -> [3,4,5,6]
+    [SLICE, [NODE], {len: 2}]             -> [0,1]
+    [SLICE, [NODE], {lim: 4}]             -> [0,1,2,3]
+    [SLICE, [NODE], {ofs: 3, lim: 6}]     -> [3,4,5]
+    [SLICE, [NODE], {ofs: 1, len: 1}]     -> [1]
+    [SLICE, [NODE], {len: 2, lim: 5}]     -> [3,4]
+
 #### <span id="ex-concat">CONCAT</span>
 
     [CONCAT, value_expr1, ...]
 
-Concatenate spans of arrays or strings into a larger array or string.
+Concatenate one or more arrays or strings into a larger array or string.
 
 All arguments must evaluate to the same type, or this generates
 `INVALID_OPERAND`.  If they are all strings, they get joined into a string.
@@ -1736,24 +1851,23 @@ The `array_expr` and `initial_value` arguments are specified in value context.
 but may also be numbers that get coerced to strings.
 `reduce_expr` is specified in value context, but is not evaluated immediately.
 
-The `initial_value` is evaluated prior to any state changes, and becomes the
-accumulator value.  For each element of the `array_expr`, the current node is
-set to alias the array element, and the TEMP namespace property `temp_prop` is
-set to alias the accumulator, and `reduce_expr` is evaluated.  The changes to
-the current node and TEMP namespace are only visible for the duration of
-evaluating this expression.  The return value of `reduce_expr` is kept as the
-new accumulator value.  After all array elements have been processed, the
-accumulator value is returned as the result of the REDUCE expression.
-
-In the second form, specifying `idx_prop` overrides a second TEMP namespace
-property to hold the array index of the current node on each evaluation of
-`reduce_expr`.
+The `initial_value` is evaluated prior to any iteration, and becomes the
+accumulator value.  For each element of the `array_expr` (which may be empty),
+the current node is set to alias the array element, and the TEMP namespace
+property `temp_prop` is set to alias the accumulator.  If `idx_prop` is
+specified, that TEMP namespace property (which must be distinct from
+`temp_prop`) is set to the integer of the array element.  Then `reduce_expr`
+is evaluated.  The changes to the current node and TEMP namespace are only
+visible to the evaluation of `reduce_expr`.
+The return value of `reduce_expr` is kept as the new accumulator value.
+After all array elements have been processed, the accumulator value is returned
+as the result of the REDUCE expression.
 
 `REDUCE` can actually be implemented using more basic expressions, but is
 provided for efficiency and to reduce the chance of exceeding `RESOURCE_LIMIT`
 from recursive behavior.  Minimalist implementations should not fall back to an
 internal common subexpression of `REDUCE` if it would make a graft more likely
-to hit resource limits than a proper REDUCE implementation.
+to hit resource limits than a proper `REDUCE` implementation.
 
 #### <span id="ex-filter">FILTER</span>
 
@@ -1785,31 +1899,35 @@ need to use `REDUCE`, which may construct an array in its accumulator.
 
 #### <span id="ex-split">SPLIT</span>
 
-    ['SPLIT', split_spec, match_spec]
+    ['SPLIT', string_expr, split_spec]
 
 Split a string into an array.
 
-This is the same (rather involved) algorithm as the
-[`SPLIT` action](#act-split) but returns the array instead of performing
-actions on the array, and discards any metdata about separators or trimmings
-that the `SPLIT` action would have used to reconstruct a string.
+The `string_expr` is value context, and `split_spec` is the same argument
+context defined by the [`SPLIT` action](#act-split).  (it may *contain*
+expressions, so it is not itself value-context)
+First `string_expr` is evaluated (and must result in a string) and then the
+algorithm of the `SPLIT` action (configured by the `split_spec` value) is
+applied to that string.  The resulting array is returned as a plain array,
+discarding any metdata about separators or trimmings that the `SPLIT` action
+would have used to reconstruct a string.
 
 #### <span id="ex-props">PROPS</span>
 
     [PROPS, object_expr]
-    [PROPS, object_expr, 1]
-    [PROPS, object_expr, 2]
+    [PROPS, object_expr, options]
 
 Return the properties of an object in various forms.
 
 `object_expr` is specified in value-context and must resolve to an object.
-In the first form, the property names of an object are returned as one array.
-In the second form, the return value is an array where each element is an array
-of `[propertyname, value]`.  In the third form, the return value is an array of
-two arrays where the first array holds property names and the second array
-holds property values.  No order is specified for the properties, other than
-that in the second form the list of names and list of values must follow the
-same property order.
+`options` is a literal value that must currently be numeric `1` or `2`.
+Future versions may define an object form for `options`.
+Without options, the property names (and only the names) of an object are
+returned as one array.  When `options === 1`, the return value is an array
+where each element is an array of `[propertyname, value]`.  When
+`options === 2`, the return value is an array of two arrays where the first
+array holds property names and the second array holds the corresponding
+property values.  No order is specified for the properties.
 
 #### <span id="ex-mkobj">MKOBJ</span>
 
@@ -1823,12 +1941,14 @@ All arguments are specified in value context.
 In the first form, a list of pairs of `name_expr` and `val_expr` each become a
 property of the created object.  At least one pair must be given in this form.
 In the second form, recognized by two array arguments, the names are provided
-in one array and the values are provided in a second array.
+in one array and the values are provided in a second array.  The arrays must be
+the same length, but also may be empty.
 In the third form, recognized by one array argument, the array holds one
-element for each property which is an array of `[name,val]`.
+element for each property which is a two element array of `[name,val]`.
+This array may also be empty to construct an empty object.
 
-In all cases, the names must evaluate to srings, and it is an error for any two
-names to be identical strings.
+In all cases, the names must evaluate to strings, and it is an error for any
+two names to be identical strings.
 
 #### <span id="ex-case">CASE</span>
 
@@ -1836,15 +1956,18 @@ names to be identical strings.
     [CASE, match_expr0, value_expr0, match1, val1, ... else_val]
 
 Like the [`IF` action](#act-if), but return the evaluated `value_expr` of the
-first successful `match_expr`.
+first successful `match_expr`, and the "else" value is required.
 
-Because [match context](#contexts) lets a plain value describe a HAS match
-against the current node, this can be an efficient way to choose an expression
-based on its value.  If the value you want to compare is not the current node,
-you can temporarily set it up as the current node with [`LOCAL`](#ex-local).
+Conditions (specified in match context) are tested in argument order, and only
+the selected value-context expression gets evaluated.  Because
+[match context](#contexts) lets a plain value describe a `HAS` match against
+the current node, this can be an efficient way to choose an expression based on
+its value.  If the value you want to compare is not the current node, you can
+temporarily set it up as the current node with [`LOCAL`](#ex-local).
 
 #### <span id="ex-castbool">CASTBOOL</span>
 
+    [CASTBOOL]                  // strict vs. current node
     [CASTBOOL, value_expr]      // strict
     [CASTBOOL, value_expr, 0]   // strict
     [CASTBOOL, value_expr, 1]   // relaxed
@@ -1853,39 +1976,111 @@ Cast a value to boolean.
 
 Boolean values always pass through.  With strict casting, only integers 1 and 0
 and strings "true" and "false" may be cast to booleans, and every other value
-generates `INVALID_OPERAND`.  With relaxed casting, empty string and `null`
-additionally become false and every other value becomes true, and only the
-nonexistent value produced during matching generates `INVALID_OPERAND`.
+generates `INVALID_OPERAND`.  In relaxed mode, 0, "false", empty string, and
+`null` become false and every other value becomes true, and only the
+nonexistent value produced during matching of a missing property or array
+element generates `INVALID_OPERAND`.
 
 #### <span id="ex-castnum">CASTNUM</span>
 
+    [CASTNUM]                   // cast current node
     [CASTNUM, value_expr]
 
 Cast a value to a number.
 
-Numeric values always pass through.  Any string composed of digits which parses
-as a valid number according to JavaScript syntax also become a number.  Every
-other value generates `INVALID_OPERAND`.
+Numeric values always pass through.  Any string which parses as a valid number
+according to JSON syntax also become a number.  Extensions to the data model
+permitted by the implementation may also support numification, as decided by
+the implementation.  Every other value generates `INVALID_OPERAND`.
 
 #### <span id="ex-caststr">CASTSTR</span>
 
+    [CASTSTR]                   // cast current node
     [CASTSTR, value_expr]
 
 Cast a value to a string.
 
-String values always pass through.  Numbers stringify to the same string that
-a JSON encoder would produce.  Every other value generates `INVALID_OPERAND`.
+String values always pass through.  Booleans stringify to "true" and "false".
+Numbers with no fractional part stringify to decimal digits with possible
+leading minus sign.  Other numbers stringify to the same string that the host
+JSON encoder would produce, which is not consistent across all implementations
+and the exact character representation should not be relied on.
+Dates stringify in ISO8601 format.  Datetimes stringify as
+"yyyy-mm-dd hh:nn:ss" with the possibility of more digits in the year and
+sub-second precision.  Timestamps stringify as "yyyy-mm-ddThh:nn:ssZ" (for a
+zero timezone offset) or "yyyy-mm-ddThh:nn:ss±zzzz", and with the same
+longer-year/subsecond possibility.
+Extensions to the data model permitted by the implementation (including numbers
+Inf and NaN) may stringify according to the implementation or configuration
+from the application.
+
+Every other value (objects, arrays, `null` and the nonexistent property that
+can be encountered when matching objects/arrays) generates `INVALID_OPERAND`.
 
 #### <span id="ex-castdate">CASTDATE</span>
 
+    [CASTDATE]                  // cast current node
     [CASTDATE, value_expr]
 
 Cast a value to a JGraft date, datetime, or timestamp.
 
+The result of a previous `CASTDATE` expression should always pass through.
+All implementations should support parsing strings of at least the following
+formats:
 
+    yyyy-mm-dd                      // date
+    yyyy-mm-ddThh:nn:ss             // datetime
+    yyyy-mm-ddThh:nn:ssZ            // timestamp
+    yyyy-mm-ddThh:nn:ss+hh          // timestamp
+    yyyy-mm-ddThh:nn:ss+hh:nn       // timestamp
+    yyyy-mm-ddThh:nn:ss+hhnn        // timestamp
+
+where the hyphens and colons are optional when the standard number of digits
+are present, the 'T' separator may also be a space, `ss` can be written
+`ss.sss` or `ss,sss` to an arbitrary precision (silently truncated to the
+precision supported by the implementation), and the timezone '+' may be a '-'
+or unicode minus sign for any nonzero timezone (as perscribed by ISO-8601).
+The year field should also be permitted to have more than 4 digits if hyphens
+are used.
+
+Additional date formats may be supported if the list above doesn't cover a
+commonly encountered format of a particular host language, but implementations
+should avoid supporting ambiguous string formats, and force users to generate
+more specific expressions to parse them if required.
+
+Additionally, `value_expr` may evaluate to an object with the following
+properties:
+
+    { "year":      // required
+      "month":     // default is 1
+      "day":       // default is 1
+      "hour":      // indicates datetime if present, default is 0
+      "minute":    // indicates datetime if present, default is 0
+      "second":    // indicates datetime if present, default is 0
+      "tz_offset": // indicates timestamp if present
+    }
+
+where the precision of the result (`date` vs `datetime` vs `timestamp`) is
+chosen based on the least-significant property supplied in the object before
+applying defaults.
+
+All date formats should be validated against the Gregorian calendar for years
+1583 and onward (the cutoff defined in ISO 8601) and invalid days rejected with
+`INVALID_OPERAND`.  Hours and minutes should be validated against the standard
+range, but seconds should permit leap second (60 and fractions above that)
+without historic validation.
+
+If host language date objects are permitted in the data, they should also be
+supported by this expression, though depending on the capabilities or
+mutability of those date objects an implementation may still need to convert
+them to a different internal representation.
+
+If an implementation cannot confidently infer a date-like meaning for a value,
+it should generate `INVALID_OPERAND`.
 
 #### <span id="ex-less">LESS</span>
 
+    [LESS, expr_b]              // current node less than b
     [LESS, expr_a, expr_b]
 
 Perform a less-than comparison.
@@ -1904,19 +2099,23 @@ values, using the same string-to-characters algorithm as configured for regular
 expressions.
 
 On arrays, this performs an element-by-element `LESS` test in the order of the
-elements.  If it makes it to the end of one array before the other, that array
+elements, stopping at the first pair which are not equal and returning the
+result.  If it makes it to the end of one array before the other, that array
 is considered the lesser of the two.
 
-On dates and datetimes, the fields are compared in sequence largest-to-smallest
-as if they were an array of those values.  On timestamps the timezone offset is
-applied first before comparing logical instants.
+On dates and datetimes, the fields are compared most-significant to
+least-significant as if they were an array of those values.  On timestamps the
+timezone offset is applied first before comparing logical instants.  Note that
+timezone offsets have a minute resolution, so applying the offset and comparing
+fields can be done independent of whether leap seconds exist.
 
 All other types (e.g. objects) generate `INVALID_OPERAND`.  If it does not
 fail, the result is always a boolean.
 
 #### <span id="ex-lesseq">LESSEQ</span>
 
-    [LESSEQ, ...]
+    [LESSEQ, expr_b]            // current node less or equal to b
+    [LESSEQ, expr_a, expr_b]
 
 Perform a less-than-or-equal comparison.
 
@@ -1931,9 +2130,10 @@ Add numbers.
 
 Arguments are described in value context.  All `value_expr` arguments must
 evaluate to numbers, though the numbers may also be provided as a single array
-argument.  The result is the host language's addition of those numbers, except
-if the implementation is not configured to allow `Inf` and `NaN` then a result
-of those value must cause the expression to fail with `INVALID_OPERAND`.
+argument. The result is the host language's addition of those numbers, or
+`0` for an empty array.  If the implementation is not configured to allow `Inf`
+and `NaN` then a result of those value must cause the expression to fail with
+`INVALID_OPERAND`.
 
 #### <span id="ex-sub">SUB</span>
 
@@ -1957,8 +2157,9 @@ Multiply numbers.
 Arguments are described in value context.  All `value_expr` arguments must
 evaluate to numbers, though the numbers may also be provided as a single array
 argument.  The result is the host language's multiplication of those numbers,
-except if the implementation is not configured to allow `Inf` and `NaN` then a
-result of those value must cause the expression to fail with `INVALID_OPERAND`.
+or `1` for an empty array.  If the implementation is not configured to allow
+`Inf` and `NaN` then a result of those value must cause the expression to fail
+with `INVALID_OPERAND`.
 
 #### <span id="ex-div">DIV</span>
 
@@ -1967,7 +2168,7 @@ result of those value must cause the expression to fail with `INVALID_OPERAND`.
 Divide numbers.
 
 Arguments are described in value context and must evaluate to numbers.
-The result is the host language's multiplication of those numbers, with
+The result is the host language's division of those numbers, with
 division by zero triggering `INVALID_OPERAND`, and a result of `Inf` or `NaN`
 when not configured to allow these must also fail with `INVALID_OPERAND`.
 
@@ -1979,5 +2180,6 @@ Calculate a modulus.
 
 Arguments are described in value context and must evaluate to numbers.
 The result is the modulus in the range `[0..value_expr2)` or `(value_expr2..0]`
-if `value_expr2` was negative.
+if `value_expr2` was negative.  Division by zero, or a result of `Inf` or `NaN`
+when not configured to allow them must fail with `INVALID_OPERAND`.
 
