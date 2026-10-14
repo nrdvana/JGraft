@@ -888,20 +888,27 @@ exception that a literal `null` may be used as `src_path` to write a literal
 `null` value to `dst_path` (which lets you preserve the existence of a
 property that would otherwise get deleted without needing a followup `COPY`
 action to fix it) or as `dst_path` as a way of requesting deletion of the
-property without preserving the value anywhere.  `MOVE` pairs may delete the
-current node, but must replace it with something by the end of the action.
-This has the consequence that a move action executed in full never performs
-a deletion on a parent container, though it may rewrite a property of a parent.
+property without preserving the value anywhere.  `MOVE` may use the current
+node itself as a source (implying deletion) so long as something is written to
+replace it before the end of the `MOVE` action; this way no actual deletion is
+required on the parent container and the current node remains defined for the
+next action.  (Note that it is not possible for the parent of the current node
+to be visible from a different namespace)
+The `MOVE` source may never be the root of a namespace other than the current
+node.
 
 When the source property is an element of an array, the deletion of the
 element implies that following elements will be shifted up to fill the gap.
 However, this shifting and the corresponding change to `LENGTH` does not occur
 until after all pairs have been processed.
 Attempts to access an array element pending deletion fail with
-`INVALID_OPERAND`, including expressions like `SLICE` that attempt to clone
-every element in a span of an array.  The deleted element may still be used as
-a move destination, and writing a new value to it (or through it) also cancels
-the deletion for that element.
+`INVALID_TARGET`, including expressions like `SLICE` that attempt to clone
+every element in a span of an array.  Moving an array with deletions pending is
+not a problem since there is no need to enumerate the elements.
+The deleted array index may still be used as a move destination, and writing a
+new value to it (or through it) also cancels the deletion for that index.
+For purposes of destination-path auto-vivification, an array index pending
+deletion is treated as nonexistent.
 The queued deletions (along with the metadata of being inaccessible to source
 paths) bind to the instance of the array, following it even if it moves to a
 different namespace.  Implementations need to also consider that the array
@@ -1250,6 +1257,7 @@ The stash namespace is reset by every [`JGRAFT` action](#act-jgraft), and can
 receive data from `MOVE` and `COPY` actions which is shared with other actions
 until the end of the enclosing `JGRAFT` scope.
 If the first element of `path` is an integer, it will be coerced to a string.
+The root of the stash may be read as an object, but not overwritten.
 
 #### <span id="ex-const">CONST</span>
 
@@ -1269,6 +1277,13 @@ If the first element of `path` is an integer, it will be coerced to a string.
 Reference data relative to the current node.
 
 The path may be empty to reference the current node itself.
+The current node may be overwritten by `COPY` and `MOVE` actions.
+Implementations need to track both the container and property of the current
+node, rather than just a pointer to it.
+
+The current node is defined at the start of every action, though when
+evaluating an expression it is possible for the current node to be undefined.
+See [matching](#matching).
 
 ### Match Expressions
 
@@ -1927,7 +1942,9 @@ returned as one array.  When `options === 1`, the return value is an array
 where each element is an array of `[propertyname, value]`.  When
 `options === 2`, the return value is an array of two arrays where the first
 array holds property names and the second array holds the corresponding
-property values.  No order is specified for the properties.
+property values.  In all cases, the properties must be sorted (by Unicode
+codepoint sequence) to ensure deterministic behavior across implementations
+when iterating over properties.
 
 #### <span id="ex-mkobj">MKOBJ</span>
 
