@@ -822,7 +822,8 @@ at a parent action will still be applied to both attempts.
 
 ### <span id="act-copy">COPY</span>
 
-    ['COPY', val_expr, path, val_expr1, path2, ...]
+    ['COPY', val_expr, path]
+    ['COPY', val_expr1, path1, val_expr2, path2, ...]
 
 Construct/clone values and assign them to paths.
 
@@ -864,7 +865,7 @@ Examples:
 ### <span id="act-move">MOVE</span>
 
     ['MOVE', src_path1, dst_path1]
-    ['MOVE', src_path1, dst_path1, src_path2, dst_path2...]
+    ['MOVE', src_path1, dst_path1, src_path2, dst_path2, ...]
 
 Relocate subtrees from a source property to a destination property without
 copying them.
@@ -930,10 +931,8 @@ half-index path.
 Negative half-index values are permitted in mostly the same manner that
 negative array indices alias positive indices, however -0.5 refers to the
 insertion point before element 0 rather than after the final element of the
-array.
-
-Enumerated for an array currently of length 2, destination array indices are
-handled like this:
+array.  Enumerated for an array currently of length 2, destination array
+indices are handled like this:
 
 Index  | Behavior
 -------|--------------------
@@ -955,6 +954,22 @@ Index  | Behavior
 In that chart, "append immediately" *does* imply an immediate change to the
 array `LENGTH` which is seen by subsequent pairs and used to interpret negative
 aliases.
+
+The `MOVE` action modifies [`SPLIT` metadata](#split-metadata) in parallel
+according to roughly the same rules as above.  Moves from an array element with
+metadata to a half-index or deleted position or append-position of an array
+move the element metadata as well, unless the target array already has `SPLIT`
+metadata with a different `origin`.  This includes when moving to auto-vivified
+arrays.  Deletions to source array elements also delete the element's metadata.
+Moves to existing, non-deleted array elements overwrite the value while
+preserving the destination's metadata, per normal "overwrite" semantics.
+Moving a value lacking element metadata to a previously deleted array index
+counts as an insertion for these purposes, and receives normal adjacent element
+metadata.  The process of applying adjacent element metadata is postponed until
+the `MOVE` action finishes and the final order of elements is known.
+Note that if you move a value to the top of the TEMP namespace or other object
+property it will lose the array element metadata, where moving to an
+auto-vivified array within the TEMP namespace will not.
 
 At the end of the `MOVE` action, every array instance where an insertion or
 deletion was queued gets conceptually rebuilt from the list of remaining
@@ -1019,12 +1034,20 @@ Negative numbers are aliases for the count that would end just before element
 `length-N`, and `null` is an alias for `length-offset`.  The resulting count
 must be within `[0..length-offset]`.
 
-The replacements are evaluated in [value context](#value-context).  If they
-contain reference expressions the nodes get deep-cloned as per the `COPY`
-action, but implementations may optimize this if they can determine that the
-reference will be the only remaining reference to a subtree of one of the
-array elements being deleted.  All replacement values are resolved before
-making any alteration to the target array.
+The replacements are evaluated in [value context](#value-context).  All
+replacement values are resolved before making any alteration to the target
+array.
+
+If [`SPLIT` metadata](#split-metadata) is present on the array it gets likewise
+spliced.  The insertion of the replacement values may also introduce `SPLIT`
+metadata to the target array if none was present, in the same manner as the
+following expression if the current node is an array with `SPLIT` metadata:
+
+    [CONCAT,
+       [SLICE, array, 0, ofs],
+       [NODE, 0],
+       [SLICE, array, ofs+count]
+    ]
 
 ### <span id="act-split">SPLIT</span>
 
@@ -1090,6 +1113,9 @@ following element.  The value '@' means to include the separator as its own
 element of the resulting array.  In all three cases, separator metadata is not
 used, and elements get reassembled with an empty string as the separator since
 the actual separator is part of the data.
+`default` must be specified when `sep` is a regular expression and `keep` is
+not used; if `sep` is a string then it also implies `default` and if `keep`
+is used then separators are not relevant to the join operation.
 
 `ltrim` and `rtrim` are used to hide unimportant characters from the resulting
 array element strings, such as leading/trailing whitespace (like `diff -b`)
@@ -1101,27 +1127,12 @@ the longest match of `rtrim` from the remainder, to resolve cases where the
 trimming could overlap.
 If you want to permanently remove the trimmed characters, use `discard: true`.
 
-If the separators are not added to the array using `keep` they are stored in
-a parallel array of metadata associated with the array.  Likewise, trimmed
-characters are stored there.  As actions like `COPY`, `MOVE`, and `SPLICE`
-process the array, assignments from one element of the array to another carry
-the separator and trimmings to the new element.  Assignments of values from
-any other source (constants, a different array, etc) do not carry this
-metadata, and eliminate trimmings at the assigned element, though the
-separator of that element remains.  Deletions on the array perform a parallel
-deletion on the metadata array, and every insert operation clones the
-separator of the previous element (and if none, the following element) such
-that every element continues to have a defined separator.  Trimmings do not
-get cloned.  To be clear, this metadata is *attached to the array* and not
-the strings within it.  It can only be copied when the source and destination
-are observed to be elements of the same metadata-bearing array, or an array
-that was derived from the same instance of `SPLIT` with e.g. `SLICE`.
-Once a `SPLIT` action ends, any metadata associated with it becomes irrelevant
-to future actions or expressions and can be discarded.
-If the array becomes empty at any point, the separator reverts to `default`.
-`default` must be specified when `sep` is a regular expression and `keep` is
-not used; if `sep` is a string then it also implies `default` and if `keep`
-is used then separators are not relevant to the join operation.
+If the separators are not added to the array using `keep` and are not a
+constant string, they are stored in a parallel array of metadata associated
+with the array, referred to as [`SPLIT` metadata](#split-metadata).  Likewise,
+trimmed characters are stored there if not being discarded.  As modifications
+are applied to the array to rearrange its elements, this metadata is modified
+in parallel as described below.
 
 Once all actions have been applied to the array, it gets reassembled into a
 string.  Each element must be a string, or it fails with `INVALID_OPERAND`.
@@ -1131,7 +1142,7 @@ separator is appended only if there is a following element.  In order to get a
 empty string.  It is the responsibility of the nested actions to preserve or
 add this element as desired.
 
-This is the primary tool used to re-implement text diff/patch behavior:
+`SPLIT` is the primary tool used to re-implement text diff/patch behavior:
 
     [SPLIT,
       { sep: [ANY, "\n", "\r\n"], default: "\n", trim: [REP,0,-1," "] },
@@ -1149,15 +1160,58 @@ This is the primary tool used to re-implement text diff/patch behavior:
       ],
     ]
 
-There are at least two ways that implementations can deal with the metadata
-requirements of `SPLIT`: create tree nodes of "array with metadata" and then
-ensure those get flattened to regular arrays before potentially storing them
-into the target tree of data, or record the metadata as inside-out properties
-of an array keyed to the array's memory address or similar identity.  In both
-cases, the metadata should get cloned any time an array gets cloned, including
-value-construction context.  Metadata tied to the array should also copy
-through array expressions that imply a pass-through of original elements,
-specifically `SLICE`, `CONCAT`, and `FILTER`.
+#### Split Metadata
+
+`SPLIT` metadata carries the separators and end-trimmings of a `SPLIT` action.
+It associates *to the array* as a parallel array of per-element data, rather
+than being bound to the values themselves.  The separator is paired to the
+element it *followed* and the final element will not logically have one since
+a string ending with a separator receives a final element of the empty string,
+though for the purposes of this algorithm it receives a copy of the separator
+of the preceeding element.
+Only one instance of `SPLIT` metadata may be associated to any one array.
+It also contains an `origin` tag; in any case where values are transferred
+between element references the `SPLIT` metadata will only carry over when both
+arrays have metadata of the same `origin`.
+
+Actions and expressions that operate on an array need to do a bit of extra work
+when `SPLIT` metadata is present in order to keep it associated with the
+correct element value.  To avoid this extra work, implementations should only
+generate `SPLIT` metadata when the separator is not a constant or when trimming
+is requested and not being discarded.
+
+Individual actions and expressions may define their handling of `SPLIT`
+metadata more specifically, but in general:
+
+  * If an array with `SPLIT` metadata is receiving an element in an "insert"
+    manner from a direct reference to an array element having `SPLIT` metadata
+    of the same `origin`, the element metadata carries over.
+  * If an array with `SPLIT` metadata is receiving an element in an "insert"
+    manner from a direct reference to an array without `SPLIT` metadata of the
+    same `origin`, the element receives "adjacent element metadata" described
+    below.
+  * If an array with `SPLIT` metadata is receiving a new value for an existing
+    element in an "overwrite" manner, the existing separator and trimming is
+    unchanged, regardless of the source.
+  * If an array without `SPLIT` metadata is receiving an element from an
+    array with `SPLIT` metadata in an "insert" manner, the destination array
+    is upgraded to have `SPLIT` metadata (of the same `origin`) to preserve the
+    metata for that element.
+  * Construction of new arrays and appending elements to arrays count as an
+    "insert" operation.
+
+`SPLIT` metadata must describe all array elements uniformly.  If separators
+exist for any element, separators must exist for all elements, and likewise for
+trimmings.  To resolve this for elements added to the array, the element
+receives "adjacent element metadata".  For separators, new elements receive the
+separator of the preceeding elemnent, or at the start of the array, the
+following element.  (arrays of no elements drop the `SPLIT` metadata)
+If trimmings are present, the new element receives the left-trimming of the
+previous line, or an empty string if there is no previous line.
+Right-trimmiing for new elements is always the empty string.
+These rules are all designed around the concept of preserving indent and
+comments in text while allowing changes to the strings within, and extending
+indent to subsequent lines without replicating comments.
 
 ### <span id="act-log">LOG</span>
 
@@ -1205,7 +1259,8 @@ shallow-clone the ancestors of each change.
 
 Reference a pre-defined expression.
 
-The common expression namespace is populated by the [`JGRAFT` action](#act-jgraft).
+The common expression namespace is populated by the
+[`JGRAFT` action](#act-jgraft).
 It is a flat namespace, so referencing one of the expressions uses only a
 single name rather than a path.  The other expression will be used as if it
 had been specified in place of this `EXPR` expression.  It is possible to
@@ -1266,7 +1321,8 @@ The root of the stash may be read as an object, but not overwritten.
 
 Reference data from the const namespace.
 
-The const namespace can only be initialized during a [`JGRAFT` action](#act-jgraft).
+The const namespace can only be initialized during a
+[`JGRAFT` action](#act-jgraft).
 If the first element of `path` is an integer, it will be coerced to a string.
 
 #### <span id="ex-node">NODE</span>
@@ -1828,6 +1884,9 @@ Any violation of these requirements generates `INVALID_OPERAND`.
 (it could also conceivably be `INVALID_TARGET` or `INVALID_GRAFT`, but it's too
 hard to decide the actual nature of the error at runtime)
 
+When [`SPLIT` metadata](#split-metadata) is present on the input array, the
+portion describing the sliced elements is added to the output array.
+
 Examples:
 
     // For NODE of [0,1,2,3,4,5,6]
@@ -1853,10 +1912,16 @@ All arguments must evaluate to the same type, or this generates
 If they are all arrays, a new array of the combined lists of elements is
 returned.
 
+When [`SPLIT` metadata](#split-metadata) is present on an input array, it gets
+copied to the output array unless an earlier input array already copied `SPLIT`
+metadata with a different `origin`.  This causes all other elements to receive
+"adjacent element metadata" unless they have some from a matching `origin`.
+
 #### <span id="ex-reduce">REDUCE</span>
 
-    [REDUCE, array_expr, initial_value, reduce_expr, temp_prop]
-    [REDUCE, array_expr, initial_value, reduce_expr, temp_prop, idx_prop]
+    [REDUCE, reduce_expr, temp_prop, initial_value]
+    [REDUCE, reduce_expr, temp_prop, initial_value, array_expr]
+    [REDUCE, reduce_expr, temp_prop, initial_value, array_expr, idx_prop]
 
 Combine the elements of an array into a result value.
 
@@ -1886,19 +1951,30 @@ to hit resource limits than a proper `REDUCE` implementation.
 
 #### <span id="ex-filter">FILTER</span>
 
-    [FILTER, array_expr, match_expr]
+    [FILTER, match_expr]
+    [FILTER, match_expr, array_expr]
+    [FILTER, match_expr, array_expr, idx_prop]
 
 Select matching elements from an array.
 
-The `array_expr` is value context and the `match_expr` is match context.
-First, the `array_expr` is evaluated, and the result must be an array.
-Then each element is set as the current node while evaluating `match_expr`.
-The ones that match become part of the returned array, in the same order they
-appeared in the original array.
+`match_expr` is a match context expression which is not immediately evaluated.
+With one argument, the current node must be an array.  Otherwise, the
+`array_expr` specified in value context must evaluate to an array.
+Each element of the array is localized as the current node while evaluating
+`match_expr`.  If a third argument `idx_prop` is provided, this property of the
+TEMP namespace will be localized to the array index being handled during the
+evaluation of `match_expr`.
+The ones that match become part of the returned array, in the
+same order they appeared in the original array.
+
+If the source array contains [`SPLIT` metadata](#split-metadata), the metadata
+for the selected elements gets copied to the new array.
 
 #### <span id="ex-map">MAP</span>
 
-    [MAP, array_expr, value_expr]
+    [MAP, value_expr]
+    [MAP, value_expr, array_expr]
+    [MAP, value_expr, array_expr, idx_prop]
 
 Transform each element of an array to produce a new array.
 
@@ -1906,34 +1982,44 @@ The `array_expr` and `value_expr` arguments are defined in value context,
 though `value_expr` is not evaluated immediately.  First, `array-expr` is
 evaluated and must result in an array.  Then for each element of `array_expr`,
 the current node is changed to reference it, and `value_expr` is evaluated in
-that context.  The list of returned values from each `value_expr` become the
-array returned by `MAP`, one per original array element, in order.
+that context.  If a third argument `idx_prop` is provided, this property of the
+TEMP namespace will be localized to the array index being handled during the
+evaluation of `match_expr`.  The list of returned values from each `value_expr`
+become the array returned by `MAP`, one per original array element, in order.
 
 If you need to replace one element with a differing number of elements you
 need to use `REDUCE`, which may construct an array in its accumulator.
 
+If the source array contains [`SPLIT` metadata](#split-metadata), the returned
+array is given a copy and new values for each element are applied as if by
+assignment to that index.  This means each element retains its separator and
+trimmings, which is different than if a graft recursively assembled a new array
+from computed values.
+
 #### <span id="ex-split">SPLIT</span>
 
-    ['SPLIT', string_expr, split_spec]
+    ['SPLIT', split_spec]              // operate on current node
+    ['SPLIT', split_spec, string_expr]
 
 Split a string into an array.
 
-The `string_expr` is value context, and `split_spec` is the same argument
-context defined by the [`SPLIT` action](#act-split).  (it may *contain*
-expressions, so it is not itself value-context)
-First `string_expr` is evaluated (and must result in a string) and then the
-algorithm of the `SPLIT` action (configured by the `split_spec` value) is
-applied to that string.  The resulting array is returned as a plain array,
-discarding any metdata about separators or trimmings that the `SPLIT` action
-would have used to reconstruct a string.
+`split_spec` is declared using the same argument context defined by the
+[`SPLIT` action](#act-split).  (it may *contain* expressions, so it is not
+itself value-context)  In the 1-argument form, the current node must be a
+string.  Otherwise the value-context `string_expr` must evaluate to a string.
+The algorithm of the `SPLIT` action (configured by the `split_spec` value) is
+applied to the string.  The [`SPLIT` metadata](#split-metadata) is discarded,
+and the array is returned.
 
 #### <span id="ex-props">PROPS</span>
 
+    [PROPS]                            // operate on current node
     [PROPS, object_expr]
     [PROPS, object_expr, options]
 
 Return the properties of an object in various forms.
 
+Lacking `object_expr`, this operates on the current node.  Otherwise,
 `object_expr` is specified in value-context and must resolve to an object.
 `options` is a literal value that must currently be numeric `1` or `2`.
 Future versions may define an object form for `options`.
@@ -2200,3 +2286,35 @@ The result is the modulus in the range `[0..value_expr2)` or `(value_expr2..0]`
 if `value_expr2` was negative.  Division by zero, or a result of `Inf` or `NaN`
 when not configured to allow them must fail with `INVALID_OPERAND`.
 
+Note that this is not the same as the C language `%` operator, which returns
+a remainder.
+
+## Implementation Hints
+
+This specification tries not to dictate too many details of an implementation,
+but implementors may find these details helpful.
+
+### Array Metadata
+
+There are four special features that require annotating arrays with some
+metadata:
+
+  * They may carry [`SPLIT` metadata](#split-metadata) which various actions
+    and expressions need to process, if present.
+  * They may have [fuzzy matching](#fuzzy-matching) aliases applied.
+  * They may have delayed insertions or deletions pending for a
+    [`MOVE` action](#act-move), though this can perhaps be kept locally to the
+    action's own execution state.
+  * They may be a virtual array of characters used during a regular expression,
+    (or even during SPLIT) where implementations likely want to keep the data
+    in string form and make elements available on demand.  This can be avoided
+    if an implementation actually does expand the string into a true array
+    which is a valid strategy for more minimalist implementations.
+
+There are multiple ways that implementations can deal with these requirements:
+they can create tree node objects of "array with metadata" and then ensure
+those get flattened to regular arrays before potentially storing them into the
+target tree of data, or record the metadata as inside-out properties of an
+array keyed to the array's memory address or similar identity, or even build a
+complete parallel tree of metadata for all namespaces and mutate it with the
+same operations being applied to the data tree.
