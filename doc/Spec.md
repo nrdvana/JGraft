@@ -579,26 +579,28 @@ Name                     | Type  | ID | Description
 [AND](#ex-and)           | Fn    | 53 | Logical AND of value exprs
 [OR](#ex-or)             | Fn    | 54 | Logical OR of value exprs
 [LENGTH](#ex-length)     | Fn    | 55 | Return length of an array or string
-[SLICE](#ex-slice)       | Fn    | 56 | Return span of an array or string
-[CONCAT](#ex-concat)     | Fn    | 57 | Join spans of arrays or strings
-[REDUCE](#ex-reduce)     | Fn    | 58 | Combine array elements
-[FILTER](#ex-filter)     | Fn    | 59 | Select array elements
-[MAP](#ex-map)           | Fn    | 60 | Transform array elements
-[SPLIT](#ex-split)       | Fn    | 61 | Split a string into an array
-[PROPS](#ex-props)       | Fn    | 62 | Return properties of an object
-[MKOBJ](#ex-mkobj)       | Fn    | 63 | Construct an object from properties
-[CASE](#ex-case)         | Fn    | 64 | If/else that returns a value
-[CASTBOOL](#ex-castbool) | Fn    | 65 | Cast value to boolean
-[CASTNUM](#ex-castnum)   | Fn    | 66 | Cast value to number
-[CASTSTR](#ex-caststr)   | Fn    | 67 | Cast value to string
-[CASTDATE](#ex-castdate) | Fn    | 68 | Cast value to date/datetime/timestamp
-[LESS](#ex-less)         | Fn    | 69 | Less-than test
-[LESSEQ](#ex-lesseq)     | Fn    | 70 | Less-or-equal test
-[ADD](#ex-add)           | Fn    | 71 | Add numbers
-[SUB](#ex-sub)           | Fn    | 72 | Subtract numbers
-[MUL](#ex-mul)           | Fn    | 73 | Multiply numbers
-[DIV](#ex-div)           | Fn    | 74 | Divide numbers
-[MOD](#ex-mod)           | Fn    | 75 | Calculate Modulus
+[CURPROP](#ex-curprop)   | Fn    | 56 | Get property/index of the current node.
+[SLICE](#ex-slice)       | Fn    | 57 | Return span of an array or string
+[CONCAT](#ex-concat)     | Fn    | 58 | Join spans of arrays or strings
+[REDUCE](#ex-reduce)     | Fn    | 59 | Combine array elements
+[FILTER](#ex-filter)     | Fn    | 60 | Select array elements
+[MAP](#ex-map)           | Fn    | 61 | Transform array elements
+[SPLIT](#ex-split)       | Fn    | 62 | Split a string into an array
+[JOIN](#ex-join)         | Fn    | 63 | Join, using split metadata
+[PROPS](#ex-props)       | Fn    | 64 | Return properties of an object
+[MKOBJ](#ex-mkobj)       | Fn    | 65 | Construct an object from properties
+[CASE](#ex-case)         | Fn    | 66 | If/else that returns a value
+[CASTBOOL](#ex-castbool) | Fn    | 67 | Cast value to boolean
+[CASTNUM](#ex-castnum)   | Fn    | 68 | Cast value to number
+[CASTSTR](#ex-caststr)   | Fn    | 69 | Cast value to string
+[CASTDATE](#ex-castdate) | Fn    | 70 | Cast value to date/datetime/timestamp
+[LESS](#ex-less)         | Fn    | 71 | Less-than test
+[LESSEQ](#ex-lesseq)     | Fn    | 72 | Less-or-equal test
+[ADD](#ex-add)           | Fn    | 73 | Add numbers
+[SUB](#ex-sub)           | Fn    | 74 | Subtract numbers
+[MUL](#ex-mul)           | Fn    | 75 | Multiply numbers
+[DIV](#ex-div)           | Fn    | 76 | Divide numbers
+[MOD](#ex-mod)           | Fn    | 77 | Calculate Modulus
 
 ### Expression Interaction
 
@@ -1899,6 +1901,18 @@ The value expression must resolve to an array or a string.  The length of a
 string is determined by the same rules that break a string into an array of
 characters, which may differ from the host language's concept of "length".
 
+#### <span id="ex-curprop">CURPROP</span>
+
+    [CURPROP]
+
+If the current node is a property of an object, return the property name, else
+if it is an element of an array, return the element number, else return `null`.
+
+This is useful when iterating over an array in a match expression or
+MAP / REDUCE / FILTER expression to know which array index is being processed.
+It can be used to help generate capture names or look up parallel paths from
+another array or object.
+
 #### <span id="ex-slice">SLICE</span>
 
     [SLICE, value_expr, ofs]
@@ -1964,13 +1978,12 @@ metadata with a different `origin`.  This causes all other elements to receive
 
     [REDUCE, reduce_expr, temp_prop, initial_value]
     [REDUCE, reduce_expr, temp_prop, initial_value, array_expr]
-    [REDUCE, reduce_expr, temp_prop, initial_value, array_expr, idx_prop]
 
 Combine the elements of an array into a result value.
 
 `reduce_expr` is specified in value context, but is not evaluated immediately.
-`temp_prop` and `idx_prop` are single property names of the TEMP namespace,
-but may also be numbers that get coerced to strings.
+`temp_prop` is a single property name of the TEMP namespace, but may also be
+a number that gets coerced to a string.
 The `initial_value` and `array_expr` arguments are specified in value context.
 If `array_expr` is provided, it must evaluate to an array, otherwise the
 current node is used as input and must be an array.
@@ -1980,13 +1993,11 @@ The `initial_value` is evaluated prior to any iteration, and becomes the
 accumulator value.  For each element of the input array (which may be empty),
 the current node is set to alias the array element, and the `TEMP` namespace
 property `temp_prop` is set to alias the accumulator, and then `reduce_expr`
-is evaluated.  If `idx_prop` is specified, that `TEMP` namespace property
-(which must be distinct from `temp_prop`) is set to the integer index of the
-array element prior to each evaluation of `reduce_expr`.    The changes to the
-current node and TEMP namespace are *only* visible to the evaluation of
-`reduce_expr`.  The return value of `reduce_expr` is kept as the new
-accumulator value.  After all array elements have been processed, the
-accumulator value is returned as the result of the `REDUCE` expression.
+is evaluated.  The changes to the current node and TEMP namespace are *only*
+visible to the evaluation of `reduce_expr`.
+The return value of `reduce_expr` is kept as the new accumulator value.
+After all array elements have been processed, the accumulator value is
+returned as the result of the `REDUCE` expression.
 
 `REDUCE` can actually be implemented using lisp-style recursive iteration, but
 is provided for efficiency and to reduce the chance of exceeding
@@ -1999,7 +2010,6 @@ limits than a proper `REDUCE` implementation.
 
     [FILTER, match_expr]
     [FILTER, match_expr, array_expr]
-    [FILTER, match_expr, array_expr, idx_prop]
 
 Select matching elements from an array.
 
@@ -2007,11 +2017,8 @@ Select matching elements from an array.
 With one argument, the current node must be an array.  Otherwise, the
 `array_expr` specified in value context must evaluate to an array.
 Each element of the array is localized as the current node while evaluating
-`match_expr`.  If a third argument `idx_prop` is provided, this property of the
-TEMP namespace will be localized to the array index being processed during the
-evaluation of `match_expr`.
-The elements that match become part of the returned array, in the
-same order they appeared in the original array.
+`match_expr`.  The elements which match become part of the returned array, in
+the same order they appeared in the original array.
 
 If the source array contains [`SPLIT` metadata](#split-metadata), the metadata
 for the selected elements gets copied to the new array.
@@ -2020,7 +2027,6 @@ for the selected elements gets copied to the new array.
 
     [MAP, transform_expr]
     [MAP, transform_expr, array_expr]
-    [MAP, transform_expr, array_expr, idx_prop]
 
 Transform each element of an array to produce a new array.
 
@@ -2029,9 +2035,7 @@ immediately.  In the one-argument form, the input comes from the current node,
 which must be an array.  Otherwise the `array_expr` (also value context) is
 evaluated and likewise must return an array to be used as the input.  Then, for
 each element of the input array, the current node is localized to reference it,
-and `transform_expr` is evaluated in that context.  If a third argument
-`idx_prop` is provided, this property of the `TEMP` namespace will be localized
-to the array index being evaluated.
+and `transform_expr` is evaluated in that context.
 The values returned by each evaluation of `transform_expr` become the elements
 of the array returned by `MAP`.
 
