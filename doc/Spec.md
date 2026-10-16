@@ -1925,29 +1925,32 @@ metadata with a different `origin`.  This causes all other elements to receive
 
 Combine the elements of an array into a result value.
 
-The `array_expr` and `initial_value` arguments are specified in value context.
-`array_expr` must evaluate to an array.  `initial_value` may be any type.
+`reduce_expr` is specified in value context, but is not evaluated immediately.
 `temp_prop` and `idx_prop` are single property names of the TEMP namespace,
 but may also be numbers that get coerced to strings.
-`reduce_expr` is specified in value context, but is not evaluated immediately.
+The `initial_value` and `array_expr` arguments are specified in value context.
+If `array_expr` is provided, it must evaluate to an array, otherwise the
+current node is used as input and must be an array.
+`initial_value` may evaluate to any type.
 
 The `initial_value` is evaluated prior to any iteration, and becomes the
-accumulator value.  For each element of the `array_expr` (which may be empty),
-the current node is set to alias the array element, and the TEMP namespace
-property `temp_prop` is set to alias the accumulator.  If `idx_prop` is
-specified, that TEMP namespace property (which must be distinct from
-`temp_prop`) is set to the integer of the array element.  Then `reduce_expr`
-is evaluated.  The changes to the current node and TEMP namespace are only
-visible to the evaluation of `reduce_expr`.
-The return value of `reduce_expr` is kept as the new accumulator value.
-After all array elements have been processed, the accumulator value is returned
-as the result of the REDUCE expression.
+accumulator value.  For each element of the input array (which may be empty),
+the current node is set to alias the array element, and the `TEMP` namespace
+property `temp_prop` is set to alias the accumulator, and then `reduce_expr`
+is evaluated.  If `idx_prop` is specified, that `TEMP` namespace property
+(which must be distinct from `temp_prop`) is set to the integer index of the
+array element prior to each evaluation of `reduce_expr`.    The changes to the
+current node and TEMP namespace are *only* visible to the evaluation of
+`reduce_expr`.  The return value of `reduce_expr` is kept as the new
+accumulator value.  After all array elements have been processed, the
+accumulator value is returned as the result of the `REDUCE` expression.
 
-`REDUCE` can actually be implemented using more basic expressions, but is
-provided for efficiency and to reduce the chance of exceeding `RESOURCE_LIMIT`
-from recursive behavior.  Minimalist implementations should not fall back to an
-internal common subexpression of `REDUCE` if it would make a graft more likely
-to hit resource limits than a proper `REDUCE` implementation.
+`REDUCE` can actually be implemented using lisp-style recursive iteration, but
+is provided for efficiency and to reduce the chance of exceeding
+`RESOURCE_LIMIT` from recursive behavior.
+Minimalist implementations should not fall back to an internal common
+subexpression of `REDUCE` if it would make a graft more likely to hit resource
+limits than a proper `REDUCE` implementation.
 
 #### <span id="ex-filter">FILTER</span>
 
@@ -1962,9 +1965,9 @@ With one argument, the current node must be an array.  Otherwise, the
 `array_expr` specified in value context must evaluate to an array.
 Each element of the array is localized as the current node while evaluating
 `match_expr`.  If a third argument `idx_prop` is provided, this property of the
-TEMP namespace will be localized to the array index being handled during the
+TEMP namespace will be localized to the array index being processed during the
 evaluation of `match_expr`.
-The ones that match become part of the returned array, in the
+The elements that match become part of the returned array, in the
 same order they appeared in the original array.
 
 If the source array contains [`SPLIT` metadata](#split-metadata), the metadata
@@ -1972,20 +1975,22 @@ for the selected elements gets copied to the new array.
 
 #### <span id="ex-map">MAP</span>
 
-    [MAP, value_expr]
-    [MAP, value_expr, array_expr]
-    [MAP, value_expr, array_expr, idx_prop]
+    [MAP, transform_expr]
+    [MAP, transform_expr, array_expr]
+    [MAP, transform_expr, array_expr, idx_prop]
 
 Transform each element of an array to produce a new array.
 
-The `array_expr` and `value_expr` arguments are defined in value context,
-though `value_expr` is not evaluated immediately.  First, `array-expr` is
-evaluated and must result in an array.  Then for each element of `array_expr`,
-the current node is changed to reference it, and `value_expr` is evaluated in
-that context.  If a third argument `idx_prop` is provided, this property of the
-TEMP namespace will be localized to the array index being handled during the
-evaluation of `match_expr`.  The list of returned values from each `value_expr`
-become the array returned by `MAP`, one per original array element, in order.
+The `transform_expr` is specified in value context, however it is not evaluated
+immediately.  In the one-argument form, the input comes from the current node,
+which must be an array.  Otherwise the `array_expr` (also value context) is
+evaluated and likewise must return an array to be used as the input.  Then, for
+each element of the input array, the current node is localized to reference it,
+and `transform_expr` is evaluated in that context.  If a third argument
+`idx_prop` is provided, this property of the `TEMP` namespace will be localized
+to the array index being evaluated.
+The values returned by each evaluation of `transform_expr` become the elements
+of the array returned by `MAP`.
 
 If you need to replace one element with a differing number of elements you
 need to use `REDUCE`, which may construct an array in its accumulator.
