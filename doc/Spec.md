@@ -239,10 +239,11 @@ a half-integer as the final destination selector.  A unspecified or illegal
 type of literal value appearing in a path raises an `INVALID_GRAFT` error.
 
 Paths always navigate deeper into the tree and have no concept of "up a level"
-like a filesystem's `..` convention.  A path element *may* be another
-expression which evaluates to become the name or number or alias of a
-property; the computed value must conform to the same rules as literal path
-elements or it results in `INVALID_OPERAND`.
+like a filesystem's `..` convention.  A path element *may* be a value-context
+expression which gets evaluated to determine the path.  If it evaluates to an
+array the elements of the array will be spliced into the path at the location
+of the expression.  After array expansion, the values must conform to the same
+rules as literal path elements or it results in `INVALID_OPERAND`.
 
 ## Action Overview
 
@@ -394,7 +395,7 @@ the successor state produced in sequence context is the position following the
 current element.  i.e. match expressions consume one element by default.
 Some expressions are simply described as "zero width assertions", which means
 they consume no elements and the successor position is identical to the initial
-position (and only if they match).
+position, unless the assertion fails making the successor the empty set.
 
 Implementations are likely to need to iterate the successor states as they look
 for an overall match for the array specification, but no specific order is
@@ -416,17 +417,53 @@ Sequence context can be configured to resolve in one of three ways:
 Sequence context is only resolved in terms of the whole array, not as decisions
 within individual expressions or named sequences.  Various regex contexts will
 set either `boolean` or `longest` resolution.  When performing structural
-matches, the default is `boolean` unless any named sequences are found among
-the array element specifications.  Named sequences specify a `longest` or
-`shortest` preference for the subexpression itself.  Of all the final states of
-all sequence context expressions that can match the complete specification for
-the array, the algorithm chooses one according to these priorities:
+matches, there is normally no preference for the overall length matched unless
+one is explicitly requested.  As `SEQMAX` / `SEQMIN` are designed, making the
+match observable with a capture also requires specifying the longest/shortest
+preference.  When no captures are observable, implementations may stop as soon
+as any complete match succeeds, without resolving length or position
+preferences.  When captures are observable, of all the final states which can
+match the complete specification for the array, the algorithm chooses one
+according to these priorities:
 
-  * Longest overall or shortest overall, if initial mode was not `boolean`.
-  * For each sequence N having a length preference, in order specified:
+  * Longest overall or shortest overall, if an overall length preference was
+    specified.
+  * For each sequence of the current array having a length preference, in
+    specification order:
     * Longest or shortest match according to its preference.
-  * For each sequence N having a length preference, in order specified:
-    * Leftmost start of a match.
+  * For each sequence of the current array having a length preference, in
+    specification order:
+    * Earliest ("leftmost") start of a match.
+  * For each capture-producing substructure in the sequence specification, in
+    specification order:
+    * <span id="earliest-substructure-match">Earliest array element at which
+      the substructure matches.
+      </span>
+
+The fourth rule has no bearing on the boundaries of captures in the current
+array; it resolves ambiguities in selecting which array element should provide
+captures from deeper arrays or strings.  Consider this example:
+
+    [[
+      [SEQ,
+        [REP, 0, -1, [EXISTS]],
+        { a: [[ [SEQMAX, "from_a", [REP, 0, -1, [EXISTS]] ] ]] },
+        [REP, 0, -1, [EXISTS]],
+        { b: [[ [SEQMAX, "from_b", [REP, 0, -1, [EXISTS]] ] ]] },
+        [REP, 0, -1, [EXISTS]]
+      ]
+    ]]
+
+The substructure that captures "from_a" could match at *any* element of the
+current array except the last, and the substructre that captures "from_b"
+could match any elemnent except the first.  The current array has exactly one
+sequence with no length preference.  The "longest" preference in the
+inner array has already been resolved at that level before becoming a
+successful substructure match in the context of the current array, so those
+sequences do not participate in resolving the sequences of the current array.
+This is given deterministic behavior by selecting the earliest candidate array
+element.  In the example, this rule uses the captures from array elements 0 and
+1, respectively.
 
 Sequence context affects the behavior of several other match expressions:
 
@@ -694,11 +731,12 @@ graft structure while others might thoroughly validate it before starting, as
 a service to the user.  This can even be a configuration option.
 
 Since errors of applying JGraft are already nondeterministic, implementations
-may also "upgrade" an `INVALID_OPERAND` to an `INVALID_GRAFT` if they can
-determine that the invalid operand will always occur for every input.
-Implementations should always report `INVALID_GRAFT` when an argument is not a
-permitted data type for an action or expression, but may additionally perform
-logical analysis of expressions to determine this is the case.  Implementations
+may also "upgrade" an `INVALID_OPERAND` or `INVALID_TARGET` to an
+`INVALID_GRAFT` if static analysis can determine that the invalid operand error
+will always occur for every input.  This must take the whole expression into
+consideration, such as the short-circuiting behavior of `AND` / `OR` / `NOT`.
+Implementations should always report `INVALID_GRAFT` when a literal argument is
+not a permitted data type for an action or expression.  Implementations
 may wish to provide a "lint mode" that checks thoroughly for errors during
 development while using a faster lazy-evaluation mode in production.
 
@@ -1321,23 +1359,30 @@ specified as an integer which is automatically coerced to a string.
 The logical structure of each capture is:
 
     {
+      path:  // array of path elements from root of match to target
       ofs:   // starting offset
       len:   // number of elements matched
       lim:   // pos + len
     }
 
-and it may be used as the argument for [`SLICE`](#ex-slice).
+and it may be used as the argument for [`SLICE`](#ex-slice), though `SLICE`
+does not use the `path` property.  The `path` property may be used as an
+argument to the various reference expressions.  For example, to select the
+captured array elements of "example" as a new array value, you can use:
+
+    [SLICE, [NODE, [CAP, 'example', 'path']], [CAP, 'example'] ]
 
 #### <span id="ex-temp">TEMP</span>
 
-    [TEMP, prop, ...]
+    [TEMP, path...]
 
 Reference data from the temporary namespace.
 
 The temporary namespace is local to the current action and may be further
 localized by an ancestor [`WITH`](#ex-with) or [`LOCAL`](#ex-local)
 expression.
-If the first `prop` argument is an integer, it will be coerced to a string.
+If the first element of `path` is an integer, it will be coerced to a string.
+This `path` must contain at least one element.
 The root of the TEMP namespace itself cannot be read or written.
 
 #### <span id="ex-stash">STASH</span>
@@ -1351,7 +1396,8 @@ The stash namespace is reset by every [`JGRAFT` action](#act-jgraft), and can
 receive data from `MOVE` and `COPY` actions which is shared with other actions
 until the end of the enclosing `JGRAFT` scope.
 If the first element of `path` is an integer, it will be coerced to a string.
-The root of the stash may be read as an object, but not overwritten.
+The path may be empty to reference the stash namespace itself as an object,
+but the root may not be overwritten.
 
 #### <span id="ex-const">CONST</span>
 
@@ -1362,6 +1408,7 @@ Reference data from the const namespace.
 
 The const namespace can only be initialized during a
 [`JGRAFT` action](#act-jgraft).
+The path may be empty to reference the const namespace itself as an object.
 If the first element of `path` is an integer, it will be coerced to a string.
 
 #### <span id="ex-node">NODE</span>
@@ -1494,18 +1541,30 @@ This is like the function [`AND`](#ex-and), but with
 [match expression](#expression-overview) semantics rather than function
 expression semantics.  It requires at least one argument.
 
-In [sequence context](#sequence-matching), each argument is treated as a
-constraint that must be satisfiable from the starting position.
-The output successor positions are the combined set of argument successor
-positions greater or equal to any of the successor positions of every other
-argument.  In other words, it returns any successor position containing at
-least enough elements to satisfy all of the other arguments.
-For each output successor position, each argument contributes the successful
-successor having the greatest position less than or equal to the output
-position.  Any capture annotations produced by structural sub-matches of that
-argument accompany that successor.  Note that sequence captures for the current
-array cannot originate within the ALL itself, due to the placement restrictions
-on `SEQMIN` and `SEQMAX`.
+In element context `ALL` is fairly straightforward, but the behavior in
+[sequence context](#sequence-matching) is a bit more involved.
+Each argument is treated as a constraint that must be satisfiable from the
+starting position.  The `ALL` expression generates one succesor state for each
+position among the states returned by any argument which also contains at least
+enough elements to satisfy all of the other arguments.  Conceptually, matching
+gets to continue from any of those successor state positions so long as all
+the other arguments are satisfied within that number of elements, but not
+requiring all arguments to have a state ending *at* that position.
+
+Named captures are restricted to the top level of the array specification, so
+are not found within the arguments of `ALL`, however named captures may come
+from substructures matched against the elements of the current array.
+For each argument's successor positions, if there are multiple potential
+elements where a substructure could match, they are immediately resolved per
+the [earliest-substructure-match](#earliest-substructure-match) rule so that
+this argument successor position has exactly one possibility for its captures.
+When merging the captures for an output successor position, the captures of
+each argument come from that argument's successor having a position nearest to
+the output position.  Uniqueness of capture names is enforced at this point,
+generating `INVALID_GRAFT` if there are duplicates.  (Since capture names are
+dynamically evaluated, they could vary per successor position.  Implementations
+are not required to enumerate all possibilities looking for conflicting names;
+just ensure that the successor state used does not have name conflicts.)
 
 For a much-needed example, if you combine an expression matching 1, 3, or 7
 elements of the current array with an expression matching 2 or 4 elements, the
