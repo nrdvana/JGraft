@@ -1,0 +1,1038 @@
+{
+  "version": 1,
+  "name": "COPY",
+  "desc": "COPY value construction, replacement of every basic JSON type, path resolution and auto-vivification, sequential assignments, namespace access, and logical cloning. Error flags include the least severe runtime failure and stronger diagnoses justified by static analysis. No resource limits or optional features are required.",
+  "tests": [
+    {
+      "name": "Write null to a new property",
+      "input": {"keep": 1},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", null, "value"]],
+      "output": {"keep": 1, "value": null}
+    },
+    {
+      "name": "Write false to a new property",
+      "input": {"keep": 1},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", false, "value"]],
+      "output": {"keep": 1, "value": false}
+    },
+    {
+      "name": "Write true to a new property",
+      "input": {"keep": 1},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", true, "value"]],
+      "output": {"keep": 1, "value": true}
+    },
+    {
+      "name": "Write zero to a new property",
+      "input": {"keep": 1},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", 0, "value"]],
+      "output": {"keep": 1, "value": 0}
+    },
+    {
+      "name": "Write a negative fraction to a new property",
+      "input": {"keep": 1},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", -12.5, "value"]],
+      "output": {"keep": 1, "value": -12.5}
+    },
+    {
+      "name": "Write an empty string to a new property",
+      "input": {"keep": 1},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", "", "value"]],
+      "output": {"keep": 1, "value": ""}
+    },
+    {
+      "name": "Write a string with escapes and Unicode to a new property",
+      "input": {"keep": 1},
+      "jgraft": [
+        "JGRAFT",
+        {"v": 1},
+        ["COPY", "text\n\t\"\\\u0000é𝄞", "value"]
+      ],
+      "output": {"keep": 1, "value": "text\n\t\"\\\u0000é𝄞"}
+    },
+    {
+      "name": "Write an empty array to a new property",
+      "input": {"keep": 1},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", [[]], "value"]],
+      "output": {"keep": 1, "value": []}
+    },
+    {
+      "name": "Write an empty object to a new property",
+      "input": {"keep": 1},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", {}, "value"]],
+      "output": {"keep": 1, "value": {}}
+    },
+    {
+      "name": "Write a heterogeneous array to a new property",
+      "input": {"keep": 1},
+      "jgraft": [
+        "JGRAFT",
+        {"v": 1},
+        ["COPY", [[null, false, true, 0, "text", [[]], {}]], "value"]
+      ],
+      "output": {"keep": 1, "value": [null, false, true, 0, "text", [], {}]}
+    },
+    {
+      "name": "Write a nested object to a new property",
+      "input": {"keep": 1},
+      "jgraft": [
+        "JGRAFT",
+        {"v": 1},
+        ["COPY", {"nested": {"array": [[1, 2]]}, "empty": {}}, "value"]
+      ],
+      "output": {
+        "keep": 1,
+        "value": {"nested": {"array": [1, 2]}, "empty": {}}
+      }
+    },
+    {
+      "name": "Write every JSON type into an array",
+      "desc": "false selects the current array length for every pair, so successive assignments append without holes.",
+      "input": [],
+      "jgraft": [
+        "JGRAFT",
+        {"v": 1},
+        [
+          "COPY",
+          null, false,
+          false, false,
+          true, false,
+          0, false,
+          -12.5, false,
+          "", false,
+          "text\n\t\"\\\u0000é𝄞", false,
+          [[]], false,
+          {}, false,
+          [[null, false, true, 0, "text", [[]], {}]], false,
+          {"nested": {"array": [[1, 2]]}, "empty": {}}, false
+        ]
+      ],
+      "output": [
+        null,
+        false,
+        true,
+        0,
+        -12.5,
+        "",
+        "text\n\t\"\\\u0000é𝄞",
+        [],
+        {},
+        [null, false, true, 0, "text", [], {}],
+        {"nested": {"array": [1, 2]}, "empty": {}}
+      ]
+    },
+    {
+      "name": "Overwrite null with null",
+      "desc": "The destination value is replaced in full; existing properties or elements are not merged.",
+      "input": {"value": null, "keep": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", null, "value"]],
+      "output": {"value": null, "keep": {"x": 1}}
+    },
+    {
+      "name": "Overwrite null with boolean",
+      "desc": "The destination value is replaced in full; existing properties or elements are not merged.",
+      "input": {"value": null, "keep": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", true, "value"]],
+      "output": {"value": true, "keep": {"x": 1}}
+    },
+    {
+      "name": "Overwrite null with number",
+      "desc": "The destination value is replaced in full; existing properties or elements are not merged.",
+      "input": {"value": null, "keep": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", 17, "value"]],
+      "output": {"value": 17, "keep": {"x": 1}}
+    },
+    {
+      "name": "Overwrite null with string",
+      "desc": "The destination value is replaced in full; existing properties or elements are not merged.",
+      "input": {"value": null, "keep": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", "old", "value"]],
+      "output": {"value": "old", "keep": {"x": 1}}
+    },
+    {
+      "name": "Overwrite null with array",
+      "desc": "The destination value is replaced in full; existing properties or elements are not merged.",
+      "input": {"value": null, "keep": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", [[1, {"old": 2}]], "value"]],
+      "output": {"value": [1, {"old": 2}], "keep": {"x": 1}}
+    },
+    {
+      "name": "Overwrite null with object",
+      "desc": "The destination value is replaced in full; existing properties or elements are not merged.",
+      "input": {"value": null, "keep": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", {"old": [[1, 2]]}, "value"]],
+      "output": {"value": {"old": [1, 2]}, "keep": {"x": 1}}
+    },
+    {
+      "name": "Overwrite boolean with null",
+      "desc": "The destination value is replaced in full; existing properties or elements are not merged.",
+      "input": {"value": true, "keep": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", null, "value"]],
+      "output": {"value": null, "keep": {"x": 1}}
+    },
+    {
+      "name": "Overwrite boolean with boolean",
+      "desc": "The destination value is replaced in full; existing properties or elements are not merged.",
+      "input": {"value": true, "keep": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", true, "value"]],
+      "output": {"value": true, "keep": {"x": 1}}
+    },
+    {
+      "name": "Overwrite boolean with number",
+      "desc": "The destination value is replaced in full; existing properties or elements are not merged.",
+      "input": {"value": true, "keep": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", 17, "value"]],
+      "output": {"value": 17, "keep": {"x": 1}}
+    },
+    {
+      "name": "Overwrite boolean with string",
+      "desc": "The destination value is replaced in full; existing properties or elements are not merged.",
+      "input": {"value": true, "keep": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", "old", "value"]],
+      "output": {"value": "old", "keep": {"x": 1}}
+    },
+    {
+      "name": "Overwrite boolean with array",
+      "desc": "The destination value is replaced in full; existing properties or elements are not merged.",
+      "input": {"value": true, "keep": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", [[1, {"old": 2}]], "value"]],
+      "output": {"value": [1, {"old": 2}], "keep": {"x": 1}}
+    },
+    {
+      "name": "Overwrite boolean with object",
+      "desc": "The destination value is replaced in full; existing properties or elements are not merged.",
+      "input": {"value": true, "keep": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", {"old": [[1, 2]]}, "value"]],
+      "output": {"value": {"old": [1, 2]}, "keep": {"x": 1}}
+    },
+    {
+      "name": "Overwrite number with null",
+      "desc": "The destination value is replaced in full; existing properties or elements are not merged.",
+      "input": {"value": 17, "keep": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", null, "value"]],
+      "output": {"value": null, "keep": {"x": 1}}
+    },
+    {
+      "name": "Overwrite number with boolean",
+      "desc": "The destination value is replaced in full; existing properties or elements are not merged.",
+      "input": {"value": 17, "keep": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", true, "value"]],
+      "output": {"value": true, "keep": {"x": 1}}
+    },
+    {
+      "name": "Overwrite number with number",
+      "desc": "The destination value is replaced in full; existing properties or elements are not merged.",
+      "input": {"value": 17, "keep": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", 17, "value"]],
+      "output": {"value": 17, "keep": {"x": 1}}
+    },
+    {
+      "name": "Overwrite number with string",
+      "desc": "The destination value is replaced in full; existing properties or elements are not merged.",
+      "input": {"value": 17, "keep": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", "old", "value"]],
+      "output": {"value": "old", "keep": {"x": 1}}
+    },
+    {
+      "name": "Overwrite number with array",
+      "desc": "The destination value is replaced in full; existing properties or elements are not merged.",
+      "input": {"value": 17, "keep": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", [[1, {"old": 2}]], "value"]],
+      "output": {"value": [1, {"old": 2}], "keep": {"x": 1}}
+    },
+    {
+      "name": "Overwrite number with object",
+      "desc": "The destination value is replaced in full; existing properties or elements are not merged.",
+      "input": {"value": 17, "keep": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", {"old": [[1, 2]]}, "value"]],
+      "output": {"value": {"old": [1, 2]}, "keep": {"x": 1}}
+    },
+    {
+      "name": "Overwrite string with null",
+      "desc": "The destination value is replaced in full; existing properties or elements are not merged.",
+      "input": {"value": "old", "keep": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", null, "value"]],
+      "output": {"value": null, "keep": {"x": 1}}
+    },
+    {
+      "name": "Overwrite string with boolean",
+      "desc": "The destination value is replaced in full; existing properties or elements are not merged.",
+      "input": {"value": "old", "keep": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", true, "value"]],
+      "output": {"value": true, "keep": {"x": 1}}
+    },
+    {
+      "name": "Overwrite string with number",
+      "desc": "The destination value is replaced in full; existing properties or elements are not merged.",
+      "input": {"value": "old", "keep": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", 17, "value"]],
+      "output": {"value": 17, "keep": {"x": 1}}
+    },
+    {
+      "name": "Overwrite string with string",
+      "desc": "The destination value is replaced in full; existing properties or elements are not merged.",
+      "input": {"value": "old", "keep": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", "old", "value"]],
+      "output": {"value": "old", "keep": {"x": 1}}
+    },
+    {
+      "name": "Overwrite string with array",
+      "desc": "The destination value is replaced in full; existing properties or elements are not merged.",
+      "input": {"value": "old", "keep": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", [[1, {"old": 2}]], "value"]],
+      "output": {"value": [1, {"old": 2}], "keep": {"x": 1}}
+    },
+    {
+      "name": "Overwrite string with object",
+      "desc": "The destination value is replaced in full; existing properties or elements are not merged.",
+      "input": {"value": "old", "keep": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", {"old": [[1, 2]]}, "value"]],
+      "output": {"value": {"old": [1, 2]}, "keep": {"x": 1}}
+    },
+    {
+      "name": "Overwrite array with null",
+      "desc": "The destination value is replaced in full; existing properties or elements are not merged.",
+      "input": {"value": [1, {"old": 2}], "keep": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", null, "value"]],
+      "output": {"value": null, "keep": {"x": 1}}
+    },
+    {
+      "name": "Overwrite array with boolean",
+      "desc": "The destination value is replaced in full; existing properties or elements are not merged.",
+      "input": {"value": [1, {"old": 2}], "keep": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", true, "value"]],
+      "output": {"value": true, "keep": {"x": 1}}
+    },
+    {
+      "name": "Overwrite array with number",
+      "desc": "The destination value is replaced in full; existing properties or elements are not merged.",
+      "input": {"value": [1, {"old": 2}], "keep": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", 17, "value"]],
+      "output": {"value": 17, "keep": {"x": 1}}
+    },
+    {
+      "name": "Overwrite array with string",
+      "desc": "The destination value is replaced in full; existing properties or elements are not merged.",
+      "input": {"value": [1, {"old": 2}], "keep": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", "old", "value"]],
+      "output": {"value": "old", "keep": {"x": 1}}
+    },
+    {
+      "name": "Overwrite array with array",
+      "desc": "The destination value is replaced in full; existing properties or elements are not merged.",
+      "input": {"value": [1, {"old": 2}], "keep": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", [[1, {"old": 2}]], "value"]],
+      "output": {"value": [1, {"old": 2}], "keep": {"x": 1}}
+    },
+    {
+      "name": "Overwrite array with object",
+      "desc": "The destination value is replaced in full; existing properties or elements are not merged.",
+      "input": {"value": [1, {"old": 2}], "keep": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", {"old": [[1, 2]]}, "value"]],
+      "output": {"value": {"old": [1, 2]}, "keep": {"x": 1}}
+    },
+    {
+      "name": "Overwrite object with null",
+      "desc": "The destination value is replaced in full; existing properties or elements are not merged.",
+      "input": {"value": {"old": [1, 2]}, "keep": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", null, "value"]],
+      "output": {"value": null, "keep": {"x": 1}}
+    },
+    {
+      "name": "Overwrite object with boolean",
+      "desc": "The destination value is replaced in full; existing properties or elements are not merged.",
+      "input": {"value": {"old": [1, 2]}, "keep": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", true, "value"]],
+      "output": {"value": true, "keep": {"x": 1}}
+    },
+    {
+      "name": "Overwrite object with number",
+      "desc": "The destination value is replaced in full; existing properties or elements are not merged.",
+      "input": {"value": {"old": [1, 2]}, "keep": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", 17, "value"]],
+      "output": {"value": 17, "keep": {"x": 1}}
+    },
+    {
+      "name": "Overwrite object with string",
+      "desc": "The destination value is replaced in full; existing properties or elements are not merged.",
+      "input": {"value": {"old": [1, 2]}, "keep": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", "old", "value"]],
+      "output": {"value": "old", "keep": {"x": 1}}
+    },
+    {
+      "name": "Overwrite object with array",
+      "desc": "The destination value is replaced in full; existing properties or elements are not merged.",
+      "input": {"value": {"old": [1, 2]}, "keep": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", [[1, {"old": 2}]], "value"]],
+      "output": {"value": [1, {"old": 2}], "keep": {"x": 1}}
+    },
+    {
+      "name": "Overwrite object with object",
+      "desc": "The destination value is replaced in full; existing properties or elements are not merged.",
+      "input": {"value": {"old": [1, 2]}, "keep": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", {"old": [[1, 2]]}, "value"]],
+      "output": {"value": {"old": [1, 2]}, "keep": {"x": 1}}
+    },
+    {
+      "name": "Replace the input root with JSON value 0",
+      "input": {"old": {"subtree": [1, 2]}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", null, ["NODE"]]],
+      "output": null
+    },
+    {
+      "name": "Replace the input root with JSON value 1",
+      "input": {"old": {"subtree": [1, 2]}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", false, ["NODE"]]],
+      "output": false
+    },
+    {
+      "name": "Replace the input root with JSON value 2",
+      "input": {"old": {"subtree": [1, 2]}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", true, ["NODE"]]],
+      "output": true
+    },
+    {
+      "name": "Replace the input root with JSON value 3",
+      "input": {"old": {"subtree": [1, 2]}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", 0, ["NODE"]]],
+      "output": 0
+    },
+    {
+      "name": "Replace the input root with JSON value 4",
+      "input": {"old": {"subtree": [1, 2]}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", "root", ["NODE"]]],
+      "output": "root"
+    },
+    {
+      "name": "Replace the input root with JSON value 5",
+      "input": {"old": {"subtree": [1, 2]}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", [[]], ["NODE"]]],
+      "output": []
+    },
+    {
+      "name": "Replace the input root with JSON value 6",
+      "input": {"old": {"subtree": [1, 2]}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", {"root": [[1]]}, ["NODE"]]],
+      "output": {"root": [1]}
+    },
+    {
+      "name": "Replace a scalar root with an object",
+      "input": null,
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", {"created": true}, ["NODE"]]],
+      "output": {"created": true}
+    },
+    {
+      "name": "Replace an array element subtree",
+      "input": [{"old": [1, 2]}, "keep"],
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", [[false, null]], 0]],
+      "output": [[false, null], "keep"]
+    },
+    {
+      "name": "Overwrite the final array element using a negative index",
+      "input": [1, 2, 3],
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", 9, -1]],
+      "output": [1, 2, 9]
+    },
+    {
+      "name": "Overwrite the first array element using a negative index",
+      "input": [1, 2, 3],
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", 9, -3]],
+      "output": [9, 2, 3]
+    },
+    {
+      "name": "Append at the numeric array length",
+      "input": [1, 2],
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", 3, 2]],
+      "output": [1, 2, 3]
+    },
+    {
+      "name": "Append to an empty array at zero",
+      "input": [],
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", null, 0]],
+      "output": [null]
+    },
+    {
+      "name": "Auto-vivify nested objects",
+      "input": {"keep": 1},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", 7, ["NODE", "a", "b", "c"]]],
+      "output": {"keep": 1, "a": {"b": {"c": 7}}}
+    },
+    {
+      "name": "Auto-vivify mixed object and array parents",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", 7, ["NODE", "a", 0, "b", 0]]],
+      "output": {"a": [{"b": [7]}]}
+    },
+    {
+      "name": "Auto-vivify an object at an appended array position",
+      "input": [],
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", 7, ["NODE", false, "x"]]],
+      "output": [{"x": 7}]
+    },
+    {
+      "name": "Reuse parents created by an earlier pair",
+      "input": {},
+      "jgraft": [
+        "JGRAFT",
+        {"v": 1},
+        ["COPY", 1, ["NODE", "a", "b"], 2, ["NODE", "a", "c"]]
+      ],
+      "output": {"a": {"b": 1, "c": 2}}
+    },
+    {
+      "name": "Later pairs read earlier assignments",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", 4, "a", ["NODE", "a"], "b"]],
+      "output": {"a": 4, "b": 4}
+    },
+    {
+      "name": "Repeated destinations use the last assignment",
+      "input": {},
+      "jgraft": [
+        "JGRAFT",
+        {"v": 1},
+        ["COPY", {"old": 1}, "a", [[2, 3]], "a", null, "a"]
+      ],
+      "output": {"a": null}
+    },
+    {
+      "name": "Replace a parent before writing a child",
+      "input": {"a": 5},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", {}, "a", 6, ["NODE", "a", "b"]]],
+      "output": {"a": {"b": 6}}
+    },
+    {
+      "name": "Replace the root before writing a property",
+      "input": 0,
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", {}, ["NODE"], 1, "a"]],
+      "output": {"a": 1}
+    },
+    {
+      "name": "Evaluate a missing source before an invalid computed destination",
+      "input": {"path": null},
+      "jgraft": [
+        "JGRAFT",
+        {"v": 1},
+        ["COPY", ["NODE", "missing"], ["NODE", ["NODE", "path"]]]
+      ],
+      "desc": "Both faults depend on input: the missing source gives INVALID_TARGET in an interpreter; an analyzer may also detect the INVALID_OPERAND from the computed null path.",
+      "errors": {
+        "INVALID_TARGET": true,
+        "INVALID_OPERAND": true
+      }
+    },
+    {
+      "name": "Compute the destination using an earlier assignment",
+      "input": {},
+      "jgraft": [
+        "JGRAFT",
+        {"v": 1},
+        ["COPY", "result", "key", 7, ["NODE", ["NODE", "key"]]]
+      ],
+      "output": {"key": "result", "result": 7}
+    },
+    {
+      "name": "Expand an array-valued path argument once",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", 8, ["NODE", [["a", 0, "b"]]]]],
+      "output": {"a": [{"b": 8}]}
+    },
+    {
+      "name": "Treat numeric-looking strings as object keys",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", 7, "0", 8, "-1", 9, "false"]],
+      "output": {"0": 7, "-1": 8, "false": 9}
+    },
+    {
+      "name": "Write arbitrary object property names",
+      "desc": "Property names are literal keys, including empty strings, punctuation, and names special to JavaScript objects.",
+      "input": {},
+      "jgraft": [
+        "JGRAFT",
+        {"v": 1},
+        [
+          "COPY",
+          1, "",
+          2, "a.b",
+          3, "a/b",
+          {"safe": 4}, "__proto__",
+          5, "__PROTO__",
+          6, "constructor",
+          7, "prototype",
+          8, "toString",
+          9, "hasOwnProperty"
+        ]
+      ],
+      "output": {
+        "": 1,
+        "a.b": 2,
+        "a/b": 3,
+        "__proto__": {"safe": 4},
+        "__PROTO__": 5,
+        "constructor": 6,
+        "prototype": 7,
+        "toString": 8,
+        "hasOwnProperty": 9
+      }
+    },
+    {
+      "name": "Evaluate expressions nested inside constructed objects and arrays",
+      "input": {"source": 3},
+      "jgraft": [
+        "JGRAFT",
+        {"v": 1},
+        [
+          "COPY",
+          {
+            "a": ["NODE", "source"],
+            "b": [[["NODE", "source"], {"x": ["NODE", "source"]}]]
+          },
+          "result"
+        ]
+      ],
+      "output": {"source": 3, "result": {"a": 3, "b": [3, {"x": 3}]}}
+    },
+    {
+      "name": "Copy an expression-looking array as literal data",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", [["NODE", "missing"]], "value"]],
+      "output": {"value": ["NODE", "missing"]}
+    },
+    {
+      "name": "Copy a referenced array without interpreting its elements",
+      "input": {"source": ["NODE", "missing"]},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["NODE", "source"], "copy"]],
+      "output": {"source": ["NODE", "missing"], "copy": ["NODE", "missing"]}
+    },
+    {
+      "name": "Copied subtrees remain independent of the source",
+      "input": {"a": {"child": [1, 2]}},
+      "jgraft": [
+        "JGRAFT",
+        {"v": 1},
+        [
+          "COPY",
+          ["NODE", "a"], "b",
+          9, ["NODE", "b", "child", 0],
+          8, ["NODE", "a", "child", 1]
+        ]
+      ],
+      "output": {"a": {"child": [1, 8]}, "b": {"child": [9, 2]}}
+    },
+    {
+      "name": "Copy a node into its descendant without creating a cycle",
+      "input": {"a": 1},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["NODE"], "snapshot", 2, "a"]],
+      "output": {"a": 2, "snapshot": {"a": 1}}
+    },
+    {
+      "name": "Copy a subtree over its ancestor",
+      "input": {"a": {"b": {"value": 1}, "old": 2}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["NODE", "a", "b"], "a"]],
+      "output": {"a": {"value": 1}}
+    },
+    {
+      "name": "Copy a node onto itself",
+      "input": {"a": {"b": [1, 2]}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["NODE", "a"], "a"]],
+      "output": {"a": {"b": [1, 2]}}
+    },
+    {
+      "name": "Overwrite a current node selected by AT",
+      "input": {"a": {"old": 1}, "keep": 2},
+      "jgraft": [
+        "JGRAFT",
+        {"v": 1},
+        ["AT", "a", ["COPY", [[3, 4]], ["NODE"]]]
+      ],
+      "output": {"a": [3, 4], "keep": 2}
+    },
+    {
+      "name": "Copy through TEMP within one action",
+      "input": {"a": {"x": 1}},
+      "jgraft": [
+        "JGRAFT",
+        {"v": 1},
+        [
+          "COPY",
+          ["NODE", "a"], ["TEMP", 0],
+          2, ["TEMP", 0, "x"],
+          ["TEMP", 0], "b"
+        ]
+      ],
+      "output": {"a": {"x": 1}, "b": {"x": 2}}
+    },
+    {
+      "name": "Copy through STASH across actions",
+      "input": {"a": [1, 2]},
+      "jgraft": [
+        "JGRAFT",
+        {"v": 1},
+        [
+          "AT",
+          ["NODE"],
+          ["COPY", ["NODE", "a"], ["STASH", 0]],
+          ["COPY", 9, ["STASH", 0, 0]],
+          ["COPY", ["STASH", 0], "b"]
+        ]
+      ],
+      "output": {"a": [1, 2], "b": [9, 2]}
+    },
+    {
+      "name": "Copy from constants without changing them",
+      "input": {},
+      "jgraft": [
+        "JGRAFT",
+        {"v": 1, "const": ["data", {"x": 1}]},
+        [
+          "COPY",
+          ["CONST", "data"], "a",
+          9, ["NODE", "a", "x"],
+          ["CONST", "data"], "b"
+        ]
+      ],
+      "output": {"a": {"x": 9}, "b": {"x": 1}}
+    },
+    {
+      "name": "Cannot descend through null",
+      "desc": "The graft can succeed on other inputs; an existing scalar parent cannot be converted to an object.",
+      "input": {"a": null},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", 1, ["NODE", "a", "b"]]],
+      "errors": {
+        "INVALID_TARGET": true
+      }
+    },
+    {
+      "name": "Cannot descend through false",
+      "desc": "The graft can succeed on other inputs; an existing scalar parent cannot be converted to an object.",
+      "input": {"a": false},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", 1, ["NODE", "a", "b"]]],
+      "errors": {
+        "INVALID_TARGET": true
+      }
+    },
+    {
+      "name": "Cannot descend through 4",
+      "desc": "The graft can succeed on other inputs; an existing scalar parent cannot be converted to an object.",
+      "input": {"a": 4},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", 1, ["NODE", "a", "b"]]],
+      "errors": {
+        "INVALID_TARGET": true
+      }
+    },
+    {
+      "name": "Cannot descend through \"text\"",
+      "desc": "The graft can succeed on other inputs; an existing scalar parent cannot be converted to an object.",
+      "input": {"a": "text"},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", 1, ["NODE", "a", "b"]]],
+      "errors": {
+        "INVALID_TARGET": true
+      }
+    },
+    {
+      "name": "Cannot use an integer selector on an object",
+      "desc": "An existing object cannot be converted to an array.",
+      "input": {"a": {}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", 1, ["NODE", "a", 0]]],
+      "errors": {
+        "INVALID_TARGET": true
+      }
+    },
+    {
+      "name": "Cannot use a string selector on an array",
+      "desc": "Even a numeric-looking string selects an object property, not an array element.",
+      "input": {"a": []},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", 1, ["NODE", "a", "0"]]],
+      "errors": {
+        "INVALID_TARGET": true
+      }
+    },
+    {
+      "name": "Cannot leave a hole at an array destination",
+      "desc": "A numeric index greater than length cannot be assigned.",
+      "input": [1],
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", 2, 2]],
+      "errors": {
+        "INVALID_TARGET": true
+      }
+    },
+    {
+      "name": "Cannot auto-vivify a path through an array hole",
+      "desc": "The missing a can become an array, but its first assigned index cannot exceed zero.",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", 2, ["NODE", "a", 1, "x"]]],
+      "errors": {
+        "INVALID_TARGET": true
+      }
+    },
+    {
+      "name": "Cannot use a negative index before the beginning",
+      "desc": "Resolving the negative alias produces an index below zero.",
+      "input": [1, 2],
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", 3, -3]],
+      "errors": {
+        "INVALID_TARGET": true
+      }
+    },
+    {
+      "name": "Cannot read a missing source property",
+      "desc": "Value-context references must exist; COPY cannot silently copy an undefined value.",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["NODE", "missing"], "a"]],
+      "errors": {
+        "INVALID_TARGET": true
+      }
+    },
+    {
+      "name": "Cannot read an array append position as a source",
+      "desc": "false resolves to length, which is writable but not readable.",
+      "input": [1],
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["NODE", false], 0]],
+      "errors": {
+        "INVALID_TARGET": true
+      }
+    },
+    {
+      "name": "TEMP does not persist across COPY actions",
+      "desc": "A minimalist interpreter reads a missing temporary; static analysis can prove the first action's temporary is unavailable in the second for every input.",
+      "input": {},
+      "jgraft": [
+        "JGRAFT",
+        {"v": 1},
+        [
+          "AT",
+          ["NODE"],
+          ["COPY", 1, ["TEMP", "x"]],
+          ["COPY", ["TEMP", "x"], "result"]
+        ]
+      ],
+      "errors": {
+        "INVALID_TARGET": true,
+        "INVALID_GRAFT": true
+      }
+    },
+    {
+      "name": "A later pair cannot descend through an earlier scalar assignment",
+      "desc": "The first assignment guarantees a scalar parent, so the failure is independent of the input.",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", 0, "a", 1, ["NODE", "a", "b"]]],
+      "errors": {
+        "INVALID_TARGET": true,
+        "INVALID_GRAFT": true
+      }
+    },
+    {
+      "name": "A literal expression error may be found statically",
+      "desc": "LENGTH on a literal number always fails outside match context, even though a minimalist evaluator reports INVALID_TARGET.",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH", 5], "a"]],
+      "errors": {
+        "INVALID_TARGET": true,
+        "INVALID_GRAFT": true
+      }
+    },
+    {
+      "name": "An intentional FAIL is never upgraded",
+      "desc": "Intentional expression failures remain INVALID_TARGET even when known statically.",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["FAIL"], "a"]],
+      "errors": {
+        "INVALID_TARGET": true
+      }
+    },
+    {
+      "name": "Reject literal destination selector null",
+      "desc": "Literal null, true, and fractional numbers are illegal path elements. The Paths rules require literal violations to be upgraded to INVALID_GRAFT, including in a minimalist implementation.",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", 1, ["NODE", null]]],
+      "errors": {
+        "INVALID_GRAFT": true
+      }
+    },
+    {
+      "name": "Reject literal destination selector true",
+      "desc": "Literal null, true, and fractional numbers are illegal path elements. The Paths rules require literal violations to be upgraded to INVALID_GRAFT, including in a minimalist implementation.",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", 1, ["NODE", true]]],
+      "errors": {
+        "INVALID_GRAFT": true
+      }
+    },
+    {
+      "name": "Reject literal destination selector 0.5",
+      "desc": "Literal null, true, and fractional numbers are illegal path elements. The Paths rules require literal violations to be upgraded to INVALID_GRAFT, including in a minimalist implementation.",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", 1, ["NODE", 0.5]]],
+      "errors": {
+        "INVALID_GRAFT": true
+      }
+    },
+    {
+      "name": "Reject computed destination selector null",
+      "desc": "The expression is valid; its input-dependent result is not a legal path element.",
+      "input": {"key": null},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", 1, ["NODE", ["NODE", "key"]]]],
+      "errors": {
+        "INVALID_OPERAND": true
+      }
+    },
+    {
+      "name": "Reject computed destination selector true",
+      "desc": "The expression is valid; its input-dependent result is not a legal path element.",
+      "input": {"key": true},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", 1, ["NODE", ["NODE", "key"]]]],
+      "errors": {
+        "INVALID_OPERAND": true
+      }
+    },
+    {
+      "name": "Reject computed destination selector 0.5",
+      "desc": "The expression is valid; its input-dependent result is not a legal path element.",
+      "input": {"key": 0.5},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", 1, ["NODE", ["NODE", "key"]]]],
+      "errors": {
+        "INVALID_OPERAND": true
+      }
+    },
+    {
+      "name": "Reject computed destination selector {}",
+      "desc": "The expression is valid; its input-dependent result is not a legal path element.",
+      "input": {"key": {}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", 1, ["NODE", ["NODE", "key"]]]],
+      "errors": {
+        "INVALID_OPERAND": true
+      }
+    },
+    {
+      "name": "Reject nested arrays after one level of path expansion",
+      "desc": "Path arrays expand once; an array left as an element is an invalid operand.",
+      "input": {"path": [["a"]]},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", 1, ["NODE", ["NODE", "path"]]]],
+      "errors": {
+        "INVALID_OPERAND": true
+      }
+    },
+    {
+      "name": "Reject a statically invalid computed selector",
+      "desc": "LOCAL makes NODE evaluate to null for every input. The resulting path element gives INVALID_OPERAND at runtime and may be diagnosed as INVALID_GRAFT statically.",
+      "input": {},
+      "jgraft": [
+        "JGRAFT",
+        {"v": 1},
+        ["COPY", 1, ["NODE", ["LOCAL", null, null, ["NODE"]]]]
+      ],
+      "errors": {
+        "INVALID_OPERAND": true,
+        "INVALID_GRAFT": true
+      }
+    },
+    {
+      "name": "Reject invalid destination path structure 0",
+      "desc": "A destination must be an implicit NODE selector or a reference expression; objects, escaped arrays, and ordinary functions are forbidden.",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", 1, {}]],
+      "errors": {
+        "INVALID_GRAFT": true
+      }
+    },
+    {
+      "name": "Reject invalid destination path structure 1",
+      "desc": "A destination must be an implicit NODE selector or a reference expression; objects, escaped arrays, and ordinary functions are forbidden.",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", 1, [["a"]]]],
+      "errors": {
+        "INVALID_GRAFT": true
+      }
+    },
+    {
+      "name": "Reject invalid destination path structure 2",
+      "desc": "A destination must be an implicit NODE selector or a reference expression; objects, escaped arrays, and ordinary functions are forbidden.",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", 1, ["LENGTH", "a"]]],
+      "errors": {
+        "INVALID_GRAFT": true
+      }
+    },
+    {
+      "name": "Reject an incomplete COPY pair",
+      "desc": "Every value must have a destination path.",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", 1, "a", 2]],
+      "errors": {
+        "INVALID_GRAFT": true
+      }
+    },
+    {
+      "name": "Reject an unknown value expression",
+      "desc": "Unescaped arrays in value context must identify defined expressions.",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["UNKNOWN"], "a"]],
+      "errors": {
+        "INVALID_GRAFT": true
+      }
+    },
+    {
+      "name": "Reject an unescaped empty array value",
+      "desc": "An empty literal array must be encoded as [[]].",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", [], "a"]],
+      "errors": {
+        "INVALID_GRAFT": true
+      }
+    },
+    {
+      "name": "Cannot write to the constant namespace",
+      "desc": "CONST is read-only, independently of the input.",
+      "input": {},
+      "jgraft": [
+        "JGRAFT",
+        {"v": 1, "const": ["x", 1]},
+        ["COPY", 2, ["CONST", "x"]]
+      ],
+      "errors": {
+        "INVALID_GRAFT": true
+      }
+    },
+    {
+      "name": "Cannot write to the capture namespace",
+      "desc": "CAP is read-only.",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", 2, ["CAP", "x"]]],
+      "errors": {
+        "INVALID_GRAFT": true
+      }
+    },
+    {
+      "name": "Cannot overwrite the STASH root",
+      "desc": "Only the input namespace permits root replacement.",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", {}, ["STASH"]]],
+      "errors": {
+        "INVALID_GRAFT": true
+      }
+    },
+    {
+      "name": "Cannot overwrite the TEMP root",
+      "desc": "TEMP references require at least one path element.",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", {}, ["TEMP"]]],
+      "errors": {
+        "INVALID_GRAFT": true
+      }
+    },
+    {
+      "name": "Cannot read the TEMP root",
+      "desc": "TEMP root access is forbidden even in value context.",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["TEMP"], "a"]],
+      "errors": {
+        "INVALID_GRAFT": true
+      }
+    },
+    {
+      "name": "Use numeric COPY and NODE identifiers",
+      "input": {"a": 1},
+      "jgraft": ["JGRAFT", {"v": 1}, [3, 2, [0, "a"]]],
+      "output": {"a": 2}
+    }
+  ]
+}
