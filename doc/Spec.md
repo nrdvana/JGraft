@@ -651,17 +651,18 @@ Name                     | Type  | ID | Description
 [PROPS](#ex-props)       | Fn    | 64 | Return properties of an object
 [MKOBJ](#ex-mkobj)       | Fn    | 65 | Construct an object from properties
 [CASE](#ex-case)         | Fn    | 66 | If/else that returns a value
-[CASTBOOL](#ex-castbool) | Fn    | 67 | Cast value to boolean
-[CASTNUM](#ex-castnum)   | Fn    | 68 | Cast value to number
-[CASTSTR](#ex-caststr)   | Fn    | 69 | Cast value to string
-[CASTDATE](#ex-castdate) | Fn    | 70 | Cast value to date/datetime/timestamp
-[LESS](#ex-less)         | Fn    | 71 | Less-than test
-[LESSEQ](#ex-lesseq)     | Fn    | 72 | Less-or-equal test
-[ADD](#ex-add)           | Fn    | 73 | Add numbers
-[SUB](#ex-sub)           | Fn    | 74 | Subtract numbers
-[MUL](#ex-mul)           | Fn    | 75 | Multiply numbers
-[DIV](#ex-div)           | Fn    | 76 | Divide numbers
-[MOD](#ex-mod)           | Fn    | 77 | Calculate Modulus
+[FAIL](#ex-fail)         | Fn    | 67 | Fail with INVALID_TARGET
+[CASTBOOL](#ex-castbool) | Fn    | 68 | Cast value to boolean
+[CASTNUM](#ex-castnum)   | Fn    | 69 | Cast value to number
+[CASTSTR](#ex-caststr)   | Fn    | 70 | Cast value to string
+[CASTDATE](#ex-castdate) | Fn    | 71 | Cast value to date/datetime/timestamp
+[LESS](#ex-less)         | Fn    | 72 | Less-than test
+[LESSEQ](#ex-lesseq)     | Fn    | 73 | Less-or-equal test
+[ADD](#ex-add)           | Fn    | 74 | Add numbers
+[SUB](#ex-sub)           | Fn    | 75 | Subtract numbers
+[MUL](#ex-mul)           | Fn    | 76 | Multiply numbers
+[DIV](#ex-div)           | Fn    | 77 | Divide numbers
+[MOD](#ex-mod)           | Fn    | 78 | Calculate Modulus
 
 ### Expression Interaction
 
@@ -2308,6 +2309,14 @@ Because [match context](#contexts) lets a plain value describe a `HAS` match
 against the current node, this can be an efficient way to choose an expression
 based on its value.  If the value you want to compare is not the current node,
 you can temporarily set it up as the current node with [`LOCAL`](#ex-local).
+
+#### <span id="ex-case">FAIL</span>
+
+    [FAIL]
+
+Generate an `INVALID_TARGET` error.  This is useful for rejecting unexpected
+scenarios in expresisons.  Note that this does not immediately end the graft
+operation if used in match context.
 
 #### <span id="ex-castbool">CASTBOOL</span>
 
