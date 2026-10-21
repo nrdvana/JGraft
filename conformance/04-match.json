@@ -1049,18 +1049,21 @@
     },
     {
       "name": "HAS matches own key \"__proto__\"",
+      "needProto": true,
       "input": {"__proto__": null},
       "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", {"__proto__": null}]]],
       "output": {"__proto__": null}
     },
     {
       "name": "IS matches own key \"__proto__\"",
+      "needProto": true,
       "input": {"__proto__": null},
       "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"__proto__": null}]]],
       "output": {"__proto__": null}
     },
     {
       "name": "Missing special key \"__proto__\"",
+      "needProto": true,
       "input": {},
       "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", {"__proto__": ["EXISTS"]}]],
       "errors": {"NO_MATCH": true}

@@ -525,6 +525,8 @@
     },
     {
       "name": "Move properties special to JavaScript objects",
+      "needProto": true,
+      "desc": "Moves own __proto__, constructor, and toString properties.",
       "input": {"__proto__": {"x": 1}, "constructor": 2, "toString": 3},
       "jgraft": [
         "JGRAFT",
@@ -540,6 +542,7 @@
     },
     {
       "name": "Move into a literal __proto__ property",
+      "needProto": true,
       "input": {"a": {"x": 1}},
       "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "a", "__proto__"]],
       "output": {"__proto__": {"x": 1}}

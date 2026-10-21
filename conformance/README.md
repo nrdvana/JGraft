@@ -7,6 +7,7 @@ This directory contains JSON files describing many instances of
       input:        // any JSON value
       jgraft:       // any valid or invalid JGraft
       output:       // the result of applying the graft
+      needProto:    // bool; the test requires "__proto__" support
       errors: {     // possible ways the graft can fail
         NO_MATCH: bool,        // can fail with NO_MATCH
         INVALID_TARGET: bool,  // can fail with INVALID_TARGET
@@ -39,6 +40,12 @@ INVALID_GRAFT, INVALID_OPERAND, INVALID_TARGET, or NO_MATCH, and only match
 should not fail overall if a new test for a semantic error is introduced which
 the engine detects as a lesser error; this merely indicates that more static
 analysis *could* be done, not that it must be done.
+
+The `needProto` flag indicates when a test requires use of the `__proto__`
+property.  Some implementations (e.g. JavaScript environments with old JSON
+modules) reject this property and may need to skip over these tests.  In these
+files, it is either true or omitted entirely, since the most common value is
+false.
 
 The top level of each file is structured as:
 

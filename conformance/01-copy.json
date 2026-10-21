@@ -544,7 +544,8 @@
     },
     {
       "name": "Write arbitrary object property names",
-      "desc": "Property names are literal keys, including empty strings, punctuation, and names special to JavaScript objects.",
+      "needProto": true,
+      "desc": "Property names are literal keys, including __proto__, empty strings, punctuation, and names special to JavaScript objects.",
       "input": {},
       "jgraft": [
         "JGRAFT",

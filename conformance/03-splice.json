@@ -159,6 +159,8 @@
     },
     {
       "name": "Insert an object with arbitrary property names",
+      "needProto": true,
+      "desc": "Includes an own __proto__ property.",
       "input": [],
       "jgraft": [
         "JGRAFT",
@@ -564,6 +566,7 @@
     },
     {
       "name": "Splice an array under a __proto__ property",
+      "needProto": true,
       "input": {"__proto__": [1, 2]},
       "jgraft": [
         "JGRAFT",
