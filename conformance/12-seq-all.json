@@ -1,0 +1,699 @@
+{
+  "version": 1,
+  "name": "ALL in sequence and regex context",
+  "desc": "Successor union constrained by minimum coverage of every argument, rather than intersection; continuation and exactness at each endpoint; zero-width and nested constraints; arrays and Unicode regexes; mode and function boundaries; capture merging, nearest eligible endpoints, earliest substructures, and duplicate names.",
+  "tests": [
+    {
+      "name": "ALL coverage example from the specification: final position 0",
+      "desc": "The complete sequence must end at 0; permitted successor positions are 2, 3, 4, 7.",
+      "input": [],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["ANY",["SEQ",1],["SEQ",1,1,1],["SEQ",1,1,1,1,1,1,1]],["ANY",["SEQ",1,1],["SEQ",1,1,1,1]]]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL coverage example from the specification: final position 1",
+      "desc": "The complete sequence must end at 1; permitted successor positions are 2, 3, 4, 7.",
+      "input": [1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["ANY",["SEQ",1],["SEQ",1,1,1],["SEQ",1,1,1,1,1,1,1]],["ANY",["SEQ",1,1],["SEQ",1,1,1,1]]]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL coverage example from the specification: final position 2",
+      "desc": "The complete sequence must end at 2; permitted successor positions are 2, 3, 4, 7.",
+      "input": [1,1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["ANY",["SEQ",1],["SEQ",1,1,1],["SEQ",1,1,1,1,1,1,1]],["ANY",["SEQ",1,1],["SEQ",1,1,1,1]]]]]]]]],
+      "output": [1,1]
+    },
+    {
+      "name": "ALL coverage example from the specification: final position 3",
+      "desc": "The complete sequence must end at 3; permitted successor positions are 2, 3, 4, 7.",
+      "input": [1,1,1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["ANY",["SEQ",1],["SEQ",1,1,1],["SEQ",1,1,1,1,1,1,1]],["ANY",["SEQ",1,1],["SEQ",1,1,1,1]]]]]]]]],
+      "output": [1,1,1]
+    },
+    {
+      "name": "ALL coverage example from the specification: final position 4",
+      "desc": "The complete sequence must end at 4; permitted successor positions are 2, 3, 4, 7.",
+      "input": [1,1,1,1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["ANY",["SEQ",1],["SEQ",1,1,1],["SEQ",1,1,1,1,1,1,1]],["ANY",["SEQ",1,1],["SEQ",1,1,1,1]]]]]]]]],
+      "output": [1,1,1,1]
+    },
+    {
+      "name": "ALL coverage example from the specification: final position 5",
+      "desc": "The complete sequence must end at 5; permitted successor positions are 2, 3, 4, 7.",
+      "input": [1,1,1,1,1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["ANY",["SEQ",1],["SEQ",1,1,1],["SEQ",1,1,1,1,1,1,1]],["ANY",["SEQ",1,1],["SEQ",1,1,1,1]]]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL coverage example from the specification: final position 6",
+      "desc": "The complete sequence must end at 6; permitted successor positions are 2, 3, 4, 7.",
+      "input": [1,1,1,1,1,1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["ANY",["SEQ",1],["SEQ",1,1,1],["SEQ",1,1,1,1,1,1,1]],["ANY",["SEQ",1,1],["SEQ",1,1,1,1]]]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL coverage example from the specification: final position 7",
+      "desc": "The complete sequence must end at 7; permitted successor positions are 2, 3, 4, 7.",
+      "input": [1,1,1,1,1,1,1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["ANY",["SEQ",1],["SEQ",1,1,1],["SEQ",1,1,1,1,1,1,1]],["ANY",["SEQ",1,1],["SEQ",1,1,1,1]]]]]]]]],
+      "output": [1,1,1,1,1,1,1]
+    },
+    {
+      "name": "ALL coverage example from the specification: final position 8",
+      "desc": "The complete sequence must end at 8; permitted successor positions are 2, 3, 4, 7.",
+      "input": [1,1,1,1,1,1,1,1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["ANY",["SEQ",1],["SEQ",1,1,1],["SEQ",1,1,1,1,1,1,1]],["ANY",["SEQ",1,1],["SEQ",1,1,1,1]]]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL coverage is invariant under argument permutation: final position 0",
+      "desc": "The complete sequence must end at 0; permitted successor positions are 2, 3, 4, 7.",
+      "input": [],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["ANY",["SEQ",1,1,1,1],["SEQ",1,1]],["ANY",["SEQ",1,1,1,1,1,1,1],["SEQ",1,1,1],["SEQ",1]]]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL coverage is invariant under argument permutation: final position 1",
+      "desc": "The complete sequence must end at 1; permitted successor positions are 2, 3, 4, 7.",
+      "input": [1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["ANY",["SEQ",1,1,1,1],["SEQ",1,1]],["ANY",["SEQ",1,1,1,1,1,1,1],["SEQ",1,1,1],["SEQ",1]]]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL coverage is invariant under argument permutation: final position 2",
+      "desc": "The complete sequence must end at 2; permitted successor positions are 2, 3, 4, 7.",
+      "input": [1,1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["ANY",["SEQ",1,1,1,1],["SEQ",1,1]],["ANY",["SEQ",1,1,1,1,1,1,1],["SEQ",1,1,1],["SEQ",1]]]]]]]]],
+      "output": [1,1]
+    },
+    {
+      "name": "ALL coverage is invariant under argument permutation: final position 3",
+      "desc": "The complete sequence must end at 3; permitted successor positions are 2, 3, 4, 7.",
+      "input": [1,1,1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["ANY",["SEQ",1,1,1,1],["SEQ",1,1]],["ANY",["SEQ",1,1,1,1,1,1,1],["SEQ",1,1,1],["SEQ",1]]]]]]]]],
+      "output": [1,1,1]
+    },
+    {
+      "name": "ALL coverage is invariant under argument permutation: final position 4",
+      "desc": "The complete sequence must end at 4; permitted successor positions are 2, 3, 4, 7.",
+      "input": [1,1,1,1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["ANY",["SEQ",1,1,1,1],["SEQ",1,1]],["ANY",["SEQ",1,1,1,1,1,1,1],["SEQ",1,1,1],["SEQ",1]]]]]]]]],
+      "output": [1,1,1,1]
+    },
+    {
+      "name": "ALL coverage is invariant under argument permutation: final position 5",
+      "desc": "The complete sequence must end at 5; permitted successor positions are 2, 3, 4, 7.",
+      "input": [1,1,1,1,1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["ANY",["SEQ",1,1,1,1],["SEQ",1,1]],["ANY",["SEQ",1,1,1,1,1,1,1],["SEQ",1,1,1],["SEQ",1]]]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL coverage is invariant under argument permutation: final position 6",
+      "desc": "The complete sequence must end at 6; permitted successor positions are 2, 3, 4, 7.",
+      "input": [1,1,1,1,1,1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["ANY",["SEQ",1,1,1,1],["SEQ",1,1]],["ANY",["SEQ",1,1,1,1,1,1,1],["SEQ",1,1,1],["SEQ",1]]]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL coverage is invariant under argument permutation: final position 7",
+      "desc": "The complete sequence must end at 7; permitted successor positions are 2, 3, 4, 7.",
+      "input": [1,1,1,1,1,1,1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["ANY",["SEQ",1,1,1,1],["SEQ",1,1]],["ANY",["SEQ",1,1,1,1,1,1,1],["SEQ",1,1,1],["SEQ",1]]]]]]]]],
+      "output": [1,1,1,1,1,1,1]
+    },
+    {
+      "name": "ALL coverage is invariant under argument permutation: final position 8",
+      "desc": "The complete sequence must end at 8; permitted successor positions are 2, 3, 4, 7.",
+      "input": [1,1,1,1,1,1,1,1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["ANY",["SEQ",1,1,1,1],["SEQ",1,1]],["ANY",["SEQ",1,1,1,1,1,1,1],["SEQ",1,1,1],["SEQ",1]]]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL has no successors when one constraint has none: final position 0",
+      "desc": "The complete sequence must end at 0; permitted successor positions are none.",
+      "input": [],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["SEQ",1],["SEQ",2]]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL has no successors when one constraint has none: final position 1",
+      "desc": "The complete sequence must end at 1; permitted successor positions are none.",
+      "input": [1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["SEQ",1],["SEQ",2]]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL has no successors when one constraint has none: final position 2",
+      "desc": "The complete sequence must end at 2; permitted successor positions are none.",
+      "input": [1,1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["SEQ",1],["SEQ",2]]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL has no successors when one constraint has none: final position 3",
+      "desc": "The complete sequence must end at 3; permitted successor positions are none.",
+      "input": [1,1,1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["SEQ",1],["SEQ",2]]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL has no successors when one constraint has none: final position 4",
+      "desc": "The complete sequence must end at 4; permitted successor positions are none.",
+      "input": [1,1,1,1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["SEQ",1],["SEQ",2]]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL accepts one argument unchanged: final position 0",
+      "desc": "The complete sequence must end at 0; permitted successor positions are 1, 3.",
+      "input": [],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["ANY",["SEQ",1],["SEQ",1,1,1]]]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL accepts one argument unchanged: final position 1",
+      "desc": "The complete sequence must end at 1; permitted successor positions are 1, 3.",
+      "input": [1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["ANY",["SEQ",1],["SEQ",1,1,1]]]]]]]]],
+      "output": [1]
+    },
+    {
+      "name": "ALL accepts one argument unchanged: final position 2",
+      "desc": "The complete sequence must end at 2; permitted successor positions are 1, 3.",
+      "input": [1,1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["ANY",["SEQ",1],["SEQ",1,1,1]]]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL accepts one argument unchanged: final position 3",
+      "desc": "The complete sequence must end at 3; permitted successor positions are 1, 3.",
+      "input": [1,1,1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["ANY",["SEQ",1],["SEQ",1,1,1]]]]]]]]],
+      "output": [1,1,1]
+    },
+    {
+      "name": "ALL accepts one argument unchanged: final position 4",
+      "desc": "The complete sequence must end at 4; permitted successor positions are 1, 3.",
+      "input": [1,1,1,1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["ANY",["SEQ",1],["SEQ",1,1,1]]]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL accepts one argument unchanged: final position 5",
+      "desc": "The complete sequence must end at 5; permitted successor positions are 1, 3.",
+      "input": [1,1,1,1,1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["ANY",["SEQ",1],["SEQ",1,1,1]]]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL combines empty and nonempty constraints: final position 0",
+      "desc": "The complete sequence must end at 0; permitted successor positions are 2.",
+      "input": [],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["SEQ"],["SEQ",1,1]]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL combines empty and nonempty constraints: final position 1",
+      "desc": "The complete sequence must end at 1; permitted successor positions are 2.",
+      "input": [1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["SEQ"],["SEQ",1,1]]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL combines empty and nonempty constraints: final position 2",
+      "desc": "The complete sequence must end at 2; permitted successor positions are 2.",
+      "input": [1,1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["SEQ"],["SEQ",1,1]]]]]]]],
+      "output": [1,1]
+    },
+    {
+      "name": "ALL combines empty and nonempty constraints: final position 3",
+      "desc": "The complete sequence must end at 3; permitted successor positions are 2.",
+      "input": [1,1,1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["SEQ"],["SEQ",1,1]]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL combines empty and nonempty constraints: final position 4",
+      "desc": "The complete sequence must end at 4; permitted successor positions are 2.",
+      "input": [1,1,1,1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["SEQ"],["SEQ",1,1]]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL of empty constraints is empty: final position 0",
+      "desc": "The complete sequence must end at 0; permitted successor positions are 0.",
+      "input": [],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["SEQ"],["SEQ"]]]]]]]],
+      "output": []
+    },
+    {
+      "name": "ALL of empty constraints is empty: final position 1",
+      "desc": "The complete sequence must end at 1; permitted successor positions are 0.",
+      "input": [1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["SEQ"],["SEQ"]]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL of empty constraints is empty: final position 2",
+      "desc": "The complete sequence must end at 2; permitted successor positions are 0.",
+      "input": [1,1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["SEQ"],["SEQ"]]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL of empty constraints is empty: final position 3",
+      "desc": "The complete sequence must end at 3; permitted successor positions are 0.",
+      "input": [1,1,1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["SEQ"],["SEQ"]]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL does not invent intermediate endpoints: final position 0",
+      "desc": "The complete sequence must end at 0; permitted successor positions are 4.",
+      "input": [],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["SEQ",1],["SEQ",1,1,1,1]]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL does not invent intermediate endpoints: final position 1",
+      "desc": "The complete sequence must end at 1; permitted successor positions are 4.",
+      "input": [1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["SEQ",1],["SEQ",1,1,1,1]]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL does not invent intermediate endpoints: final position 2",
+      "desc": "The complete sequence must end at 2; permitted successor positions are 4.",
+      "input": [1,1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["SEQ",1],["SEQ",1,1,1,1]]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL does not invent intermediate endpoints: final position 3",
+      "desc": "The complete sequence must end at 3; permitted successor positions are 4.",
+      "input": [1,1,1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["SEQ",1],["SEQ",1,1,1,1]]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL does not invent intermediate endpoints: final position 4",
+      "desc": "The complete sequence must end at 4; permitted successor positions are 4.",
+      "input": [1,1,1,1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["SEQ",1],["SEQ",1,1,1,1]]]]]]]],
+      "output": [1,1,1,1]
+    },
+    {
+      "name": "ALL does not invent intermediate endpoints: final position 5",
+      "desc": "The complete sequence must end at 5; permitted successor positions are 4.",
+      "input": [1,1,1,1,1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["SEQ",1],["SEQ",1,1,1,1]]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL does not invent intermediate endpoints: final position 6",
+      "desc": "The complete sequence must end at 6; permitted successor positions are 4.",
+      "input": [1,1,1,1,1,1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["SEQ",1],["SEQ",1,1,1,1]]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL starts at the current cursor rather than array zero",
+      "input": [9,1,2],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[9,["SEQ",["ALL",["SEQ",1,2]]]]]]]],
+      "output": [9,1,2]
+    },
+    {
+      "name": "ALL does not descend into the current array element implicitly",
+      "input": [[1,2]],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["SEQ",1,2]]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL explicit nested array matching starts a new context",
+      "input": [[1,2]],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",[[1,2]]]]]]]]],
+      "output": [[1,2]]
+    },
+    {
+      "name": "ALL ordinary scalar successor consumes one element",
+      "input": [1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",1]]]]]]],
+      "output": [1]
+    },
+    {
+      "name": "ALL numeric ID in sequence context",
+      "input": [1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",[5,1]]]]]]],
+      "output": [1]
+    },
+    {
+      "name": "ALL cannot initiate SEQ below itself",
+      "input": [1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",[[["ALL",["SEQ",1]]]]]],
+      "errors": {"INVALID_GRAFT":true}
+    },
+    {
+      "name": "ALL cannot initiate a nested named sequence at this level",
+      "input": [1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",[[["SEQ",["ALL",["SEQMAX","bad",1]]]]]]],
+      "errors": {"INVALID_GRAFT":true}
+    },
+    {
+      "name": "ALL EXPR expands in existing sequence context",
+      "input": [1,2],
+      "jgraft": ["JGRAFT",{"v":1,"expr":["p",["ALL",["SEQ",1,2]]]},["MATCH",["IS",[[["SEQ",["EXPR","p"]]]]]]],
+      "output": [1,2]
+    },
+    {
+      "name": "ALL direct value-defined EXPR retains literal data semantics",
+      "input": [1],
+      "jgraft": ["JGRAFT",{"v":1,"expr":["p",1]},["MATCH",["IS",[[["SEQ",["ALL",["EXPR","p"]]]]]]]],
+      "output": [1]
+    },
+    {
+      "name": "ALL nested substructure starts ordinary element matching",
+      "input": [{"a":1,"b":2}],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",{"a":["ANY",1,2],"b":2}]]]]]]],
+      "output": [{"a":1,"b":2}]
+    },
+    {
+      "name": "ALL structural child inherits exactness",
+      "input": [{"a":1,"b":2}],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",{"a":1}]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL partial override applies to a structural child",
+      "input": [{"a":1,"b":2}],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["HAS",{"a":1}]]]]]]]],
+      "output": [{"a":1,"b":2}]
+    },
+    {
+      "name": "ALL current-element references are evaluated for each probe",
+      "input": [1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["NODE"]]]]]]]],
+      "output": [1]
+    },
+    {
+      "name": "ALL missing reference is a failed sequence probe",
+      "input": [1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["NODE","missing"]]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL intentional FAIL is a failed sequence probe",
+      "input": [],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["FAIL"]]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL syntax faults escape sequence probes",
+      "input": [1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",[[["SEQ",["ALL",["UNKNOWN"]]]]]]],
+      "errors": {"INVALID_GRAFT":true}
+    },
+    {
+      "name": "ALL requires a sequence argument",
+      "input": [],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",[[["SEQ",["ALL"]]]]]],
+      "errors": {"INVALID_GRAFT":true}
+    },
+    {
+      "name": "ALL multi-character regex literal is a sequence",
+      "input": "ab",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["STR",["SEQ",["START"],["ALL","ab"],["END"]]]]],
+      "output": "ab"
+    },
+    {
+      "name": "ALL empty regex literal is an empty sequence",
+      "input": "",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["STR",["SEQ",["START"],["ALL",""],["END"]]]]],
+      "output": ""
+    },
+    {
+      "name": "ALL virtual end element is absent",
+      "input": "",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["STR",["SEQ",["START"],["ALL",["EXISTS"]],["END"]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL unanchored STR searches later positions",
+      "input": "zabz",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["STR",["ALL","ab"]]]],
+      "output": "zabz"
+    },
+    {
+      "name": "ALL supplementary character is a single codepoint",
+      "input": "😀",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["STR",["SEQ",["START"],["ALL",128512],["END"]]]]],
+      "output": "😀"
+    },
+    {
+      "name": "ALL partial surrogate does not match a valid pair",
+      "input": "😀",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["STR",["SEQ",["START"],["ALL","\ud83d"],["END"]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL lone surrogate behavior when preserved",
+      "input": "\ud800",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["STR",["SEQ",["START"],["ALL",55296],["END"]]]]],
+      "needLoneSurrogate": true,
+      "output": "\ud800"
+    },
+    {
+      "name": "ALL combining marks remain separate codepoints",
+      "input": "é",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["STR",["SEQ",["START"],["ALL",["SEQ",101,769]],["END"]]]]],
+      "output": "é"
+    },
+    {
+      "name": "ALL alternate-target HAS is a zero-width assertion",
+      "desc": "Two-argument HAS changes the comparison target and therefore consumes no elements in sequence context.",
+      "input": [9],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["HAS",1,1]],9]]]]]],
+      "output": [9]
+    },
+    {
+      "name": "ALL alternate-target IS is a zero-width assertion",
+      "input": [9],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["IS",1,1]],9]]]]]],
+      "output": [9]
+    },
+    {
+      "name": "ALL alternate-target string uses ordinary matching",
+      "input": "q",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["STR",["SEQ",["START"],["ALL",["IS","ab","ab"]],"q",["END"]]]]],
+      "output": "q"
+    },
+    {
+      "name": "ALL continuation may require the shorter eligible endpoint",
+      "input": [1,1,2],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["SEQ",1],["ANY",["SEQ",1,1],["SEQ",1,1,1]]],2]]]]]],
+      "output": [1,1,2]
+    },
+    {
+      "name": "ALL continuation may require a longer eligible endpoint",
+      "input": [1,1,1,2],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["SEQ",1],["ANY",["SEQ",1,1],["SEQ",1,1,1]]],2]]]]]],
+      "output": [1,1,1,2]
+    },
+    {
+      "name": "ALL does not intersect unequal single successors",
+      "input": [1,2],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["SEQ",1],["SEQ",1,2]]]]]]]],
+      "output": [1,2]
+    },
+    {
+      "name": "ALL keeps all predicates anchored to the same start",
+      "input": [1,2],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",[[["SEQ",["ALL",1,2]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL cannot satisfy constraints by concatenating them",
+      "input": [1,2],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",[[["SEQ",["ALL",["SEQ",1],["SEQ",2]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "A failing ALL child eliminates the complete constraint",
+      "input": [1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",[[["SEQ",["ALL",1,["NODE","missing"]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "Nested ALL combines its own successor coverage",
+      "input": [1,1,1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["ALL",["SEQ",1],["SEQ",1,1]],["SEQ",1,1,1]]]]]]]],
+      "output": [1,1,1]
+    },
+    {
+      "name": "ALL of zero-width assertions does not consume data",
+      "input": [1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["START"],["NONE",2]],1]]]]]],
+      "output": [1]
+    },
+    {
+      "name": "ALL unions Unicode endpoints without UTF-16 splitting",
+      "input": "😀a",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["STR",["SEQ",["START"],["ALL","😀","😀a"],["END"]]]]],
+      "output": "😀a"
+    },
+    {
+      "name": "Regex ALL constrains content as well as width",
+      "input": "abc",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["STR",["SEQ",["START"],["ALL","a","abd"],["END"]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "Regex ALL can have a zero-width lookahead argument",
+      "input": "abc",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["STR",["SEQ",["START"],["ALL",["NONE","z"],"abc"],["END"]]]]],
+      "output": "abc"
+    },
+    {
+      "name": "ALL merges captures from unequal-width structural arguments",
+      "input": [{"a":[1]},{"b":[2]}],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["SEQ",{"a":[[["SEQMAX","A",1]]]}],["SEQ",["EXISTS"],{"b":[[["SEQMIN","B",2]]]}]]]]]],["COPY",["CAP"],["NODE"]]]],
+      "output": {"A":{"path":[0,"a"],"ofs":0,"len":1,"lim":1},"B":{"path":[1,"b"],"ofs":0,"len":1,"lim":1}}
+    },
+    {
+      "name": "ALL capture merging is independent of argument order",
+      "input": [{"a":[1]},{"b":[2]}],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["SEQ",["EXISTS"],{"b":[[["SEQMIN","B",2]]]}],["SEQ",{"a":[[["SEQMAX","A",1]]]}]]]]]],["COPY",["CAP"],["NODE"]]]],
+      "output": {"A":{"path":[0,"a"],"ofs":0,"len":1,"lim":1},"B":{"path":[1,"b"],"ofs":0,"len":1,"lim":1}}
+    },
+    {
+      "name": "ALL chooses the nearest eligible capture endpoint for each argument",
+      "input": [{"x":[1]},{"x":[2]},{"y":[3]}],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["SEQ",["REP",0,1,["EXISTS"]],{"x":[[["SEQMAX","A",["EXISTS"]]]]}],["SEQ",["EXISTS"],["EXISTS"],{"y":[[["SEQMAX","B",["EXISTS"]]]]}]]]]]],["COPY",["CAP"],["NODE"]]]],
+      "output": {"A":{"path":[1,"x"],"ofs":0,"len":1,"lim":1},"B":{"path":[2,"y"],"ofs":0,"len":1,"lim":1}}
+    },
+    {
+      "name": "ALL does not take captures beyond output endpoint 2",
+      "input": [{"x":[1]},{"y":[2]},{"x":[3]}],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["SEQ",["REP",0,2,["EXISTS"]],{"x":[[["SEQMAX","A",["EXISTS"]]]]}],["SEQ",["EXISTS"],{"y":[[["SEQMAX","B",["EXISTS"]]]]}]],["EXISTS"]]]]],["COPY",["CAP"],["NODE"]]]],
+      "output": {"A":{"path":[0,"x"],"ofs":0,"len":1,"lim":1},"B":{"path":[1,"y"],"ofs":0,"len":1,"lim":1}}
+    },
+    {
+      "name": "ALL does not take captures beyond output endpoint 3",
+      "input": [{"x":[1]},{"y":[2]},{"x":[3]}],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["SEQ",["REP",0,2,["EXISTS"]],{"x":[[["SEQMAX","A",["EXISTS"]]]]}],["SEQ",["EXISTS"],{"y":[[["SEQMAX","B",["EXISTS"]]]]}]]]]]],["COPY",["CAP"],["NODE"]]]],
+      "output": {"A":{"path":[2,"x"],"ofs":0,"len":1,"lim":1},"B":{"path":[1,"y"],"ofs":0,"len":1,"lim":1}}
+    },
+    {
+      "name": "ALL resolves equal-endpoint substructures by earliest match",
+      "input": [{"x":[1]},{"x":[2]}],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["SEQ",["REP",0,1,["EXISTS"]],{"x":[[["SEQMAX","A",["EXISTS"]]]]},["REP",0,1,["EXISTS"]]],["SEQ"],["SEQ",["EXISTS"],["EXISTS"]]]]]]],["COPY",["CAP"],["NODE"]]]],
+      "output": {"A":{"path":[0,"x"],"ofs":0,"len":1,"lim":1}}
+    },
+    {
+      "name": "ALL rejects duplicate names when merging captures",
+      "input": [{"a":[1]},{"b":[2]}],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["SEQ",{"a":[[["SEQMAX","same",1]]]}],["SEQ",["EXISTS"],{"b":[[["SEQMAX","same",2]]]}]]]]]],["COPY",["CAP"],["NODE"]]]],
+      "errors": {"NO_MATCH":true,"INVALID_GRAFT":true},
+      "desc": "Reading CAP makes capture names and conflicts observable; boolean-only matching must not bypass this check."
+    },
+    {
+      "name": "An enclosing ANY suppresses captures and duplicate-name conflicts in ALL",
+      "input": [{"a":[1]},{"b":[2]}],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ANY",["IS",[[["SEQ",["ALL",["SEQ",{"a":[[["SEQMAX","same",1]]]}],["SEQ",["EXISTS"],{"b":[[["SEQMAX","same",2]]]}]]]]]]],["COPY",["CAP"],["NODE"]]]],
+      "output": {}
+    },
+    {
+      "name": "ALL SEQ initiation restriction applies after EXPR expansion",
+      "input": [1],
+      "jgraft": ["JGRAFT",{"v":1,"expr":["p",["SEQ",1]]},["MATCH",[[["ALL",["EXPR","p"]]]]]],
+      "errors": {"INVALID_GRAFT":true}
+    },
+    {
+      "name": "ALL one-argument IS advances one element after a successful sequence test",
+      "input": [1,2],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["IS",["SEQ",1,2]]],2]]]]]],
+      "output": [1,2]
+    },
+    {
+      "name": "ALL one-argument HAS advances one element after a successful sequence test",
+      "input": [1,2],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["HAS",["SEQ",1,2]]],2]]]]]],
+      "output": [1,2]
+    },
+    {
+      "name": "ALL an explicit IS child overrides partial structural matching",
+      "input": [{"a":1,"b":2}],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",[[["SEQ",["ALL",["IS",{"a":1}]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL retains zero-length captures from a satisfied shorter constraint",
+      "input": [{"a":[]},{"b":[2]}],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["SEQ",{"a":[[["SEQMAX","empty"]]]}],["SEQ",["EXISTS"],{"b":[[["SEQMAX","other",2]]]}]]]]]],["COPY",["CAP"],["NODE"]]]],
+      "output": {"empty":{"path":[0,"a"],"ofs":0,"len":0,"lim":0},"other":{"path":[1,"b"],"ofs":0,"len":1,"lim":1}}
+    },
+    {
+      "name": "ALL merges arbitrary capture names including __proto__",
+      "input": [{"a":[1]}],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",{"a":[[["SEQMAX","__proto__",1]]]}]]]]],["COPY",["CAP"],["NODE"]]]],
+      "needProto": true,
+      "output": {"__proto__":{"path":[0,"a"],"ofs":0,"len":1,"lim":1}}
+    },
+    {
+      "name": "ALL capture name uniqueness applies after integer coercion",
+      "input": [{"a":[1]},{"b":[2]}],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["SEQ",{"a":[[["SEQMAX",1,1]]]}],["SEQ",["EXISTS"],{"b":[[["SEQMAX","1",2]]]}]]]]]],["COPY",["CAP"],["NODE"]]]],
+      "errors": {"NO_MATCH":true,"INVALID_GRAFT":true},
+      "desc": "Reading CAP makes capture names and conflicts observable; boolean-only matching must not bypass this check."
+    },
+    {
+      "name": "ALL cannot satisfy a nonempty constraint at the end",
+      "input": [],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["ALL",["SEQ"],1]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL invalid regex literal: null",
+      "input": "a",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["STR",["SEQ",["START"],["ALL",null],["END"]]]]],
+      "errors": {"NO_MATCH":true,"INVALID_GRAFT":true}
+    },
+    {
+      "name": "ALL invalid regex literal: boolean",
+      "input": "a",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["STR",["SEQ",["START"],["ALL",true],["END"]]]]],
+      "errors": {"NO_MATCH":true,"INVALID_GRAFT":true}
+    },
+    {
+      "name": "ALL invalid regex literal: negative number",
+      "input": "a",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["STR",["SEQ",["START"],["ALL",-1],["END"]]]]],
+      "errors": {"NO_MATCH":true,"INVALID_GRAFT":true}
+    },
+    {
+      "name": "ALL invalid regex literal: fraction",
+      "input": "a",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["STR",["SEQ",["START"],["ALL",0.5],["END"]]]]],
+      "errors": {"NO_MATCH":true,"INVALID_GRAFT":true}
+    },
+    {
+      "name": "ALL invalid regex literal: object",
+      "input": "a",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["STR",["SEQ",["START"],["ALL",{}],["END"]]]]],
+      "errors": {"NO_MATCH":true,"INVALID_GRAFT":true}
+    },
+    {
+      "name": "ALL invalid regex literal: escaped array",
+      "input": "a",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["STR",["SEQ",["START"],["ALL",[[97]]],["END"]]]]],
+      "errors": {"NO_MATCH":true,"INVALID_GRAFT":true}
+    },
+    {
+      "name": "ALL a reference-produced array is not reinterpreted as regex syntax",
+      "input": "a",
+      "jgraft": ["JGRAFT",{"v":1,"const":["p",[["SEQ",97]]]},["MATCH",["STR",["SEQ",["START"],["ALL",["CONST","p"]],["END"]]]]],
+      "errors": {"NO_MATCH":true,"INVALID_GRAFT":true}
+    }
+  ]
+}

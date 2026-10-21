@@ -1,0 +1,461 @@
+{
+  "version": 1,
+  "name": "ALL in element context",
+  "desc": "ALL boolean conjunction, strict literal and structural matching, inherited and overridden exactness, missing nodes, value and EXPR contexts, alternate current nodes, capture retention and name uniqueness, arbitrary property names, and error trapping. Sequence-context behavior is covered by 12-seq-all.json.",
+  "tests": [
+    {
+      "name": "ALL truth table: false, false",
+      "input": null,
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",["NONE",["EXISTS"]],["NONE",["EXISTS"]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL returns boolean for false, false",
+      "input": null,
+      "jgraft": ["JGRAFT",{"v":1},["COPY",["ALL",["NONE",["EXISTS"]],["NONE",["EXISTS"]]],["NODE"]]],
+      "output": false
+    },
+    {
+      "name": "ALL truth table: false, true",
+      "input": null,
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",["NONE",["EXISTS"]],["EXISTS"]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL returns boolean for false, true",
+      "input": null,
+      "jgraft": ["JGRAFT",{"v":1},["COPY",["ALL",["NONE",["EXISTS"]],["EXISTS"]],["NODE"]]],
+      "output": false
+    },
+    {
+      "name": "ALL truth table: true, false",
+      "input": null,
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",["EXISTS"],["NONE",["EXISTS"]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL returns boolean for true, false",
+      "input": null,
+      "jgraft": ["JGRAFT",{"v":1},["COPY",["ALL",["EXISTS"],["NONE",["EXISTS"]]],["NODE"]]],
+      "output": false
+    },
+    {
+      "name": "ALL truth table: true, true",
+      "input": null,
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",["EXISTS"],["EXISTS"]]]],
+      "output": null
+    },
+    {
+      "name": "ALL returns boolean for true, true",
+      "input": null,
+      "jgraft": ["JGRAFT",{"v":1},["COPY",["ALL",["EXISTS"],["EXISTS"]],["NODE"]]],
+      "output": true
+    },
+    {
+      "name": "ALL literal type matrix: null",
+      "input": null,
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",null,true]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL literal type matrix: false",
+      "input": false,
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",null,true]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL literal type matrix: true",
+      "input": true,
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",null,true]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL literal type matrix: 0",
+      "input": 0,
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",null,true]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL literal type matrix: 1",
+      "input": 1,
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",null,true]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL literal type matrix: \"\"",
+      "input": "",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",null,true]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL literal type matrix: \"x\"",
+      "input": "x",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",null,true]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL literal type matrix: []",
+      "input": [],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",null,true]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL literal type matrix: {}",
+      "input": {},
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",null,true]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL single literal matches 0",
+      "input": 0,
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",0]]],
+      "output": 0
+    },
+    {
+      "name": "ALL single literal rejects coercion false",
+      "input": false,
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",0]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL single literal matches 1",
+      "input": 1,
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",1]]],
+      "output": 1
+    },
+    {
+      "name": "ALL single literal rejects coercion true",
+      "input": true,
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",1]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL single literal matches \"1\"",
+      "input": "1",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL","1"]]],
+      "output": "1"
+    },
+    {
+      "name": "ALL single literal rejects coercion 1",
+      "input": 1,
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL","1"]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL single literal matches null",
+      "input": null,
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",null]]],
+      "output": null
+    },
+    {
+      "name": "ALL single literal rejects coercion \"null\"",
+      "input": "null",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",null]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL single literal matches \"\"",
+      "input": "",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",""]]],
+      "output": ""
+    },
+    {
+      "name": "ALL single literal rejects coercion null",
+      "input": null,
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",""]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL duplicate identical arguments",
+      "input": 7,
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",7,7]]],
+      "output": 7
+    },
+    {
+      "name": "ALL duplicate failing arguments",
+      "input": 8,
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",7,7]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL partial structural children",
+      "input": {"a":1,"b":2},
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",{"a":1},{"b":2}]]],
+      "output": {"a":1,"b":2}
+    },
+    {
+      "name": "ALL incompatible structural children",
+      "input": {"a":1},
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",{"a":1},{"a":2}]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL exactness is inherited by every child",
+      "input": {"a":1,"b":2},
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",["ALL",{"a":1},{"b":2}]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL exact complete child",
+      "input": {"a":1},
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",["ALL",{"a":1}]]]],
+      "output": {"a":1}
+    },
+    {
+      "name": "ALL explicit HAS overrides inherited exactness",
+      "input": {"a":1,"b":2},
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",["ALL",["HAS",{"a":1}]]]]],
+      "output": {"a":1,"b":2}
+    },
+    {
+      "name": "ALL explicit IS overrides partial matching",
+      "input": {"a":1,"b":2},
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",["IS",{"a":1}]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL partial array child",
+      "input": [1,2],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",[[1]]]]],
+      "output": [1,2]
+    },
+    {
+      "name": "ALL exact array child rejects trailing elements",
+      "input": [1,2],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",["ALL",[[1]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL empty array specification remains partial",
+      "input": [1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",[[]]]]],
+      "output": [1]
+    },
+    {
+      "name": "ALL descendant object inherits exactness",
+      "input": {"a":{"x":1,"y":2}},
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",["ALL",{"a":{"x":1}}]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL nested object property changes current node",
+      "input": {"p":7},
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",{"p":["ALL",["IS",["NODE"],7]]}]],
+      "output": {"p":7}
+    },
+    {
+      "name": "ALL alternate target is visible inside match children",
+      "input": {"target":{"a":7},"a":8},
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["HAS",["NODE","target"],["ALL",{"a":7}]]]],
+      "output": {"target":{"a":7},"a":8}
+    },
+    {
+      "name": "ALL wrapped references see the alternate target",
+      "input": {"target":{"a":7},"a":8},
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["HAS",["NODE","target"],["ALL",{"a":["NODE"]}]]]],
+      "output": {"target":{"a":7},"a":8}
+    },
+    {
+      "name": "ALL missing object property",
+      "input": {},
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",{"p":["ALL",["EXISTS"]]}]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL null property exists",
+      "input": {"p":null},
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",{"p":["ALL",["EXISTS"]]}]],
+      "output": {"p":null}
+    },
+    {
+      "name": "ALL missing array end element",
+      "input": [],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",[[["ALL",["EXISTS"]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL cannot address an element beyond the array end",
+      "input": [],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",[[["NONE"],["ALL",["NONE"]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL match expression is a value when copied",
+      "input": {"x":1},
+      "jgraft": ["JGRAFT",{"v":1},["COPY",["ALL",{"x":1}],["NODE"]]],
+      "output": true
+    },
+    {
+      "name": "ALL direct reference result is literal data",
+      "input": {"wanted":5},
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",["NODE","wanted"]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL reference arrays are not reinterpreted as syntax",
+      "input": ["EXISTS"],
+      "jgraft": ["JGRAFT",{"v":1,"const":["pattern",[["EXISTS"]]]},["MATCH",["ALL",["CONST","pattern"]]]],
+      "output": ["EXISTS"]
+    },
+    {
+      "name": "ALL numeric opcode",
+      "input": 4,
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",[5,4]]],
+      "output": 4
+    },
+    {
+      "name": "ALL EXPR root retains match semantics",
+      "input": {"x":1,"y":2},
+      "jgraft": ["JGRAFT",{"v":1,"expr":["p",["ALL",{"x":1}]]},["MATCH",["EXPR","p"]]],
+      "output": {"x":1,"y":2}
+    },
+    {
+      "name": "ALL EXPR inherits exactness",
+      "input": {"x":1,"y":2},
+      "jgraft": ["JGRAFT",{"v":1,"expr":["p",["ALL",{"x":1}]]},["MATCH",["IS",["EXPR","p"]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL value-defined structure constructs nested matches",
+      "input": {"x":true},
+      "jgraft": ["JGRAFT",{"v":1,"expr":["p",{"x":["EXISTS"]}]},["MATCH",["ALL",["EXPR","p"]]]],
+      "output": {"x":true}
+    },
+    {
+      "name": "ALL intentional FAIL is a false child",
+      "input": 1,
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",["FAIL"]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL missing reference is a false child",
+      "input": {},
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",["NODE","missing"]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL invalid target from a function is a false child",
+      "input": 5,
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",["LENGTH"]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL invalid computed operand is a false child",
+      "input": {},
+      "jgraft": ["JGRAFT",{"v":1,"const":["bad",{}]},["MATCH",["ALL",["NODE",["CONST","bad"]]]]],
+      "errors": {"NO_MATCH":true,"INVALID_GRAFT":true}
+    },
+    {
+      "name": "ALL unknown child expression is not a false child",
+      "input": 1,
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",["UNKNOWN"]]]],
+      "errors": {"INVALID_GRAFT":true}
+    },
+    {
+      "name": "ALL arbitrary prototype-like property",
+      "input": {"__proto__":7},
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",{"__proto__":7}]]],
+      "needProto": true,
+      "output": {"__proto__":7}
+    },
+    {
+      "name": "ALL ordinary own property \"constructor\"",
+      "input": {"constructor":1},
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",{"constructor":1}]]],
+      "output": {"constructor":1}
+    },
+    {
+      "name": "ALL ordinary own property \"toString\"",
+      "input": {"toString":1},
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",{"toString":1}]]],
+      "output": {"toString":1}
+    },
+    {
+      "name": "ALL ordinary own property \"hasOwnProperty\"",
+      "input": {"hasOwnProperty":1},
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",{"hasOwnProperty":1}]]],
+      "output": {"hasOwnProperty":1}
+    },
+    {
+      "name": "ALL ordinary own property \"\"",
+      "input": {"":1},
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",{"":1}]]],
+      "output": {"":1}
+    },
+    {
+      "name": "ALL requires at least one argument",
+      "input": null,
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL"]]],
+      "errors": {"INVALID_GRAFT":true}
+    },
+    {
+      "name": "ALL fails when one child probe fails",
+      "input": {},
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",{},["NODE","absent"]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL failed first constraint may skip a syntax fault",
+      "input": 1,
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",2,["UNKNOWN"]]]],
+      "errors": {"NO_MATCH":true,"INVALID_GRAFT":true}
+    },
+    {
+      "name": "Nested ALL does not merge object specifications before exact matching",
+      "input": {"a":1,"b":2},
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",["ALL",{"a":1},{"b":2}]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "Function argument matches reset inherited exactness",
+      "input": {"a":1,"b":2},
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",["ALL",["IS",["NONE",{"a":1}],false]]]]],
+      "output": {"a":1,"b":2}
+    },
+    {
+      "name": "ALL retains captures from every structural argument",
+      "input": {"a":[7],"b":[8]},
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",{"a":[[["SEQMAX","A",7]]]},{"b":[[["SEQMIN","B",8]]]}],["COPY",["CAP"],["NODE"]]]],
+      "output": {"A":{"path":["a"],"ofs":0,"len":1,"lim":1},"B":{"path":["b"],"ofs":0,"len":1,"lim":1}}
+    },
+    {
+      "name": "ALL duplicate capture names are invalid operands",
+      "input": {"a":[7],"b":[8]},
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",{"a":[[["SEQMAX","dup",7]]]},{"b":[[["SEQMIN","dup",8]]]}],["COPY",["CAP"],["NODE"]]]],
+      "errors": {"NO_MATCH":true,"INVALID_GRAFT":true},
+      "desc": "Reading CAP makes capture names and conflicts observable; boolean-only matching must not bypass this check."
+    },
+    {
+      "name": "ALL merges capture names including __proto__",
+      "input": {"a":[7]},
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",{"a":[[["SEQMAX","__proto__",7]]]}],["COPY",["CAP"],["NODE"]]]],
+      "needProto": true,
+      "output": {"__proto__":{"path":["a"],"ofs":0,"len":1,"lim":1}}
+    },
+    {
+      "name": "ALL does not infer a fatal operand error from sibling assertions",
+      "input": {"offset":"2"},
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",["ALL",{"offset":"2"},["IS",["SLICE","abc",["NODE","offset"]],"c"]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "ALL reference arrays preserve their contained opcode as data",
+      "input": ["SEQ",1],
+      "jgraft": ["JGRAFT",{"v":1,"const":["p",[["SEQ",1]]]},["MATCH",["ALL",["CONST","p"]]]],
+      "output": ["SEQ",1]
+    },
+    {
+      "name": "ALL returns an empty capture namespace without named sequences",
+      "input": 7,
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",7],["COPY",["CAP"],["NODE"]]]],
+      "output": {}
+    },
+    {
+      "name": "Observable capture names cannot read the current node",
+      "input": {"a":[7]},
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ALL",{"a":[[["SEQMAX",["NODE"],7]]]}],["COPY",["CAP"],["NODE"]]]],
+      "errors": {"NO_MATCH":true},
+      "desc": "Reading CAP makes capture names and conflicts observable; boolean-only matching must not bypass this check."
+    }
+  ]
+}

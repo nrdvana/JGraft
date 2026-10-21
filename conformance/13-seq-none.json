@@ -1,0 +1,434 @@
+{
+  "version": 1,
+  "name": "NONE in sequence and regex context",
+  "desc": "Zero-width negative assertion against all successor possibilities, including empty and missing elements; arrays and Unicode regexes; continuation, context boundaries, operand-error recovery, EXPR, and capture suppression across nested structures and fresh function match states.",
+  "tests": [
+    {
+      "name": "NONE with no arguments has one empty successor: final position 0",
+      "desc": "The complete sequence must end at 0; permitted successor positions are 0.",
+      "input": [],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["NONE"]]]]]]],
+      "output": []
+    },
+    {
+      "name": "NONE with no arguments has one empty successor: final position 1",
+      "desc": "The complete sequence must end at 1; permitted successor positions are 0.",
+      "input": [1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["NONE"]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "NONE with no arguments has one empty successor: final position 2",
+      "desc": "The complete sequence must end at 2; permitted successor positions are 0.",
+      "input": [1,1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["NONE"]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "NONE with no arguments has one empty successor: final position 3",
+      "desc": "The complete sequence must end at 3; permitted successor positions are 0.",
+      "input": [1,1,1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["NONE"]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "NONE starts at the current cursor rather than array zero",
+      "input": [9,1,2],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[9,["SEQ",["NONE",["SEQ",1,2]],1,2]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "NONE does not descend into the current array element implicitly",
+      "input": [[1,2]],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["NONE",["SEQ",1,2]],["EXISTS"]]]]]]],
+      "output": [[1,2]]
+    },
+    {
+      "name": "NONE explicit nested array matching starts a new context",
+      "input": [[1,2]],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["NONE",[[1,2]]]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "NONE ordinary scalar successor consumes one element",
+      "input": [1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["NONE",["NONE",1]]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "NONE numeric ID in sequence context",
+      "input": [1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",[3,1]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "NONE cannot initiate SEQ below itself",
+      "input": [1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",[[["NONE",["SEQ",1]]]]]],
+      "errors": {"INVALID_GRAFT":true}
+    },
+    {
+      "name": "NONE cannot initiate a nested named sequence at this level",
+      "input": [1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",[[["SEQ",["NONE",["SEQMAX","bad",1]]]]]]],
+      "errors": {"INVALID_GRAFT":true}
+    },
+    {
+      "name": "NONE EXPR expands in existing sequence context",
+      "input": [1,2],
+      "jgraft": ["JGRAFT",{"v":1,"expr":["p",["NONE",["SEQ",1,2]]]},["MATCH",["IS",[[["SEQ",["EXPR","p"]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "NONE direct value-defined EXPR retains literal data semantics",
+      "input": [1],
+      "jgraft": ["JGRAFT",{"v":1,"expr":["p",1]},["MATCH",["IS",[[["SEQ",["NONE",["EXPR","p"]]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "NONE nested substructure starts ordinary element matching",
+      "input": [{"a":1,"b":2}],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["NONE",{"a":["ANY",1,2],"b":2}]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "NONE structural child inherits exactness",
+      "input": [{"a":1,"b":2}],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["NONE",{"a":1}],["EXISTS"]]]]]]],
+      "output": [{"a":1,"b":2}]
+    },
+    {
+      "name": "NONE partial override applies to a structural child",
+      "input": [{"a":1,"b":2}],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["NONE",["HAS",{"a":1}]]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "NONE current-element references are evaluated for each probe",
+      "input": [1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["NONE",["NODE"]]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "NONE missing reference is a failed sequence probe",
+      "input": [1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["NONE",["NODE","missing"]],1]]]]]],
+      "output": [1]
+    },
+    {
+      "name": "NONE intentional FAIL is a failed sequence probe",
+      "input": [],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["NONE",["FAIL"]]]]]]]],
+      "output": []
+    },
+    {
+      "name": "NONE syntax faults escape sequence probes",
+      "input": [1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",[[["SEQ",["NONE",["UNKNOWN"]]]]]]],
+      "errors": {"INVALID_GRAFT":true}
+    },
+    {
+      "name": "NONE multi-character regex literal is a sequence",
+      "input": "ab",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["STR",["SEQ",["START"],["NONE","ab"],"ab",["END"]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "NONE empty regex literal is an empty sequence",
+      "input": "",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["STR",["SEQ",["START"],["NONE",""],["END"]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "NONE virtual end element is absent",
+      "input": "",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["STR",["SEQ",["START"],["NONE",["EXISTS"]],["END"]]]]],
+      "output": ""
+    },
+    {
+      "name": "NONE unanchored STR searches later positions",
+      "input": "zabz",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["STR",["NONE","ab"]]]],
+      "output": "zabz"
+    },
+    {
+      "name": "NONE supplementary character is a single codepoint",
+      "input": "😀",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["STR",["SEQ",["START"],["NONE",128512],"😀",["END"]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "NONE partial surrogate does not match a valid pair",
+      "input": "😀",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["STR",["SEQ",["START"],["NONE","\ud83d"],"😀",["END"]]]]],
+      "output": "😀"
+    },
+    {
+      "name": "NONE lone surrogate behavior when preserved",
+      "input": "\ud800",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["STR",["SEQ",["START"],["NONE",55296],"\ud800",["END"]]]]],
+      "needLoneSurrogate": true,
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "NONE combining marks remain separate codepoints",
+      "input": "é",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["STR",["SEQ",["START"],["NONE",["SEQ",101,769]],"é",["END"]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "NONE alternate-target HAS is a zero-width assertion",
+      "desc": "Two-argument HAS changes the comparison target and therefore consumes no elements in sequence context.",
+      "input": [9],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["NONE",["HAS",1,1]],9]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "NONE alternate-target IS is a zero-width assertion",
+      "input": [9],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["NONE",["IS",1,1]],9]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "NONE alternate-target string uses ordinary matching",
+      "input": "q",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["STR",["SEQ",["START"],["NONE",["IS","ab","ab"]],"q",["END"]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "NONE leaves the current element for the next term",
+      "input": [1,2],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["NONE",2],1,2]]]]]],
+      "output": [1,2]
+    },
+    {
+      "name": "NONE rejects a matching two-element sequence",
+      "input": [1,2],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",[[["SEQ",["NONE",["SEQ",1,2]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "NONE accepts a matching prefix whose sequence later fails",
+      "input": [1,3],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["NONE",["SEQ",1,2]],1,3]]]]]],
+      "output": [1,3]
+    },
+    {
+      "name": "NONE tests every argument at the same starting position",
+      "input": [1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",[[["SEQ",["NONE",2,1]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "NONE with a successful empty child always fails",
+      "input": [],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",[[["SEQ",["NONE",["SEQ"]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "Double NONE is a positive zero-width assertion",
+      "input": [1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["NONE",["NONE",1]],1]]]]]],
+      "output": [1]
+    },
+    {
+      "name": "NONE of an empty ANY alternative fails",
+      "input": [1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",[[["SEQ",["NONE",["ANY",2,["SEQ"]]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "NONE of a failed ALL constraint succeeds",
+      "input": [1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["NONE",["ALL",1,2]],1]]]]]],
+      "output": [1]
+    },
+    {
+      "name": "NONE of an optional repetition fails even at end",
+      "input": [],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",[[["SEQ",["NONE",["REP",0,1,1]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "NONE EXISTS is a zero-width end assertion",
+      "input": [1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",1,["NONE",["EXISTS"]]]]]]]],
+      "output": [1]
+    },
+    {
+      "name": "NONE EXISTS rejects an element that still exists",
+      "input": [1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",[[["SEQ",["NONE",["EXISTS"]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "NONE distinguishes null from a missing element",
+      "input": [null],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",[[["SEQ",["NONE",["EXISTS"]]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "An ordinary descended NONE consumes its containing element",
+      "input": [[1]],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",[[["NONE",2]]]]]]]]],
+      "output": [[1]]
+    },
+    {
+      "name": "Regex negative lookahead consumes no characters",
+      "input": "ab",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["STR",["SEQ",["START"],["NONE","ac"],"a","b",["END"]]]]],
+      "output": "ab"
+    },
+    {
+      "name": "Regex negative lookahead considers the entire literal",
+      "input": "ab",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["STR",["SEQ",["START"],["NONE","ab"],"ab",["END"]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "Regex empty negative pattern always fails",
+      "input": "ab",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["STR",["NONE",""]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "Regex negative codepoint assertion",
+      "input": "😀",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["STR",["SEQ",["START"],["NONE",65],128512,["END"]]]]],
+      "output": "😀"
+    },
+    {
+      "name": "Sequence NONE failure can select an IF fallback",
+      "input": [1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",[[["SEQ",["NONE",1]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "IF can branch on a failed zero-width NONE",
+      "input": [1],
+      "jgraft": ["JGRAFT",{"v":1},["IF",[[["SEQ",["NONE",1]]]],["COPY","yes",["NODE"]],["COPY","no",["NODE"]]]],
+      "output": "no"
+    },
+    {
+      "name": "NONE suppresses captures below a structural element",
+      "input": [{"a":[7]}],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["SEQ",["NONE",["NONE",{"a":[[["SEQMAX","hidden",7]]]}]],["EXISTS"]]]]]],["COPY",["CAP"],["NODE"]]]],
+      "output": {}
+    },
+    {
+      "name": "NONE ignores capture-name evaluation below a structural element",
+      "input": [{"a":[7]}],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["SEQ",["NONE",["NONE",{"a":[[["SEQMAX",["FAIL"],7]]]}]],["EXISTS"]]]]]],["COPY",["CAP"],["NODE"]]]],
+      "output": {}
+    },
+    {
+      "name": "NONE function-created match state retains its own captures",
+      "input": [{"a":[7]}],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["SEQ",["NONE",["NONE",{"a":["IS",["CAPTURE",[[["SEQMAX","fresh",7]]]],{"fresh":{"path":[],"ofs":0,"len":1,"lim":1}}]}]],["EXISTS"]]]]]],["COPY",["CAP"],["NODE"]]]],
+      "output": {}
+    },
+    {
+      "name": "Failed NONE branch cannot leak its nested captures",
+      "input": [{"a":[7]}],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["NONE",["SEQ",{"a":[[["SEQMAX","hidden",7]]]},9]],["EXISTS"]]]]],["COPY",["CAP"],["NODE"]]]],
+      "output": {}
+    },
+    {
+      "name": "NONE SEQ initiation restriction applies after EXPR expansion",
+      "input": [1],
+      "jgraft": ["JGRAFT",{"v":1,"expr":["p",["SEQ",1]]},["MATCH",[[["NONE",["EXPR","p"]]]]]],
+      "errors": {"INVALID_GRAFT":true}
+    },
+    {
+      "name": "NONE one-argument IS advances one element after a successful sequence test",
+      "input": [1,2],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["NONE",["IS",["SEQ",1,2]]],1,2]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "NONE one-argument HAS advances one element after a successful sequence test",
+      "input": [1,2],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["NONE",["HAS",["SEQ",1,2]]],1,2]]]]]],
+      "errors": {"NO_MATCH":true}
+    },
+    {
+      "name": "NONE an explicit IS child overrides partial structural matching",
+      "input": [{"a":1,"b":2}],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",[[["SEQ",["NONE",["IS",{"a":1}]],["EXISTS"]]]]]],
+      "output": [{"a":1,"b":2}]
+    },
+    {
+      "name": "NONE without sequence context consumes one missing element",
+      "input": [],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",[[["NONE",["EXISTS"]]]]]],
+      "output": []
+    },
+    {
+      "name": "An inner function starts an ordinary nonsequence match",
+      "input": [1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["NONE",["IS",["NONE",2],false]],1]]]]]],
+      "output": [1]
+    },
+    {
+      "name": "Suppressed duplicate names below NONE cannot invalidate a probe",
+      "input": [{"a":[7],"b":[8]}],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["NONE",["NONE",{"a":[[["SEQMAX","same",7]]],"b":[[["SEQMAX","same",8]]]}]],["EXISTS"]]]]],["COPY",["CAP"],["NODE"]]]],
+      "output": {}
+    },
+    {
+      "name": "Negative sequence assertion succeeds when its child runs out of data",
+      "input": [1],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["NONE",["SEQ",1,2]],1]]]]]],
+      "output": [1]
+    },
+    {
+      "name": "NONE invalid regex literal: null",
+      "input": "a",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["STR",["SEQ",["START"],["NONE",null],"a",["END"]]]]],
+      "output": "a",
+      "errors": {"INVALID_GRAFT":true}
+    },
+    {
+      "name": "NONE invalid regex literal: boolean",
+      "input": "a",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["STR",["SEQ",["START"],["NONE",true],"a",["END"]]]]],
+      "output": "a",
+      "errors": {"INVALID_GRAFT":true}
+    },
+    {
+      "name": "NONE invalid regex literal: negative number",
+      "input": "a",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["STR",["SEQ",["START"],["NONE",-1],"a",["END"]]]]],
+      "output": "a",
+      "errors": {"INVALID_GRAFT":true}
+    },
+    {
+      "name": "NONE invalid regex literal: fraction",
+      "input": "a",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["STR",["SEQ",["START"],["NONE",0.5],"a",["END"]]]]],
+      "output": "a",
+      "errors": {"INVALID_GRAFT":true}
+    },
+    {
+      "name": "NONE invalid regex literal: object",
+      "input": "a",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["STR",["SEQ",["START"],["NONE",{}],"a",["END"]]]]],
+      "output": "a",
+      "errors": {"INVALID_GRAFT":true}
+    },
+    {
+      "name": "NONE invalid regex literal: escaped array",
+      "input": "a",
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["STR",["SEQ",["START"],["NONE",[[97]]],"a",["END"]]]]],
+      "output": "a",
+      "errors": {"INVALID_GRAFT":true}
+    },
+    {
+      "name": "NONE a reference-produced array is not reinterpreted as regex syntax",
+      "input": "a",
+      "jgraft": ["JGRAFT",{"v":1,"const":["p",[["SEQ",97]]]},["MATCH",["STR",["SEQ",["START"],["NONE",["CONST","p"]],"a",["END"]]]]],
+      "output": "a",
+      "errors": {"INVALID_GRAFT":true}
+    }
+  ]
+}
