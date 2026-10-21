@@ -7,7 +7,8 @@ This directory contains JSON files describing many instances of
       input:        // any JSON value
       jgraft:       // any valid or invalid JGraft
       output:       // the result of applying the graft
-      needProto:    // bool; the test requires "__proto__" support
+      needProto: bool           // uses "__proto__" properties
+      needLoneSurrogate: bool,  // uses lone Unicode surrogates
       errors: {     // possible ways the graft can fail
         NO_MATCH: bool,        // can fail with NO_MATCH
         INVALID_TARGET: bool,  // can fail with INVALID_TARGET
@@ -46,6 +47,11 @@ property.  Some implementations (e.g. JavaScript environments with old JSON
 modules) reject this property and may need to skip over these tests.  In these
 files, it is either true or omitted entirely, since the most common value is
 false.
+
+The `needLoneSurrogate` flag indicates which tests expect to be able to see
+lone unicode surrogates as characters when they don't form a complete
+character.  Some implementations may reject these entirely or replace them with
+a placeholder character.
 
 The top level of each file is structured as:
 
