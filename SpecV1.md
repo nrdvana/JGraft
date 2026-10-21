@@ -94,8 +94,10 @@ specification structure.
   * Objects and escaped arrays are considered structure to be matched.
   * Other arrays represent expressions, which are handled specially depending
     on their type.  Match expressions become part of the matching algorithm,
-    while all other expression types evaluate to a plain value and then use
-    the value as structure to match against.
+    while functions evaluate to a plain value and then use the value as
+    structure to match against.  Reference expresisons are also treated as
+    returning values, except for `EXPR` which substitutes some other
+    expression in its place, to be composed at runtime.
 
 The section [Matching](#matching) describes the process in detail.
 
@@ -109,9 +111,9 @@ structure as general matching, but operating on a virtual array of characters.
     expressions, matching a sequence of characters
   * Non-negative integers describe unicode codepoints
   * Arrays represent expressions; match expressions become part of the matching
-    algorithm, subexpressions (via [`EXPR`](#ex-expr) ) get re-interpreted
-    according to these rules, and all other expressions evaluate to a plain
-    value interpreted according to these rules.
+    algorithm, subexpressions (via [`EXPR`](#ex-expr) ) that resolve to match
+    expressions get re-interpreted according to these rules, and all other
+    expressions evaluate to a plain value interpreted according to these rules.
   * Any other type of data (non-integer number, object, escaped-array, or date)
     counts as an `INVALID_OPERAND` error.
 
@@ -353,9 +355,11 @@ current array.  The `regex` flag is set by any expression declared in
 For all contiguous portions of the match specification composed of plain
 structures or match expressions, the matching algorithm continues building on
 the same match state.  If the match algorithm encounters an `EXPR` path
-expression, the referenced structure (which may contain expressions) becomes
-part of the current match specification and likewise continues building on the
-same match state.
+expression, the referenced expression becomes part of the current match
+specification and likewise continues building on the same match state.
+Note that expressions are values by default, and interpreting them as match
+expressions requires them to be declared as such, as described in
+[the `EXPR` expression](#ex-expr).
 If the matching algorithm encounters any other type of expression, it evaluates
 it as a function and uses the resulting value (which may not contain
 expressions) as a literal structure to match against.
@@ -1430,10 +1434,24 @@ The common expression namespace is populated by the
 [`JGRAFT` action](#act-jgraft).
 It is a flat namespace, so referencing one of the expressions uses only a
 single name rather than a path.  The other expression will be used as if it
-had been specified in place of this `EXPR` expression.  It is possible to
+had been specified in place of this `EXPR` expression, but preserving the
+definition's value-construction or matching semantics.  It is possible to
 set up infinite recursion using EXPR references, but likely to quickly run
 into `RESOURCE_LIMIT` errors.  Implementations are not expected to optimize
 tail-calls like a functional language would (but are permitted to).
+
+Note that expressions are declared in value context and imply value
+construction unless the root of the expression is a match expression.
+This means if you declare a data structure containing expressions and
+reference that expression in match context, it will still construct a value
+to match against rather than applying subexpressions *during* the match.
+A bare structure in match context would normally imply `HAS` or `IS`,
+but to preserve that behavior as a common subexpression it must be explicit.
+To preserve existing `HAS` / `IS` context of the caller, use an expression
+like `ALL`.  Match expressions referenced in Regex context do still get
+interpreted according to the Regex rules; regex context should be implemented
+as a runtime context for match expressions rather than a distinct class of
+expressions that happen to have the same names as match expressions.
 
 #### <span id="ex-cap">CAP</span>
 
@@ -1531,6 +1549,15 @@ The `HAS` expresison is the default for match context; a `[HAS,...]`
 expression at the root of a match structure is redundant unless used in
 the 2-argument form to establish an alternate current node.
 
+In the 2-argument form, the current node does not change until matching begins
+in the subexpression; this means that if `match_spec` is a reference or
+function expression (evaluated to produce the match structure) `NODE`
+references still refer to the old tree, but if `match_spec` is a structure or
+match expression, `NODE` references refer to the new tree.  Further, if
+`match_spec` is an `EXPR` expresison which resolves to a non-match expression,
+`NODE` expressions within the replacement still refer to the old tree until
+it returns something that causes matching to begin again.
+
 Examples:
 
     null                                node === null
@@ -1573,6 +1600,9 @@ structure and match expressions within the `IS` expression inherit `IS`
 semantics unless overridden with a `HAS` expression, but a match expression
 used as a direct child of a function expression resets to `HAS` semantics.
 
+Like `HAS`, in the 2-argument form the current node does not change until
+matching begins in the subexpression.
+
 Examples:
 
     [IS, null]                          node === null
@@ -1582,6 +1612,8 @@ Examples:
     [IS, [ANY, {a:1}, {b:1}]]           is_deeply(node, {a:1})
                                          || is_deeply(node, {b:1})
     [IS, [TEMP,0], {a:1}]               is_deeply(temp['0'], {a:1})
+    [IS, [NODE,'a'], [NODE,'b']]        is_deeply(node.a, node.b)
+    [IS, [NODE,'a'], [IS,[NODE,'b']]]   is_deeply(node.a, node.a.b)
 
 #### <span id="ex-none">NONE</span>
 
