@@ -1,0 +1,147 @@
+{
+  "version": 1,
+  "name": "IF",
+  "desc": "Ordered IF branches, optional else and empty actions, default matching mode, lazy evaluation, alternate/current-node scope, nested actions, numeric IDs, empty captures, and propagation of syntax, action, and resource errors.",
+  "tests": [
+    {
+      "name": "Execute the first matching branch only",
+      "input": {"x": 1},
+      "jgraft": ["JGRAFT", {"v": 1}, ["IF", {"x": 1}, ["COPY", 2, "x"], {"x": 2}, ["COPY", 3, "x"], ["COPY", ["FAIL"], "x"]]],
+      "output": {"x": 2}
+    },
+    {
+      "name": "Continue past failed conditions",
+      "input": {"x": 2},
+      "jgraft": ["JGRAFT", {"v": 1}, ["IF", {"x": 1}, ["COPY", ["FAIL"], "x"], {"x": 2}, ["COPY", 3, "x"], ["COPY", 4, "x"]]],
+      "output": {"x": 3}
+    },
+    {
+      "name": "Execute else when no condition matches",
+      "input": {"x": 3},
+      "jgraft": ["JGRAFT", {"v": 1}, ["IF", {"x": 1}, ["COPY", 1, "x"], {"x": 2}, ["COPY", 2, "x"], ["COPY", 4, "x"]]],
+      "output": {"x": 4}
+    },
+    {
+      "name": "No matching branch without else is a no-op",
+      "input": {"x": 3},
+      "jgraft": ["JGRAFT", {"v": 1}, ["IF", {"x": 1}, ["COPY", 1, "x"], {"x": 2}, ["COPY", 2, "x"]]],
+      "output": {"x": 3}
+    },
+    {
+      "name": "An empty IF is a no-op",
+      "input": null,
+      "jgraft": ["JGRAFT", {"v": 1}, ["IF"]],
+      "output": null
+    },
+    {
+      "name": "A single action is an unconditional else",
+      "input": 1,
+      "jgraft": ["JGRAFT", {"v": 1}, ["IF", ["COPY", 2, ["NODE"]]]],
+      "output": 2
+    },
+    {
+      "name": "Literal false is a pattern rather than a false condition",
+      "input": false,
+      "jgraft": ["JGRAFT", {"v": 1}, ["IF", false, ["COPY", 1, ["NODE"]], ["COPY", 2, ["NODE"]]]],
+      "output": 1
+    },
+    {
+      "name": "A null pattern can select a branch",
+      "input": null,
+      "jgraft": ["JGRAFT", {"v": 1}, ["IF", null, ["COPY", 1, ["NODE"]]]],
+      "output": 1
+    },
+    {
+      "name": "Conditions begin with default HAS semantics",
+      "input": {"x": 1, "y": 2},
+      "jgraft": ["JGRAFT", {"v": 1}, ["IF", ["IS", {"x": 1}], ["COPY", 3, "y"], {"x": 1}, ["COPY", 4, "y"]]],
+      "output": {"x": 1, "y": 4}
+    },
+    {
+      "name": "A missing reference is a failed condition",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["IF", ["IS", ["NODE", "missing"], 1], ["COPY", ["FAIL"], "x"], ["COPY", 2, "x"]]],
+      "output": {"x": 2}
+    },
+    {
+      "name": "A runtime invalid operand is a failed condition",
+      "input": {"key": true},
+      "jgraft": ["JGRAFT", {"v": 1}, ["IF", ["HAS", ["NODE", ["NODE", "key"]], 1], ["COPY", ["FAIL"], "x"], ["COPY", 2, "x"]]],
+      "output": {"key": true, "x": 2}
+    },
+    {
+      "name": "A selected action error does not fall through",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["IF", {}, ["COPY", ["FAIL"], "x"], ["COPY", 2, "x"]]],
+      "errors": {"INVALID_TARGET": true}
+    },
+    {
+      "name": "A selected MATCH failure does not fall through",
+      "input": 1,
+      "jgraft": ["JGRAFT", {"v": 1}, ["IF", 1, ["MATCH", 2], ["COPY", 2, ["NODE"]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Else action errors propagate",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["IF", {"x": 1}, ["COPY", 1, "x"], ["COPY", ["FAIL"], "x"]]],
+      "errors": {"INVALID_TARGET": true}
+    },
+    {
+      "name": "An invalid condition is fatal",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["IF", ["IS"], ["COPY", 1, "x"], ["COPY", 2, "x"]]],
+      "errors": {"INVALID_GRAFT": true}
+    },
+    {
+      "name": "A final singleton must be an action",
+      "input": null,
+      "jgraft": ["JGRAFT", {"v": 1}, ["IF", true]],
+      "errors": {"INVALID_GRAFT": true}
+    },
+    {
+      "name": "Later conditions are not evaluated after a match",
+      "input": null,
+      "jgraft": ["JGRAFT", {"v": 1, "expr": ["loop", ["EXPR", "loop"]]}, ["IF", null, ["COPY", 1, ["NODE"]], ["EXPR", "loop"], ["COPY", 2, ["NODE"]]]],
+      "limits": {"depth": 20},
+      "output": 1
+    },
+    {
+      "name": "Resource errors in conditions remain fatal",
+      "input": null,
+      "jgraft": ["JGRAFT", {"v": 1, "expr": ["loop", ["EXPR", "loop"]]}, ["IF", ["EXPR", "loop"], ["COPY", 1, ["NODE"]], ["COPY", 2, ["NODE"]]]],
+      "limits": {"depth": 20},
+      "errors": {"RESOURCE_LIMIT": true}
+    },
+    {
+      "name": "Alternate condition targets do not redirect the branch",
+      "input": {"a": 1},
+      "jgraft": ["JGRAFT", {"v": 1}, ["IF", ["IS", ["NODE", "a"], 1], ["COPY", 2, "b"]]],
+      "output": {"a": 1, "b": 2}
+    },
+    {
+      "name": "IF uses an enclosing AT current node",
+      "input": {"a": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["AT", "a", ["IF", {"x": 1}, ["COPY", 2, "x"]]]],
+      "output": {"a": {"x": 2}}
+    },
+    {
+      "name": "A nested IF sees edits in its containing branch",
+      "input": {"x": 1},
+      "jgraft": ["JGRAFT", {"v": 1}, ["IF", {"x": 1}, ["AT", ["NODE"], ["COPY", 2, "x"], ["IF", {"x": 2}, ["COPY", 3, "x"]]]]],
+      "output": {"x": 3}
+    },
+    {
+      "name": "Numeric action ID selects IF",
+      "input": 1,
+      "jgraft": ["JGRAFT", {"v": 1}, [2, 1, ["COPY", 2, ["NODE"]]]],
+      "output": 2
+    },
+    {
+      "name": "A successful condition supplies an empty capture namespace",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["IF", {}, ["COPY", ["CAP"], "captures"]]],
+      "output": {"captures": {}}
+    }
+  ]
+}
