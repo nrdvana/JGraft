@@ -1,0 +1,2112 @@
+{
+  "version": 1,
+  "name": "MATCH, IS, HAS, and EXISTS",
+  "desc": "MATCH guards and subaction scope; type-strict scalar equality; partial and exact recursive object/array matching; scoped HAS/IS overrides; alternate targets and boolean value results; existence and arbitrary property names; reference and function results; EXPR construction versus explicit matching; and error trapping. NODE, EXPR, ALL, NOT, NONE, COPY, and AT support context checks. Sequence captures, regex matching, fuzzy matching, dates, and resource limits are left to dedicated suites.",
+  "tests": [
+    {
+      "name": "Default match: null against null",
+      "input": null,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", null]],
+      "output": null
+    },
+    {
+      "name": "Default match: null against false",
+      "input": null,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", false]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: null against true",
+      "input": null,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", true]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: null against number",
+      "input": null,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", 0]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: null against string",
+      "input": null,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ""]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: null against object",
+      "input": null,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", {}]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: null against array",
+      "input": null,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", [[]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: false against null",
+      "input": false,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", null]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: false against false",
+      "input": false,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", false]],
+      "output": false
+    },
+    {
+      "name": "Default match: false against true",
+      "input": false,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", true]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: false against number",
+      "input": false,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", 0]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: false against string",
+      "input": false,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ""]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: false against object",
+      "input": false,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", {}]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: false against array",
+      "input": false,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", [[]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: true against null",
+      "input": true,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", null]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: true against false",
+      "input": true,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", false]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: true against true",
+      "input": true,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", true]],
+      "output": true
+    },
+    {
+      "name": "Default match: true against number",
+      "input": true,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", 0]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: true against string",
+      "input": true,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ""]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: true against object",
+      "input": true,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", {}]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: true against array",
+      "input": true,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", [[]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: number against null",
+      "input": 0,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", null]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: number against false",
+      "input": 0,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", false]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: number against true",
+      "input": 0,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", true]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: number against number",
+      "input": 0,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", 0]],
+      "output": 0
+    },
+    {
+      "name": "Default match: number against string",
+      "input": 0,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ""]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: number against object",
+      "input": 0,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", {}]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: number against array",
+      "input": 0,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", [[]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: string against null",
+      "input": "",
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", null]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: string against false",
+      "input": "",
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", false]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: string against true",
+      "input": "",
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", true]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: string against number",
+      "input": "",
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", 0]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: string against string",
+      "input": "",
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ""]],
+      "output": ""
+    },
+    {
+      "name": "Default match: string against object",
+      "input": "",
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", {}]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: string against array",
+      "input": "",
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", [[]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: object against null",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", null]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: object against false",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", false]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: object against true",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", true]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: object against number",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", 0]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: object against string",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ""]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: object against object",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", {}]],
+      "output": {}
+    },
+    {
+      "name": "Default match: object against array",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", [[]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: array against null",
+      "input": [],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", null]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: array against false",
+      "input": [],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", false]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: array against true",
+      "input": [],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", true]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: array against number",
+      "input": [],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", 0]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: array against string",
+      "input": [],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ""]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: array against object",
+      "input": [],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", {}]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Default match: array against array",
+      "input": [],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", [[]]]],
+      "output": []
+    },
+    {
+      "name": "HAS matches null",
+      "input": null,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", null]]],
+      "output": null
+    },
+    {
+      "name": "HAS matches false",
+      "input": false,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", false]]],
+      "output": false
+    },
+    {
+      "name": "HAS matches true",
+      "input": true,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", true]]],
+      "output": true
+    },
+    {
+      "name": "HAS matches zero",
+      "input": 0,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", 0]]],
+      "output": 0
+    },
+    {
+      "name": "HAS matches negative fraction",
+      "input": -12.5,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", -12.5]]],
+      "output": -12.5
+    },
+    {
+      "name": "HAS matches empty string",
+      "input": "",
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", ""]]],
+      "output": ""
+    },
+    {
+      "name": "HAS matches Unicode and escapes",
+      "input": "a\n\t\"\\\u0000é𝄞",
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", "a\n\t\"\\\u0000é𝄞"]]],
+      "output": "a\n\t\"\\\u0000é𝄞"
+    },
+    {
+      "name": "HAS: number differs",
+      "input": 1,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", 2]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS: string differs",
+      "input": "abc",
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", "abd"]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS: boolean is not a number",
+      "input": true,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", 1]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS: number is not a string",
+      "input": 1,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", "1"]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS: null is not false",
+      "input": null,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", false]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS: string is not a prefix match",
+      "input": "abc",
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", "ab"]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS: Unicode normalization is not implicit",
+      "input": "é",
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", "é"]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS: string case is significant",
+      "input": "A",
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", "a"]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS: empty object",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", {}]]],
+      "output": {}
+    },
+    {
+      "name": "HAS: empty object with extra property",
+      "input": {"a": 1},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", {}]]],
+      "output": {"a": 1}
+    },
+    {
+      "name": "HAS: empty array",
+      "input": [],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", [[]]]]],
+      "output": []
+    },
+    {
+      "name": "HAS: empty array with extra element",
+      "input": [1],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", [[]]]]],
+      "output": [1]
+    },
+    {
+      "name": "HAS: object subset",
+      "input": {"a": 1, "b": 2},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", {"a": 1}]]],
+      "output": {"a": 1, "b": 2}
+    },
+    {
+      "name": "HAS: object property order",
+      "input": {"a": 1, "b": 2},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", {"b": 2, "a": 1}]]],
+      "output": {"a": 1, "b": 2}
+    },
+    {
+      "name": "HAS: missing null property",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", {"a": null}]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS: missing empty object",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", {"a": {}}]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS: missing empty array",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", {"a": [[]]}]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS: wrong property value",
+      "input": {"a": 2},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", {"a": 1}]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS: array prefix",
+      "input": [1, 2, 3],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", [[1, 2]]]]],
+      "output": [1, 2, 3]
+    },
+    {
+      "name": "HAS: array equality",
+      "input": [1, 2],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", [[1, 2]]]]],
+      "output": [1, 2]
+    },
+    {
+      "name": "HAS: array is not searched",
+      "input": [0, 1, 2],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", [[1, 2]]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS: array order matters",
+      "input": [2, 1],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", [[1, 2]]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS: array is not a subsequence",
+      "input": [1, 0, 2],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", [[1, 2]]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS: array is too short",
+      "input": [1],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", [[1, 2]]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS: missing null element",
+      "input": [],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", [[null]]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS: missing empty object element",
+      "input": [],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", [[{}]]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS: object does not match array",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", [[]]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS: array does not match object",
+      "input": [],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", {}]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS: array length is not an object property",
+      "input": [1],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", {"length": 1}]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS: numeric object keys are not array elements",
+      "input": {"0": 1},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", [[1]]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS: nested object extras",
+      "input": {"a": {"b": 1, "extra": 2}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", {"a": {"b": 1}}]]],
+      "output": {"a": {"b": 1, "extra": 2}}
+    },
+    {
+      "name": "HAS: nested array extras",
+      "input": {"a": [1, 2]},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", {"a": [[1]]}]]],
+      "output": {"a": [1, 2]}
+    },
+    {
+      "name": "HAS: objects inside arrays",
+      "input": [{"a": 1, "b": 2}],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", [[{"a": 1}]]]]],
+      "output": [{"a": 1, "b": 2}]
+    },
+    {
+      "name": "HAS: arrays inside arrays",
+      "input": [[1, 2]],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", [[[[1]]]]]]],
+      "output": [[1, 2]]
+    },
+    {
+      "name": "HAS: mixed recursive structure",
+      "input": {"a": [{"b": [null, false, 3]}]},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", {"a": [[{"b": [[null, false, 3]]}]]}]]],
+      "output": {"a": [{"b": [null, false, 3]}]}
+    },
+    {
+      "name": "HAS: deep mismatch",
+      "input": {"a": [{"b": 1}]},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", {"a": [[{"b": 2}]]}]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS matches null",
+      "input": null,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", null]]],
+      "output": null
+    },
+    {
+      "name": "IS matches false",
+      "input": false,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", false]]],
+      "output": false
+    },
+    {
+      "name": "IS matches true",
+      "input": true,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", true]]],
+      "output": true
+    },
+    {
+      "name": "IS matches zero",
+      "input": 0,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", 0]]],
+      "output": 0
+    },
+    {
+      "name": "IS matches negative fraction",
+      "input": -12.5,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", -12.5]]],
+      "output": -12.5
+    },
+    {
+      "name": "IS matches empty string",
+      "input": "",
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", ""]]],
+      "output": ""
+    },
+    {
+      "name": "IS matches Unicode and escapes",
+      "input": "a\n\t\"\\\u0000é𝄞",
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", "a\n\t\"\\\u0000é𝄞"]]],
+      "output": "a\n\t\"\\\u0000é𝄞"
+    },
+    {
+      "name": "IS: number differs",
+      "input": 1,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", 2]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS: string differs",
+      "input": "abc",
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", "abd"]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS: boolean is not a number",
+      "input": true,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", 1]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS: number is not a string",
+      "input": 1,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", "1"]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS: null is not false",
+      "input": null,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", false]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS: string is not a prefix match",
+      "input": "abc",
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", "ab"]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS: Unicode normalization is not implicit",
+      "input": "é",
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", "é"]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS: string case is significant",
+      "input": "A",
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", "a"]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS: empty object",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {}]]],
+      "output": {}
+    },
+    {
+      "name": "IS: empty object with extra property",
+      "input": {"a": 1},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {}]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS: empty array",
+      "input": [],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", [[]]]]],
+      "output": []
+    },
+    {
+      "name": "IS: empty array with extra element",
+      "input": [1],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", [[]]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS: object subset",
+      "input": {"a": 1, "b": 2},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"a": 1}]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS: object property order",
+      "input": {"a": 1, "b": 2},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"b": 2, "a": 1}]]],
+      "output": {"a": 1, "b": 2}
+    },
+    {
+      "name": "IS: missing null property",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"a": null}]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS: missing empty object",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"a": {}}]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS: missing empty array",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"a": [[]]}]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS: wrong property value",
+      "input": {"a": 2},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"a": 1}]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS: array prefix",
+      "input": [1, 2, 3],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", [[1, 2]]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS: array equality",
+      "input": [1, 2],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", [[1, 2]]]]],
+      "output": [1, 2]
+    },
+    {
+      "name": "IS: array is not searched",
+      "input": [0, 1, 2],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", [[1, 2]]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS: array order matters",
+      "input": [2, 1],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", [[1, 2]]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS: array is not a subsequence",
+      "input": [1, 0, 2],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", [[1, 2]]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS: array is too short",
+      "input": [1],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", [[1, 2]]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS: missing null element",
+      "input": [],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", [[null]]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS: missing empty object element",
+      "input": [],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", [[{}]]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS: object does not match array",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", [[]]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS: array does not match object",
+      "input": [],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {}]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS: array length is not an object property",
+      "input": [1],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"length": 1}]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS: numeric object keys are not array elements",
+      "input": {"0": 1},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", [[1]]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS: nested object extras",
+      "input": {"a": {"b": 1, "extra": 2}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"a": {"b": 1}}]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS: nested array extras",
+      "input": {"a": [1, 2]},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"a": [[1]]}]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS: objects inside arrays",
+      "input": [{"a": 1, "b": 2}],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", [[{"a": 1}]]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS: arrays inside arrays",
+      "input": [[1, 2]],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", [[[[1]]]]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS: mixed recursive structure",
+      "input": {"a": [{"b": [null, false, 3]}]},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"a": [[{"b": [[null, false, 3]]}]]}]]],
+      "output": {"a": [{"b": [null, false, 3]}]}
+    },
+    {
+      "name": "IS: deep mismatch",
+      "input": {"a": [{"b": 1}]},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"a": [[{"b": 2}]]}]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS can relax a child object",
+      "input": {"a": {"x": 1, "y": 2}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"a": ["HAS", {"x": 1}]}]]],
+      "output": {"a": {"x": 1, "y": 2}}
+    },
+    {
+      "name": "HAS can tighten a child object",
+      "input": {"a": {"x": 1, "y": 2}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", {"a": ["IS", {"x": 1}]}]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS can relax a child array",
+      "input": {"a": [1, 2]},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"a": ["HAS", [[1]]]}]]],
+      "output": {"a": [1, 2]}
+    },
+    {
+      "name": "HAS can tighten a child array",
+      "input": {"a": [1, 2]},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", {"a": ["IS", [[1]]]}]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Nested HAS does not relax its IS parent",
+      "input": {"a": {"x": 1, "y": 2}, "extra": 3},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"a": ["HAS", {"x": 1}]}]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Nested IS does not tighten its HAS parent",
+      "input": {"a": {"x": 1}, "extra": 3},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", {"a": ["IS", {"x": 1}]}]]],
+      "output": {"a": {"x": 1}, "extra": 3}
+    },
+    {
+      "name": "Nested mode can switch back to IS",
+      "input": {"a": {"b": {"x": 1, "y": 2}, "extra": 3}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"a": ["HAS", {"b": ["IS", {"x": 1}]}]}]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Nested mode can switch back to HAS",
+      "input": {"a": {"b": {"x": 1, "y": 2}}, "extra": 3},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", {"a": ["IS", {"b": ["HAS", {"x": 1}]}]}]]],
+      "output": {"a": {"b": {"x": 1, "y": 2}}, "extra": 3}
+    },
+    {
+      "name": "IS sibling remains exact",
+      "input": [{"x": 1, "y": 2}, {"x": 1, "y": 2}],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", [[["HAS", {"x": 1}], {"x": 1}]]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS sibling remains partial",
+      "input": [{"x": 1}, {"x": 1, "y": 2}],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", [[["IS", {"x": 1}], {"x": 1}]]]]],
+      "output": [{"x": 1}, {"x": 1, "y": 2}]
+    },
+    {
+      "name": "Explicit IS then HAS uses the inner mode",
+      "input": {"x": 1, "y": 2},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", ["HAS", {"x": 1}]]]],
+      "output": {"x": 1, "y": 2}
+    },
+    {
+      "name": "Explicit HAS then IS uses the inner mode",
+      "input": {"x": 1, "y": 2},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", ["IS", {"x": 1}]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "EXISTS accepts null",
+      "input": null,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["EXISTS"]]],
+      "output": null
+    },
+    {
+      "name": "EXISTS accepts property containing null",
+      "input": {"a": null},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", {"a": ["EXISTS"]}]],
+      "output": {"a": null}
+    },
+    {
+      "name": "EXISTS accepts false",
+      "input": false,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["EXISTS"]]],
+      "output": false
+    },
+    {
+      "name": "EXISTS accepts property containing false",
+      "input": {"a": false},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", {"a": ["EXISTS"]}]],
+      "output": {"a": false}
+    },
+    {
+      "name": "EXISTS accepts true",
+      "input": true,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["EXISTS"]]],
+      "output": true
+    },
+    {
+      "name": "EXISTS accepts property containing true",
+      "input": {"a": true},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", {"a": ["EXISTS"]}]],
+      "output": {"a": true}
+    },
+    {
+      "name": "EXISTS accepts number",
+      "input": 0,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["EXISTS"]]],
+      "output": 0
+    },
+    {
+      "name": "EXISTS accepts property containing number",
+      "input": {"a": 0},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", {"a": ["EXISTS"]}]],
+      "output": {"a": 0}
+    },
+    {
+      "name": "EXISTS accepts string",
+      "input": "",
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["EXISTS"]]],
+      "output": ""
+    },
+    {
+      "name": "EXISTS accepts property containing string",
+      "input": {"a": ""},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", {"a": ["EXISTS"]}]],
+      "output": {"a": ""}
+    },
+    {
+      "name": "EXISTS accepts object",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["EXISTS"]]],
+      "output": {}
+    },
+    {
+      "name": "EXISTS accepts property containing object",
+      "input": {"a": {}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", {"a": ["EXISTS"]}]],
+      "output": {"a": {}}
+    },
+    {
+      "name": "EXISTS accepts array",
+      "input": [],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["EXISTS"]]],
+      "output": []
+    },
+    {
+      "name": "EXISTS accepts property containing array",
+      "input": {"a": []},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", {"a": ["EXISTS"]}]],
+      "output": {"a": []}
+    },
+    {
+      "name": "EXISTS accepts negative fraction",
+      "input": -12.5,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["EXISTS"]]],
+      "output": -12.5
+    },
+    {
+      "name": "EXISTS accepts property containing negative fraction",
+      "input": {"a": -12.5},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", {"a": ["EXISTS"]}]],
+      "output": {"a": -12.5}
+    },
+    {
+      "name": "EXISTS accepts empty string",
+      "input": "",
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["EXISTS"]]],
+      "output": ""
+    },
+    {
+      "name": "EXISTS accepts property containing empty string",
+      "input": {"a": ""},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", {"a": ["EXISTS"]}]],
+      "output": {"a": ""}
+    },
+    {
+      "name": "EXISTS accepts Unicode and escapes",
+      "input": "a\n\t\"\\\u0000é𝄞",
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["EXISTS"]]],
+      "output": "a\n\t\"\\\u0000é𝄞"
+    },
+    {
+      "name": "EXISTS accepts property containing Unicode and escapes",
+      "input": {"a": "a\n\t\"\\\u0000é𝄞"},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", {"a": ["EXISTS"]}]],
+      "output": {"a": "a\n\t\"\\\u0000é𝄞"}
+    },
+    {
+      "name": "EXISTS rejects missing property",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", {"a": ["EXISTS"]}]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "EXISTS rejects missing array element",
+      "input": [],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", [[["EXISTS"]]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "EXISTS checks the last present element",
+      "input": [1, null],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", [[["EXISTS"], ["EXISTS"]]]]],
+      "output": [1, null]
+    },
+    {
+      "name": "EXISTS cannot consume beyond array length",
+      "input": [1],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", [[["EXISTS"], ["EXISTS"]]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "EXISTS accepts extra structure in exact context",
+      "input": {"a": {"x": 1, "y": 2}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"a": ["EXISTS"]}]]],
+      "output": {"a": {"x": 1, "y": 2}}
+    },
+    {
+      "name": "IS still rejects unspecified siblings of EXISTS",
+      "input": {"a": null, "b": 1},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"a": ["EXISTS"]}]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS allows unspecified siblings of EXISTS",
+      "input": {"a": null, "b": 1},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", {"a": ["EXISTS"]}]]],
+      "output": {"a": null, "b": 1}
+    },
+    {
+      "name": "HAS matches own key \"__proto__\"",
+      "input": {"__proto__": null},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", {"__proto__": null}]]],
+      "output": {"__proto__": null}
+    },
+    {
+      "name": "IS matches own key \"__proto__\"",
+      "input": {"__proto__": null},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"__proto__": null}]]],
+      "output": {"__proto__": null}
+    },
+    {
+      "name": "Missing special key \"__proto__\"",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", {"__proto__": ["EXISTS"]}]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS matches own key \"constructor\"",
+      "input": {"constructor": null},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", {"constructor": null}]]],
+      "output": {"constructor": null}
+    },
+    {
+      "name": "IS matches own key \"constructor\"",
+      "input": {"constructor": null},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"constructor": null}]]],
+      "output": {"constructor": null}
+    },
+    {
+      "name": "Missing special key \"constructor\"",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", {"constructor": ["EXISTS"]}]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS matches own key \"prototype\"",
+      "input": {"prototype": null},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", {"prototype": null}]]],
+      "output": {"prototype": null}
+    },
+    {
+      "name": "IS matches own key \"prototype\"",
+      "input": {"prototype": null},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"prototype": null}]]],
+      "output": {"prototype": null}
+    },
+    {
+      "name": "Missing special key \"prototype\"",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", {"prototype": ["EXISTS"]}]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS matches own key \"toString\"",
+      "input": {"toString": null},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", {"toString": null}]]],
+      "output": {"toString": null}
+    },
+    {
+      "name": "IS matches own key \"toString\"",
+      "input": {"toString": null},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"toString": null}]]],
+      "output": {"toString": null}
+    },
+    {
+      "name": "Missing special key \"toString\"",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", {"toString": ["EXISTS"]}]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS matches own key \"hasOwnProperty\"",
+      "input": {"hasOwnProperty": null},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", {"hasOwnProperty": null}]]],
+      "output": {"hasOwnProperty": null}
+    },
+    {
+      "name": "IS matches own key \"hasOwnProperty\"",
+      "input": {"hasOwnProperty": null},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"hasOwnProperty": null}]]],
+      "output": {"hasOwnProperty": null}
+    },
+    {
+      "name": "Missing special key \"hasOwnProperty\"",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", {"hasOwnProperty": ["EXISTS"]}]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS matches own key \"valueOf\"",
+      "input": {"valueOf": null},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", {"valueOf": null}]]],
+      "output": {"valueOf": null}
+    },
+    {
+      "name": "IS matches own key \"valueOf\"",
+      "input": {"valueOf": null},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"valueOf": null}]]],
+      "output": {"valueOf": null}
+    },
+    {
+      "name": "Missing special key \"valueOf\"",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", {"valueOf": ["EXISTS"]}]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS matches own key \"\"",
+      "input": {"": null},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", {"": null}]]],
+      "output": {"": null}
+    },
+    {
+      "name": "IS matches own key \"\"",
+      "input": {"": null},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"": null}]]],
+      "output": {"": null}
+    },
+    {
+      "name": "Missing special key \"\"",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", {"": ["EXISTS"]}]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS matches own key \"0\"",
+      "input": {"0": null},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", {"0": null}]]],
+      "output": {"0": null}
+    },
+    {
+      "name": "IS matches own key \"0\"",
+      "input": {"0": null},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"0": null}]]],
+      "output": {"0": null}
+    },
+    {
+      "name": "Missing special key \"0\"",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", {"0": ["EXISTS"]}]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS matches own key \"a.b\"",
+      "input": {"a.b": null},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", {"a.b": null}]]],
+      "output": {"a.b": null}
+    },
+    {
+      "name": "IS matches own key \"a.b\"",
+      "input": {"a.b": null},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"a.b": null}]]],
+      "output": {"a.b": null}
+    },
+    {
+      "name": "Missing special key \"a.b\"",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", {"a.b": ["EXISTS"]}]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS matches own key \"a/b\"",
+      "input": {"a/b": null},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", {"a/b": null}]]],
+      "output": {"a/b": null}
+    },
+    {
+      "name": "IS matches own key \"a/b\"",
+      "input": {"a/b": null},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"a/b": null}]]],
+      "output": {"a/b": null}
+    },
+    {
+      "name": "Missing special key \"a/b\"",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", {"a/b": ["EXISTS"]}]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS matches own key \"\\u0000\"",
+      "input": {"\u0000": null},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", {"\u0000": null}]]],
+      "output": {"\u0000": null}
+    },
+    {
+      "name": "IS matches own key \"\\u0000\"",
+      "input": {"\u0000": null},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"\u0000": null}]]],
+      "output": {"\u0000": null}
+    },
+    {
+      "name": "Missing special key \"\\u0000\"",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", {"\u0000": ["EXISTS"]}]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS matches own key \"é𝄞\"",
+      "input": {"é𝄞": null},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", {"é𝄞": null}]]],
+      "output": {"é𝄞": null}
+    },
+    {
+      "name": "IS matches own key \"é𝄞\"",
+      "input": {"é𝄞": null},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"é𝄞": null}]]],
+      "output": {"é𝄞": null}
+    },
+    {
+      "name": "Missing special key \"é𝄞\"",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", {"é𝄞": ["EXISTS"]}]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS two-argument/reference: literal alternate scalar",
+      "input": {"keep": 1},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", 7, 7]]],
+      "output": {"keep": 1}
+    },
+    {
+      "name": "HAS two-argument/reference: literal alternate scalar mismatch",
+      "input": {"keep": 1},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", 7, 8]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS two-argument/reference: alternate object",
+      "input": {"a": {"x": 1, "y": 2}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", ["NODE", "a"], {"x": 1}]]],
+      "output": {"a": {"x": 1, "y": 2}}
+    },
+    {
+      "name": "HAS two-argument/reference: alternate array",
+      "input": {"a": [1, 2]},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", ["NODE", "a"], [[1]]]]],
+      "output": {"a": [1, 2]}
+    },
+    {
+      "name": "HAS two-argument/reference: alternate null",
+      "input": {"a": null},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", ["NODE", "a"], null]]],
+      "output": {"a": null}
+    },
+    {
+      "name": "HAS two-argument/reference: compares sibling values",
+      "input": {"a": {"x": 1}, "b": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", ["NODE", "a"], ["NODE", "b"]]]],
+      "output": {"a": {"x": 1}, "b": {"x": 1}}
+    },
+    {
+      "name": "HAS two-argument/reference: alternate node is not its parent",
+      "input": {"a": {"x": 1}, "x": 2},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", ["NODE", "a"], {"x": ["IS", ["NODE"], 1]}]]],
+      "output": {"a": {"x": 1}, "x": 2}
+    },
+    {
+      "name": "HAS two-argument/reference: constructed alternate object",
+      "input": {"x": 1},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", {"a": ["NODE", "x"]}, {"a": 1}]]],
+      "output": {"x": 1}
+    },
+    {
+      "name": "HAS two-argument/reference: constructed alternate array",
+      "input": {"x": 1},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", [[["NODE", "x"]]], [[1]]]]],
+      "output": {"x": 1}
+    },
+    {
+      "name": "HAS two-argument/reference: alternate expressions evaluate before rebinding",
+      "input": {"a": 2, "b": 3},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", {"a": ["NODE", "a"], "b": ["NODE", "b"]}, {"a": 2, "b": 3}]]],
+      "output": {"a": 2, "b": 3}
+    },
+    {
+      "name": "HAS two-argument/reference: missing alternate target",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", ["NODE", "missing"], null]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS two-argument/reference: missing pattern reference",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", ["NODE", "missing"]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS two-argument/reference: missing alternate descendant",
+      "input": {"a": null},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", ["NODE", "a", "b"], null]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS two-argument/reference: missing reference in structure",
+      "input": {"a": 1},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", {"a": ["NODE", "missing"]}]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS two-argument/reference: runtime invalid selector",
+      "input": {"key": true},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", ["NODE", ["NODE", "key"]], null]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS two-argument/reference: returned array is literal data",
+      "input": ["IS", 1],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", ["NODE"]]]],
+      "output": ["IS", 1]
+    },
+    {
+      "name": "HAS two-argument/reference: returned object contains literal arrays",
+      "input": {"a": ["EXISTS"]},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", ["NODE"]]]],
+      "output": {"a": ["EXISTS"]}
+    },
+    {
+      "name": "HAS two-argument/reference: nested alternate comparison",
+      "input": {"a": {"x": 1}, "b": 9},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", {"a": ["IS", ["NODE", "x"], 1]}]]],
+      "output": {"a": {"x": 1}, "b": 9}
+    },
+    {
+      "name": "HAS returns boolean true",
+      "input": {"a": 1},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["HAS", {"a": 1}], ["NODE"]]],
+      "output": true
+    },
+    {
+      "name": "HAS returns boolean false",
+      "input": {"a": 1},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["HAS", {"a": 2}], ["NODE"]]],
+      "output": false
+    },
+    {
+      "name": "HAS can compare two literal values in value context",
+      "input": null,
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["HAS", {"a": 1, "b": 2}, {"a": 1}], ["NODE"]]],
+      "output": true
+    },
+    {
+      "name": "HAS state passes through EXPR",
+      "input": {"x": 1, "y": 2},
+      "jgraft": ["JGRAFT", {"v": 1, "expr": ["pattern", ["ALL", {"x": 1}]]}, ["MATCH", ["HAS", ["EXPR", "pattern"]]]],
+      "output": {"x": 1, "y": 2},
+      "desc": "ALL declares a match expression while preserving the caller's partial or exact matching mode."
+    },
+    {
+      "name": "HAS state passes through a referenced nested pattern",
+      "input": {"a": {"x": 1, "y": 2}},
+      "jgraft": ["JGRAFT", {"v": 1, "expr": ["pattern", ["ALL", {"x": 1}]]}, ["MATCH", ["HAS", {"a": ["EXPR", "pattern"]}]]],
+      "output": {"a": {"x": 1, "y": 2}},
+      "desc": "ALL declares a match expression while preserving the caller's partial or exact matching mode."
+    },
+    {
+      "name": "IS two-argument/reference: literal alternate scalar",
+      "input": {"keep": 1},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", 7, 7]]],
+      "output": {"keep": 1}
+    },
+    {
+      "name": "IS two-argument/reference: literal alternate scalar mismatch",
+      "input": {"keep": 1},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", 7, 8]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS two-argument/reference: alternate object",
+      "input": {"a": {"x": 1, "y": 2}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", ["NODE", "a"], {"x": 1}]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS two-argument/reference: alternate array",
+      "input": {"a": [1, 2]},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", ["NODE", "a"], [[1]]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS two-argument/reference: alternate null",
+      "input": {"a": null},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", ["NODE", "a"], null]]],
+      "output": {"a": null}
+    },
+    {
+      "name": "IS two-argument/reference: compares sibling values",
+      "input": {"a": {"x": 1}, "b": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", ["NODE", "a"], ["NODE", "b"]]]],
+      "output": {"a": {"x": 1}, "b": {"x": 1}}
+    },
+    {
+      "name": "IS two-argument/reference: alternate node is not its parent",
+      "input": {"a": {"x": 1}, "x": 2},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", ["NODE", "a"], {"x": ["IS", ["NODE"], 1]}]]],
+      "output": {"a": {"x": 1}, "x": 2}
+    },
+    {
+      "name": "IS two-argument/reference: constructed alternate object",
+      "input": {"x": 1},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"a": ["NODE", "x"]}, {"a": 1}]]],
+      "output": {"x": 1}
+    },
+    {
+      "name": "IS two-argument/reference: constructed alternate array",
+      "input": {"x": 1},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", [[["NODE", "x"]]], [[1]]]]],
+      "output": {"x": 1}
+    },
+    {
+      "name": "IS two-argument/reference: alternate expressions evaluate before rebinding",
+      "input": {"a": 2, "b": 3},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"a": ["NODE", "a"], "b": ["NODE", "b"]}, {"a": 2, "b": 3}]]],
+      "output": {"a": 2, "b": 3}
+    },
+    {
+      "name": "IS two-argument/reference: missing alternate target",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", ["NODE", "missing"], null]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS two-argument/reference: missing pattern reference",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", ["NODE", "missing"]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS two-argument/reference: missing alternate descendant",
+      "input": {"a": null},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", ["NODE", "a", "b"], null]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS two-argument/reference: missing reference in structure",
+      "input": {"a": 1},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"a": ["NODE", "missing"]}]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS two-argument/reference: runtime invalid selector",
+      "input": {"key": true},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", ["NODE", ["NODE", "key"]], null]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS two-argument/reference: returned array is literal data",
+      "input": ["IS", 1],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", ["NODE"]]]],
+      "output": ["IS", 1]
+    },
+    {
+      "name": "IS two-argument/reference: returned object contains literal arrays",
+      "input": {"a": ["EXISTS"]},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", ["NODE"]]]],
+      "output": {"a": ["EXISTS"]}
+    },
+    {
+      "name": "IS two-argument/reference: nested alternate comparison",
+      "input": {"a": {"x": 1}, "b": 9},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"a": ["IS", ["NODE", "x"], 1]}]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS returns boolean true",
+      "input": {"a": 1},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["IS", {"a": 1}], ["NODE"]]],
+      "output": true
+    },
+    {
+      "name": "IS returns boolean false",
+      "input": {"a": 1},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["IS", {"a": 2}], ["NODE"]]],
+      "output": false
+    },
+    {
+      "name": "IS can compare two literal values in value context",
+      "input": null,
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["IS", {"a": 1, "b": 2}, {"a": 1}], ["NODE"]]],
+      "output": false
+    },
+    {
+      "name": "IS state passes through EXPR",
+      "input": {"x": 1, "y": 2},
+      "jgraft": ["JGRAFT", {"v": 1, "expr": ["pattern", ["ALL", {"x": 1}]]}, ["MATCH", ["IS", ["EXPR", "pattern"]]]],
+      "errors": {"NO_MATCH": true},
+      "desc": "ALL declares a match expression while preserving the caller's partial or exact matching mode."
+    },
+    {
+      "name": "IS state passes through a referenced nested pattern",
+      "input": {"a": {"x": 1, "y": 2}},
+      "jgraft": ["JGRAFT", {"v": 1, "expr": ["pattern", ["ALL", {"x": 1}]]}, ["MATCH", ["IS", {"a": ["EXPR", "pattern"]}]]],
+      "errors": {"NO_MATCH": true},
+      "desc": "ALL declares a match expression while preserving the caller's partial or exact matching mode."
+    },
+    {
+      "name": "Input methods are data",
+      "input": {"toString": 1, "hasOwnProperty": 2, "valueOf": 3},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"toString": 1, "hasOwnProperty": 2, "valueOf": 3}]]],
+      "output": {"toString": 1, "hasOwnProperty": 2, "valueOf": 3}
+    },
+    {
+      "name": "Function result is compared as literal data",
+      "input": false,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["NOT", true]]],
+      "output": false
+    },
+    {
+      "name": "A true function result does not match arbitrary data",
+      "input": 7,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["NOT", false]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "MATCH executes subactions in order",
+      "input": {"x": 1},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", {"x": 1}, ["COPY", 2, "x"], ["COPY", ["NODE", "x"], "y"]]],
+      "output": {"x": 2, "y": 2}
+    },
+    {
+      "name": "MATCH tests once before its edits",
+      "input": {"x": 1},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", {"x": 1}, ["COPY", 2, "x"], ["COPY", 3, "x"]]],
+      "output": {"x": 3}
+    },
+    {
+      "name": "MATCH failure precedes subaction errors",
+      "input": {"ready": false},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", {"ready": true}, ["COPY", ["NODE", "missing"], ["NODE"]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "MATCH propagates subaction errors",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", {}, ["COPY", ["NODE", "missing"], ["NODE"]]]],
+      "errors": {"INVALID_TARGET": true}
+    },
+    {
+      "name": "MATCH uses the current AT node",
+      "input": {"a": {"x": 1}, "x": 2},
+      "jgraft": ["JGRAFT", {"v": 1}, ["AT", "a", ["MATCH", {"x": 1}, ["COPY", 3, "x"]]]],
+      "output": {"a": {"x": 3}, "x": 2}
+    },
+    {
+      "name": "Alternate target does not redirect MATCH subactions",
+      "input": {"a": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", ["NODE", "a"], {"x": 1}], ["COPY", 2, "b"]]],
+      "output": {"a": {"x": 1}, "b": 2}
+    },
+    {
+      "name": "Structural matching restores NODE for subactions",
+      "input": {"a": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", {"a": {"x": 1}}, ["COPY", ["NODE", "a"], "b"]]],
+      "output": {"a": {"x": 1}, "b": {"x": 1}}
+    },
+    {
+      "name": "Nested MATCH sees edits from its parent",
+      "input": {"x": 1},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", {"x": 1}, ["COPY", 2, "x"], ["MATCH", {"x": 2}, ["COPY", 3, "y"]]]],
+      "output": {"x": 2, "y": 3}
+    },
+    {
+      "name": "MATCH scopes do not leak exact mode",
+      "input": {"a": 1, "b": 2},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"a": 1, "b": 2}]], ["MATCH", {"a": 1}]],
+      "output": {"a": 1, "b": 2}
+    },
+    {
+      "name": "MATCH numeric action and expression IDs",
+      "input": {"a": 1},
+      "jgraft": ["JGRAFT", {"v": 1}, [1, [2, {"a": [6]}], [3, 2, "a"]]],
+      "output": {"a": 2}
+    },
+    {
+      "name": "Numeric HAS expression ID",
+      "input": {"a": 1, "b": 2},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", [1, {"a": 1}]]],
+      "output": {"a": 1, "b": 2}
+    },
+    {
+      "name": "Numeric two-argument IS expression ID",
+      "input": {"a": 1},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", [2, ["NODE", "a"], 1]]],
+      "output": {"a": 1}
+    },
+    {
+      "name": "MATCH requires a pattern",
+      "input": null,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH"]],
+      "errors": {"INVALID_GRAFT": true}
+    },
+    {
+      "name": "HAS requires a pattern",
+      "input": null,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS"]]],
+      "errors": {"INVALID_GRAFT": true}
+    },
+    {
+      "name": "IS requires a pattern",
+      "input": null,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS"]]],
+      "errors": {"INVALID_GRAFT": true}
+    },
+    {
+      "name": "HAS rejects a third argument",
+      "input": null,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", 1, 1, 1]]],
+      "errors": {"INVALID_GRAFT": true}
+    },
+    {
+      "name": "IS rejects a third argument",
+      "input": null,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", 1, 1, 1]]],
+      "errors": {"INVALID_GRAFT": true}
+    },
+    {
+      "name": "EXISTS takes no arguments",
+      "input": null,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["EXISTS", 1]]],
+      "errors": {"INVALID_GRAFT": true}
+    },
+    {
+      "name": "Unescaped empty array is not a pattern",
+      "input": null,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", []]],
+      "errors": {"INVALID_GRAFT": true}
+    },
+    {
+      "name": "Unknown match expression is invalid",
+      "input": null,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["UNKNOWN_MATCH"]]],
+      "errors": {"INVALID_GRAFT": true}
+    },
+    {
+      "name": "Invalid literal selector is not swallowed",
+      "input": null,
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", ["NODE", true], null]]],
+      "errors": {"INVALID_GRAFT": true}
+    },
+    {
+      "name": "HAS evaluates a pattern at a missing property",
+      "desc": "A specification property is evaluated even when absent; the two-argument comparison succeeds independently of that missing node.",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", {"a": ["HAS", 1, 1]}]]],
+      "output": {}
+    },
+    {
+      "name": "HAS evaluates a failing pattern at a missing property",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", {"a": ["HAS", 1, 2]}]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS can assert a missing element at the end",
+      "desc": "One nonexistent element at the end may be tested without sequence context.",
+      "input": [],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", [[["HAS", 1, 1]]]]]],
+      "output": []
+    },
+    {
+      "name": "HAS cannot match past the nonexistent end element",
+      "desc": "Specification elements beyond LENGTH do not match, even when their expressions could succeed without a current node.",
+      "input": [],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", [[["HAS", 1, 1], ["HAS", 1, 1]]]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS two-argument EXISTS sees the alternate null",
+      "input": {"a": null},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", ["NODE", "a"], ["EXISTS"]]]],
+      "output": {"a": null}
+    },
+    {
+      "name": "HAS two-argument EXISTS rejects a missing target",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", ["NODE", "a"], ["EXISTS"]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS descends NODE to each object property",
+      "input": {"a": 1, "b": 2},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", {"a": ["NODE"], "b": ["NODE"]}]]],
+      "output": {"a": 1, "b": 2}
+    },
+    {
+      "name": "HAS descends NODE to each array element",
+      "input": [1, 2],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", [[["NODE"], ["NODE"]]]]]],
+      "output": [1, 2]
+    },
+    {
+      "name": "IS evaluates a pattern at a missing property",
+      "desc": "A specification property is evaluated even when absent; the two-argument comparison succeeds independently of that missing node.",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"a": ["IS", 1, 1]}]]],
+      "output": {}
+    },
+    {
+      "name": "IS evaluates a failing pattern at a missing property",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"a": ["IS", 1, 2]}]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS can assert a missing element at the end",
+      "desc": "One nonexistent element at the end may be tested without sequence context.",
+      "input": [],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", [[["IS", 1, 1]]]]]],
+      "output": []
+    },
+    {
+      "name": "IS cannot match past the nonexistent end element",
+      "desc": "Specification elements beyond LENGTH do not match, even when their expressions could succeed without a current node.",
+      "input": [],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", [[["IS", 1, 1], ["IS", 1, 1]]]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS two-argument EXISTS sees the alternate null",
+      "input": {"a": null},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", ["NODE", "a"], ["EXISTS"]]]],
+      "output": {"a": null}
+    },
+    {
+      "name": "IS two-argument EXISTS rejects a missing target",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", ["NODE", "a"], ["EXISTS"]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS descends NODE to each object property",
+      "input": {"a": 1, "b": 2},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"a": ["NODE"], "b": ["NODE"]}]]],
+      "output": {"a": 1, "b": 2}
+    },
+    {
+      "name": "IS descends NODE to each array element",
+      "input": [1, 2],
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", [[["NODE"], ["NODE"]]]]]],
+      "output": [1, 2]
+    },
+    {
+      "name": "IS exact mode passes through a match expression",
+      "input": {"a": {"x": 1, "extra": 2}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"a": ["NONE", {"x": 1}]}]]],
+      "output": {"a": {"x": 1, "extra": 2}}
+    },
+    {
+      "name": "HAS partial mode passes through a match expression",
+      "input": {"a": {"x": 1, "extra": 2}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", {"a": ["NONE", {"x": 1}]}]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "Function boundary resets inherited IS to default HAS",
+      "desc": "NONE is required here to observe inherited exact mode without overriding it. As a child of NOT it starts a fresh default HAS match state.",
+      "input": {"a": {"x": 1, "extra": 2}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"a": ["IS", ["NOT", ["NONE", {"x": 1}]], true]}]]],
+      "output": {"a": {"x": 1, "extra": 2}}
+    },
+    {
+      "name": "Explicit IS still works inside a fresh function match state",
+      "input": {"a": {"x": 1, "extra": 2}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", {"a": ["IS", ["NOT", ["NONE", ["IS", {"x": 1}]]], false]}]]],
+      "output": {"a": {"x": 1, "extra": 2}}
+    },
+    {
+      "name": "HAS returns false for a missing alternate target",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["HAS", ["NODE", "missing"], null], ["NODE"]]],
+      "output": false
+    },
+    {
+      "name": "HAS returns false for a missing pattern reference",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["HAS", ["NODE", "missing"]], ["NODE"]]],
+      "output": false
+    },
+    {
+      "name": "HAS returns false for a runtime invalid selector",
+      "input": {"key": true},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["HAS", ["NODE", ["NODE", "key"]], null], ["NODE"]]],
+      "output": false
+    },
+    {
+      "name": "HAS propagates invalid graft syntax in value context",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["HAS", ["NODE", true], null], ["NODE"]]],
+      "errors": {"INVALID_GRAFT": true}
+    },
+    {
+      "name": "IS returns false for a missing alternate target",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["IS", ["NODE", "missing"], null], ["NODE"]]],
+      "output": false
+    },
+    {
+      "name": "IS returns false for a missing pattern reference",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["IS", ["NODE", "missing"]], ["NODE"]]],
+      "output": false
+    },
+    {
+      "name": "IS returns false for a runtime invalid selector",
+      "input": {"key": true},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["IS", ["NODE", ["NODE", "key"]], null], ["NODE"]]],
+      "output": false
+    },
+    {
+      "name": "IS propagates invalid graft syntax in value context",
+      "input": {},
+      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["IS", ["NODE", true], null], ["NODE"]]],
+      "errors": {"INVALID_GRAFT": true}
+    },
+    {
+      "name": "HAS two-argument context: different siblings fail",
+      "input": {"a": {"x": 1}, "b": {"x": 2}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", ["NODE", "a"], ["NODE", "b"]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS two-argument context: referenced structure uses selected exact mode",
+      "input": {"a": {"x": 1, "y": 2}, "b": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", ["NODE", "a"], ["NODE", "b"]]]],
+      "output": {"a": {"x": 1, "y": 2}, "b": {"x": 1}}
+    },
+    {
+      "name": "HAS two-argument context: direct reference uses original node",
+      "input": {"a": {"b": 1}, "b": {"b": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", ["NODE", "a"], ["NODE", "b"]]]],
+      "output": {"a": {"b": 1}, "b": {"b": 1}}
+    },
+    {
+      "name": "HAS two-argument context: wrapped reference uses alternate node",
+      "desc": "Wrapping the reference in a match expression delays its evaluation until after the alternate current node is established.",
+      "input": {"a": {"b": 1}, "b": {"b": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", ["NODE", "a"], ["HAS", ["NODE", "b"]]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS two-argument context: direct function uses original node",
+      "input": {"a": true, "b": false},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", ["NODE", "a"], ["NOT", ["NODE", "b"]]]]],
+      "output": {"a": true, "b": false}
+    },
+    {
+      "name": "HAS two-argument context: match inside direct function retains original node",
+      "input": {"a": true},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["HAS", ["NODE", "a"], ["NOT", ["NONE", {"a": true}]]]]],
+      "output": {"a": true}
+    },
+    {
+      "name": "HAS two-argument context: EXPR expanding to reference uses original node",
+      "desc": "A reference definition retains value semantics and is evaluated against the original node.",
+      "input": {"a": {"x": 1}, "b": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1, "expr": ["pattern", ["NODE", "b"]]}, ["MATCH", ["HAS", ["NODE", "a"], ["EXPR", "pattern"]]]],
+      "output": {"a": {"x": 1}, "b": {"x": 1}}
+    },
+    {
+      "name": "HAS two-argument context: EXPR expanding to match expression uses alternate node",
+      "input": {"a": {"x": 1}, "x": 9},
+      "jgraft": ["JGRAFT", {"v": 1, "expr": ["pattern", ["HAS", {"x": 1}]]}, ["MATCH", ["HAS", ["NODE", "a"], ["EXPR", "pattern"]]]],
+      "output": {"a": {"x": 1}, "x": 9}
+    },
+    {
+      "name": "HAS two-argument context: EXPR expanding to match-wrapped structure uses alternate node",
+      "input": {"a": {"x": 1}, "x": 9},
+      "jgraft": ["JGRAFT", {"v": 1, "expr": ["pattern", ["ALL", {"x": ["IS", ["NODE"], 1]}]]}, ["MATCH", ["HAS", ["NODE", "a"], ["EXPR", "pattern"]]]],
+      "output": {"a": {"x": 1}, "x": 9},
+      "desc": "The ALL wrapper declares matching semantics; a bare structure would construct a value using the original node."
+    },
+    {
+      "name": "HAS two-argument context: EXPR expanding to function uses original node",
+      "input": {"a": true, "b": false},
+      "jgraft": ["JGRAFT", {"v": 1, "expr": ["pattern", ["NOT", ["NODE", "b"]]]}, ["MATCH", ["HAS", ["NODE", "a"], ["EXPR", "pattern"]]]],
+      "output": {"a": true, "b": false}
+    },
+    {
+      "name": "IS two-argument context: different siblings fail",
+      "input": {"a": {"x": 1}, "b": {"x": 2}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", ["NODE", "a"], ["NODE", "b"]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS two-argument context: referenced structure uses selected exact mode",
+      "input": {"a": {"x": 1, "y": 2}, "b": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", ["NODE", "a"], ["NODE", "b"]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS two-argument context: direct reference uses original node",
+      "input": {"a": {"b": 1}, "b": {"b": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", ["NODE", "a"], ["NODE", "b"]]]],
+      "output": {"a": {"b": 1}, "b": {"b": 1}}
+    },
+    {
+      "name": "IS two-argument context: wrapped reference uses alternate node",
+      "desc": "Wrapping the reference in a match expression delays its evaluation until after the alternate current node is established.",
+      "input": {"a": {"b": 1}, "b": {"b": 1}},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", ["NODE", "a"], ["IS", ["NODE", "b"]]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS two-argument context: direct function uses original node",
+      "input": {"a": true, "b": false},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", ["NODE", "a"], ["NOT", ["NODE", "b"]]]]],
+      "output": {"a": true, "b": false}
+    },
+    {
+      "name": "IS two-argument context: match inside direct function retains original node",
+      "input": {"a": true},
+      "jgraft": ["JGRAFT", {"v": 1}, ["MATCH", ["IS", ["NODE", "a"], ["NOT", ["NONE", {"a": true}]]]]],
+      "output": {"a": true}
+    },
+    {
+      "name": "IS two-argument context: EXPR expanding to reference uses original node",
+      "desc": "A reference definition retains value semantics and is evaluated against the original node.",
+      "input": {"a": {"x": 1}, "b": {"x": 1}},
+      "jgraft": ["JGRAFT", {"v": 1, "expr": ["pattern", ["NODE", "b"]]}, ["MATCH", ["IS", ["NODE", "a"], ["EXPR", "pattern"]]]],
+      "output": {"a": {"x": 1}, "b": {"x": 1}}
+    },
+    {
+      "name": "IS two-argument context: EXPR expanding to match expression uses alternate node",
+      "input": {"a": {"x": 1}, "x": 9},
+      "jgraft": ["JGRAFT", {"v": 1, "expr": ["pattern", ["HAS", {"x": 1}]]}, ["MATCH", ["IS", ["NODE", "a"], ["EXPR", "pattern"]]]],
+      "output": {"a": {"x": 1}, "x": 9}
+    },
+    {
+      "name": "IS two-argument context: EXPR expanding to match-wrapped structure uses alternate node",
+      "input": {"a": {"x": 1}, "x": 9},
+      "jgraft": ["JGRAFT", {"v": 1, "expr": ["pattern", ["ALL", {"x": ["IS", ["NODE"], 1]}]]}, ["MATCH", ["IS", ["NODE", "a"], ["EXPR", "pattern"]]]],
+      "output": {"a": {"x": 1}, "x": 9},
+      "desc": "The ALL wrapper declares matching semantics; a bare structure would construct a value using the original node."
+    },
+    {
+      "name": "IS two-argument context: EXPR expanding to function uses original node",
+      "input": {"a": true, "b": false},
+      "jgraft": ["JGRAFT", {"v": 1, "expr": ["pattern", ["NOT", ["NODE", "b"]]]}, ["MATCH", ["IS", ["NODE", "a"], ["EXPR", "pattern"]]]],
+      "output": {"a": true, "b": false}
+    },
+    {
+      "name": "HAS EXPR value construction: embedded match returns a boolean",
+      "input": {"x": true},
+      "jgraft": ["JGRAFT", {"v": 1, "expr": ["pattern", {"x": ["EXISTS"]}]}, ["MATCH", ["HAS", ["EXPR", "pattern"]]]],
+      "output": {"x": true}
+    },
+    {
+      "name": "HAS EXPR value construction: embedded match is not a predicate on the property",
+      "input": {"x": 0},
+      "jgraft": ["JGRAFT", {"v": 1, "expr": ["pattern", {"x": ["EXISTS"]}]}, ["MATCH", ["HAS", ["EXPR", "pattern"]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS EXPR value construction: NODE is evaluated before property traversal",
+      "input": {"x": 1},
+      "jgraft": ["JGRAFT", {"v": 1, "expr": ["pattern", {"x": ["NODE", "x"]}]}, ["MATCH", ["HAS", ["EXPR", "pattern"]]]],
+      "output": {"x": 1}
+    },
+    {
+      "name": "HAS EXPR value construction: escaped array constructs elements before matching",
+      "input": {"target": [7], "x": 7},
+      "jgraft": ["JGRAFT", {"v": 1, "expr": ["pattern", [[["NODE", "x"]]]]}, ["MATCH", ["HAS", ["NODE", "target"], ["EXPR", "pattern"]]]],
+      "output": {"target": [7], "x": 7}
+    },
+    {
+      "name": "HAS EXPR value construction: constructed arrays remain literal data",
+      "input": {"x": ["EXISTS"]},
+      "jgraft": ["JGRAFT", {"v": 1, "expr": ["pattern", {"x": [["EXISTS"]]}]}, ["MATCH", ["HAS", ["EXPR", "pattern"]]]],
+      "output": {"x": ["EXISTS"]}
+    },
+    {
+      "name": "HAS EXPR value construction: two-argument structure reads the original node",
+      "input": {"target": {"x": 2}, "x": 2},
+      "jgraft": ["JGRAFT", {"v": 1, "expr": ["pattern", {"x": ["NODE", "x"]}]}, ["MATCH", ["HAS", ["NODE", "target"], ["EXPR", "pattern"]]]],
+      "output": {"target": {"x": 2}, "x": 2}
+    },
+    {
+      "name": "HAS EXPR value construction: two-argument structure does not read the alternate node",
+      "input": {"target": {"x": 1}, "x": 2},
+      "jgraft": ["JGRAFT", {"v": 1, "expr": ["pattern", {"x": ["NODE", "x"]}]}, ["MATCH", ["HAS", ["NODE", "target"], ["EXPR", "pattern"]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "HAS EXPR value construction: two-argument embedded match sees original node",
+      "input": {"target": {"x": true}},
+      "jgraft": ["JGRAFT", {"v": 1, "expr": ["pattern", {"x": ["IS", {"target": {"x": true}}]}]}, ["MATCH", ["HAS", ["NODE", "target"], ["EXPR", "pattern"]]]],
+      "output": {"target": {"x": true}}
+    },
+    {
+      "name": "HAS EXPR value construction: nested construction keeps original current node",
+      "input": {"a": {"x": 1}, "x": 1},
+      "jgraft": ["JGRAFT", {"v": 1, "expr": ["pattern", {"a": {"x": ["NODE", "x"]}}]}, ["MATCH", ["HAS", ["EXPR", "pattern"]]]],
+      "output": {"a": {"x": 1}, "x": 1}
+    },
+    {
+      "name": "HAS EXPR value construction: match inside construction starts with default HAS",
+      "input": {"x": false, "extra": 1},
+      "jgraft": ["JGRAFT", {"v": 1, "expr": ["pattern", {"x": ["NONE", {"extra": 1}], "extra": 1}]}, ["MATCH", ["HAS", ["EXPR", "pattern"]]]],
+      "output": {"x": false, "extra": 1}
+    },
+    {
+      "name": "IS EXPR value construction: embedded match returns a boolean",
+      "input": {"x": true},
+      "jgraft": ["JGRAFT", {"v": 1, "expr": ["pattern", {"x": ["EXISTS"]}]}, ["MATCH", ["IS", ["EXPR", "pattern"]]]],
+      "output": {"x": true}
+    },
+    {
+      "name": "IS EXPR value construction: embedded match is not a predicate on the property",
+      "input": {"x": 0},
+      "jgraft": ["JGRAFT", {"v": 1, "expr": ["pattern", {"x": ["EXISTS"]}]}, ["MATCH", ["IS", ["EXPR", "pattern"]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS EXPR value construction: NODE is evaluated before property traversal",
+      "input": {"x": 1},
+      "jgraft": ["JGRAFT", {"v": 1, "expr": ["pattern", {"x": ["NODE", "x"]}]}, ["MATCH", ["IS", ["EXPR", "pattern"]]]],
+      "output": {"x": 1}
+    },
+    {
+      "name": "IS EXPR value construction: escaped array constructs elements before matching",
+      "input": {"target": [7], "x": 7},
+      "jgraft": ["JGRAFT", {"v": 1, "expr": ["pattern", [[["NODE", "x"]]]]}, ["MATCH", ["IS", ["NODE", "target"], ["EXPR", "pattern"]]]],
+      "output": {"target": [7], "x": 7}
+    },
+    {
+      "name": "IS EXPR value construction: constructed arrays remain literal data",
+      "input": {"x": ["EXISTS"]},
+      "jgraft": ["JGRAFT", {"v": 1, "expr": ["pattern", {"x": [["EXISTS"]]}]}, ["MATCH", ["IS", ["EXPR", "pattern"]]]],
+      "output": {"x": ["EXISTS"]}
+    },
+    {
+      "name": "IS EXPR value construction: two-argument structure reads the original node",
+      "input": {"target": {"x": 2}, "x": 2},
+      "jgraft": ["JGRAFT", {"v": 1, "expr": ["pattern", {"x": ["NODE", "x"]}]}, ["MATCH", ["IS", ["NODE", "target"], ["EXPR", "pattern"]]]],
+      "output": {"target": {"x": 2}, "x": 2}
+    },
+    {
+      "name": "IS EXPR value construction: two-argument structure does not read the alternate node",
+      "input": {"target": {"x": 1}, "x": 2},
+      "jgraft": ["JGRAFT", {"v": 1, "expr": ["pattern", {"x": ["NODE", "x"]}]}, ["MATCH", ["IS", ["NODE", "target"], ["EXPR", "pattern"]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS EXPR value construction: two-argument embedded match sees original node",
+      "input": {"target": {"x": true}},
+      "jgraft": ["JGRAFT", {"v": 1, "expr": ["pattern", {"x": ["IS", {"target": {"x": true}}]}]}, ["MATCH", ["IS", ["NODE", "target"], ["EXPR", "pattern"]]]],
+      "output": {"target": {"x": true}}
+    },
+    {
+      "name": "IS EXPR value construction: nested construction keeps original current node",
+      "input": {"a": {"x": 1}, "x": 1},
+      "jgraft": ["JGRAFT", {"v": 1, "expr": ["pattern", {"a": {"x": ["NODE", "x"]}}]}, ["MATCH", ["IS", ["EXPR", "pattern"]]]],
+      "errors": {"NO_MATCH": true}
+    },
+    {
+      "name": "IS EXPR value construction: match inside construction starts with default HAS",
+      "input": {"x": false, "extra": 1},
+      "jgraft": ["JGRAFT", {"v": 1, "expr": ["pattern", {"x": ["NONE", {"extra": 1}], "extra": 1}]}, ["MATCH", ["IS", ["EXPR", "pattern"]]]],
+      "output": {"x": false, "extra": 1}
+    }
+  ]
+}
