@@ -4,1441 +4,1026 @@
   "desc": "SPLICE insertion, deletion, and replacement of JSON values; integer, negative, and append offsets; positive, negative, and null counts; pre-edit replacement evaluation; logical cloning; nested and stash arrays; invalid paths and operands; and SPLIT separator and trimming metadata. Error flags allow runtime failures and stronger diagnoses justified by static analysis. No resource limits or optional features are required.",
   "tests": [
     {
-      "name": "Insert null",
-      "input": ["left", "right"],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 1, 0, null]],
-      "output": ["left", null, "right"]
-    },
-    {
-      "name": "Insert false",
-      "input": ["left", "right"],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 1, 0, false]],
-      "output": ["left", false, "right"]
-    },
-    {
-      "name": "Insert true",
-      "input": ["left", "right"],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 1, 0, true]],
-      "output": ["left", true, "right"]
-    },
-    {
-      "name": "Insert zero",
-      "input": ["left", "right"],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 1, 0, 0]],
-      "output": ["left", 0, "right"]
-    },
-    {
-      "name": "Insert a negative fraction",
-      "input": ["left", "right"],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 1, 0, -12.5]],
-      "output": ["left", -12.5, "right"]
-    },
-    {
-      "name": "Insert an empty string",
-      "input": ["left", "right"],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 1, 0, ""]],
-      "output": ["left", "", "right"]
-    },
-    {
-      "name": "Insert a string with escapes and Unicode",
-      "input": ["left", "right"],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 1, 0, "a\n\t\"\\\u0000é𝄞"]],
-      "output": ["left", "a\n\t\"\\\u0000é𝄞", "right"]
-    },
-    {
-      "name": "Insert an empty array",
-      "input": ["left", "right"],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 1, 0, [[]]]],
-      "output": ["left", [], "right"]
-    },
-    {
-      "name": "Insert an empty object",
-      "input": ["left", "right"],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 1, 0, {}]],
-      "output": ["left", {}, "right"]
-    },
-    {
-      "name": "Insert a heterogeneous array",
-      "input": ["left", "right"],
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLICE", 1, 0, [[null, true, 1, "x", [[]], {}]]]
-      ],
-      "output": ["left", [null, true, 1, "x", [], {}], "right"]
-    },
-    {
-      "name": "Insert a nested object",
-      "input": ["left", "right"],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 1, 0, {"a": {"b": [[1, 2]]}}]],
-      "output": ["left", {"a": {"b": [1, 2]}}, "right"]
-    },
-    {
-      "name": "Insert all basic JSON types in argument order",
-      "input": [],
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        [
-          "SPLICE",
-          0,
-          0,
-          null,
-          false,
-          true,
-          0,
-          -12.5,
-          "",
-          "a\n\t\"\\\u0000é𝄞",
-          [[]],
-          {},
-          [[null, true, 1, "x", [[]], {}]],
-          {"a": {"b": [[1, 2]]}}
-        ]
-      ],
-      "output": [
-        null,
-        false,
-        true,
-        0,
-        -12.5,
-        "",
-        "a\n\t\"\\\u0000é𝄞",
-        [],
-        {},
-        [null, true, 1, "x", [], {}],
-        {"a": {"b": [1, 2]}}
+      "name": "Replacement values",
+      "desc": "Insert every JSON type and preserve the distinction between one array value and a list of replacements.",
+      "tests": [
+        {
+          "name": "Insert null",
+          "input": ["left","right"],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,0,null]],
+          "output": ["left",null,"right"]
+        },
+        {
+          "name": "Insert false",
+          "input": ["left","right"],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,0,false]],
+          "output": ["left",false,"right"]
+        },
+        {
+          "name": "Insert true",
+          "input": ["left","right"],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,0,true]],
+          "output": ["left",true,"right"]
+        },
+        {
+          "name": "Insert zero",
+          "input": ["left","right"],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,0,0]],
+          "output": ["left",0,"right"]
+        },
+        {
+          "name": "Insert a negative fraction",
+          "input": ["left","right"],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,0,-12.5]],
+          "output": ["left",-12.5,"right"]
+        },
+        {
+          "name": "Insert an empty string",
+          "input": ["left","right"],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,0,""]],
+          "output": ["left","","right"]
+        },
+        {
+          "name": "Insert a string with escapes and Unicode",
+          "input": ["left","right"],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,0,"a\n\t\"\\\u0000é𝄞"]],
+          "output": ["left","a\n\t\"\\\u0000é𝄞","right"]
+        },
+        {
+          "name": "Insert an empty array",
+          "input": ["left","right"],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,0,[[]]]],
+          "output": ["left",[],"right"]
+        },
+        {
+          "name": "Insert an empty object",
+          "input": ["left","right"],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,0,{}]],
+          "output": ["left",{},"right"]
+        },
+        {
+          "name": "Insert a heterogeneous array",
+          "input": ["left","right"],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,0,[[null,true,1,"x",[[]],{}]]]],
+          "output": ["left",[null,true,1,"x",[],{}],"right"]
+        },
+        {
+          "name": "Insert a nested object",
+          "input": ["left","right"],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,0,{"a":{"b":[[1,2]]}}]],
+          "output": ["left",{"a":{"b":[1,2]}},"right"]
+        },
+        {
+          "name": "Insert all basic JSON types in argument order",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,0,null,false,true,0,-12.5,"","a\n\t\"\\\u0000é𝄞",[[]],{},[[null,true,1,"x",[[]],{}]],{"a":{"b":[[1,2]]}}]],
+          "output": [null,false,true,0,-12.5,"","a\n\t\"\\\u0000é𝄞",[],{},[null,true,1,"x",[],{}],{"a":{"b":[1,2]}}]
+        },
+        {
+          "name": "Literal array is one inserted element",
+          "desc": "Replacement arguments are individual values; array-valued replacements are not flattened.",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,0,[[1,2,3]]]],
+          "output": [[1,2,3]]
+        },
+        {
+          "name": "Empty replacement array is not an empty replacement list",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,1,[[]]]],
+          "output": [[],2]
+        },
+        {
+          "name": "Insert an expression-looking literal array",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,0,[["NODE","missing"]]]],
+          "output": [["NODE","missing"]]
+        },
+        {
+          "name": "Insert a referenced expression-looking array",
+          "input": {"source":["NODE","missing"],"list":[]},
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list",0],0,["NODE","source"]]],
+          "output": {"source":["NODE","missing"],"list":[["NODE","missing"]]}
+        },
+        {
+          "name": "Evaluate nested expressions in replacements",
+          "input": {"value":3,"list":[]},
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list",0],0,{"a":["NODE","value"],"b":[[["NODE","value"],{"x":["NODE","value"]}]]}]],
+          "output": {"value":3,"list":[{"a":3,"b":[3,{"x":3}]}]}
+        },
+        {
+          "name": "Insert an object with arbitrary property names",
+          "needProto": true,
+          "desc": "Includes an own __proto__ property.",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,0,{"__proto__":1,"constructor":2,"":3}]],
+          "output": [{"__proto__":1,"constructor":2,"":3}]
+        },
+        {
+          "name": "Replace whole subtrees with scalar values",
+          "input": [{"old":[1,2]},["old"],null],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,2,7]],
+          "output": [7,null]
+        },
+        {
+          "name": "Replace a scalar with several subtrees",
+          "input": [1,"keep"],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,1,{"a":1},[[2,3]],{"b":{"c":4}}]],
+          "output": [{"a":1},[2,3],{"b":{"c":4}},"keep"]
+        }
       ]
     },
     {
-      "name": "A literal array is one inserted element",
-      "desc": "Replacement arguments are individual values; array-valued replacements are not flattened.",
-      "input": [],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 0, 0, [[1, 2, 3]]]],
-      "output": [[1, 2, 3]]
-    },
-    {
-      "name": "An empty replacement array is not an empty replacement list",
-      "input": [1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 0, 1, [[]]]],
-      "output": [[], 2]
-    },
-    {
-      "name": "Insert an expression-looking literal array",
-      "input": [],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 0, 0, [["NODE", "missing"]]]],
-      "output": [["NODE", "missing"]]
-    },
-    {
-      "name": "Insert a referenced expression-looking array",
-      "input": {"source": ["NODE", "missing"], "list": []},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLICE", ["NODE", "list", 0], 0, ["NODE", "source"]]
-      ],
-      "output": {"source": ["NODE", "missing"], "list": [["NODE", "missing"]]}
-    },
-    {
-      "name": "Evaluate nested expressions in replacements",
-      "input": {"value": 3, "list": []},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        [
-          "SPLICE",
-          ["NODE", "list", 0],
-          0,
-          {
-            "a": ["NODE", "value"],
-            "b": [[["NODE", "value"], {"x": ["NODE", "value"]}]]
-          }
-        ]
-      ],
-      "output": {"value": 3, "list": [{"a": 3, "b": [3, {"x": 3}]}]}
-    },
-    {
-      "name": "Insert an object with arbitrary property names",
-      "needProto": true,
-      "desc": "Includes an own __proto__ property.",
-      "input": [],
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLICE", 0, 0, {"__proto__": 1, "constructor": 2, "": 3}]
-      ],
-      "output": [{"__proto__": 1, "constructor": 2, "": 3}]
-    },
-    {
-      "name": "Replace whole subtrees with scalar values",
-      "input": [{"old": [1, 2]}, ["old"], null],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 0, 2, 7]],
-      "output": [7, null]
-    },
-    {
-      "name": "Replace a scalar with several subtrees",
-      "input": [1, "keep"],
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLICE", 0, 1, {"a": 1}, [[2, 3]], {"b": {"c": 4}}]
-      ],
-      "output": [{"a": 1}, [2, 3], {"b": {"c": 4}}, "keep"]
-    },
-    {
-      "name": "Delete 0 elements at offset 0",
-      "input": ["a", "b", "c"],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 0, 0]],
-      "output": ["a", "b", "c"]
-    },
-    {
-      "name": "Replace 0 elements at offset 0",
-      "input": ["a", "b", "c"],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 0, 0, "x", "y"]],
-      "output": ["x", "y", "a", "b", "c"]
-    },
-    {
-      "name": "Delete 1 elements at offset 0",
-      "input": ["a", "b", "c"],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 0, 1]],
-      "output": ["b", "c"]
-    },
-    {
-      "name": "Replace 1 elements at offset 0",
-      "input": ["a", "b", "c"],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 0, 1, "x", "y"]],
-      "output": ["x", "y", "b", "c"]
-    },
-    {
-      "name": "Delete 2 elements at offset 0",
-      "input": ["a", "b", "c"],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 0, 2]],
-      "output": ["c"]
-    },
-    {
-      "name": "Replace 2 elements at offset 0",
-      "input": ["a", "b", "c"],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 0, 2, "x", "y"]],
-      "output": ["x", "y", "c"]
-    },
-    {
-      "name": "Delete 3 elements at offset 0",
-      "input": ["a", "b", "c"],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 0, 3]],
-      "output": []
-    },
-    {
-      "name": "Replace 3 elements at offset 0",
-      "input": ["a", "b", "c"],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 0, 3, "x", "y"]],
-      "output": ["x", "y"]
-    },
-    {
-      "name": "Delete 0 elements at offset 1",
-      "input": ["a", "b", "c"],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 1, 0]],
-      "output": ["a", "b", "c"]
-    },
-    {
-      "name": "Replace 0 elements at offset 1",
-      "input": ["a", "b", "c"],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 1, 0, "x", "y"]],
-      "output": ["a", "x", "y", "b", "c"]
-    },
-    {
-      "name": "Delete 1 elements at offset 1",
-      "input": ["a", "b", "c"],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 1, 1]],
-      "output": ["a", "c"]
-    },
-    {
-      "name": "Replace 1 elements at offset 1",
-      "input": ["a", "b", "c"],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 1, 1, "x", "y"]],
-      "output": ["a", "x", "y", "c"]
-    },
-    {
-      "name": "Delete 2 elements at offset 1",
-      "input": ["a", "b", "c"],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 1, 2]],
-      "output": ["a"]
-    },
-    {
-      "name": "Replace 2 elements at offset 1",
-      "input": ["a", "b", "c"],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 1, 2, "x", "y"]],
-      "output": ["a", "x", "y"]
-    },
-    {
-      "name": "Delete 0 elements at offset 2",
-      "input": ["a", "b", "c"],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 2, 0]],
-      "output": ["a", "b", "c"]
-    },
-    {
-      "name": "Replace 0 elements at offset 2",
-      "input": ["a", "b", "c"],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 2, 0, "x", "y"]],
-      "output": ["a", "b", "x", "y", "c"]
-    },
-    {
-      "name": "Delete 1 elements at offset 2",
-      "input": ["a", "b", "c"],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 2, 1]],
-      "output": ["a", "b"]
-    },
-    {
-      "name": "Replace 1 elements at offset 2",
-      "input": ["a", "b", "c"],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 2, 1, "x", "y"]],
-      "output": ["a", "b", "x", "y"]
-    },
-    {
-      "name": "Delete 0 elements at offset 3",
-      "input": ["a", "b", "c"],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 3, 0]],
-      "output": ["a", "b", "c"]
-    },
-    {
-      "name": "Replace 0 elements at offset 3",
-      "input": ["a", "b", "c"],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 3, 0, "x", "y"]],
-      "output": ["a", "b", "c", "x", "y"]
-    },
-    {
-      "name": "An empty splice on an empty array is a no-op",
-      "input": [],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 0, 0]],
-      "output": []
-    },
-    {
-      "name": "Append using false",
-      "input": [1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", false, 0, 3, 4]],
-      "output": [1, 2, 3, 4]
-    },
-    {
-      "name": "Append to an empty array using false",
-      "input": [],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", false, 0, 1]],
-      "output": [1]
-    },
-    {
-      "name": "A null count at the append position removes nothing",
-      "input": [1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", false, null, 3]],
-      "output": [1, 2, 3]
-    },
-    {
-      "name": "Null count deletes the tail from offset 0",
-      "input": ["a", "b", "c"],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 0, null, "x"]],
-      "output": ["x"]
-    },
-    {
-      "name": "Null count deletes the tail from offset 1",
-      "input": ["a", "b", "c"],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 1, null, "x"]],
-      "output": ["a", "x"]
-    },
-    {
-      "name": "Null count deletes the tail from offset 2",
-      "input": ["a", "b", "c"],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 2, null, "x"]],
-      "output": ["a", "b", "x"]
-    },
-    {
-      "name": "Null count deletes the tail from offset 3",
-      "input": ["a", "b", "c"],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 3, null, "x"]],
-      "output": ["a", "b", "c", "x"]
-    },
-    {
-      "name": "A negative offset selects the final element",
-      "input": [1, 2, 3],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", -1, 1, 9]],
-      "output": [1, 2, 9]
-    },
-    {
-      "name": "A negative offset selects the first element",
-      "input": [1, 2, 3],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", -3, 1, 9]],
-      "output": [9, 2, 3]
-    },
-    {
-      "name": "A negative offset combines with a null count",
-      "input": [1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", -2, null, 9]],
-      "output": [1, 2, 9]
-    },
-    {
-      "name": "A negative count leaves the last element",
-      "desc": "For length four, count -1 specifies limiting offset three, so two elements are removed.",
-      "input": [1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 1, -1, 9]],
-      "output": [1, 9, 4]
-    },
-    {
-      "name": "A negative count leaves the last two elements",
-      "input": [1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 0, -2, 9]],
-      "output": [9, 3, 4]
-    },
-    {
-      "name": "A negative count can normalize to zero",
-      "input": [1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 2, -2, 9]],
-      "output": [1, 2, 9, 3, 4]
-    },
-    {
-      "name": "Negative count equal to minus length inserts at zero",
-      "input": [1, 2, 3],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 0, -3, 9]],
-      "output": [9, 1, 2, 3]
-    },
-    {
-      "name": "Combine negative offset and negative count",
-      "input": [1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", -3, -1, 9]],
-      "output": [1, 9, 4]
-    },
-    {
-      "name": "Compute the destination path from input",
-      "input": {"index": 1, "list": [1, 2, 3]},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLICE", ["NODE", "list", ["NODE", "index"]], 1, 9]
-      ],
-      "output": {"index": 1, "list": [1, 9, 3]}
-    },
-    {
-      "name": "Expand a computed path array",
-      "input": {"path": ["list", 1], "list": [1, 2, 3]},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLICE", ["NODE", ["NODE", "path"]], 1, 9]
-      ],
-      "output": {"path": ["list", 1], "list": [1, 9, 3]}
-    },
-    {
-      "name": "Compute a positive count from input",
-      "input": {"count": 2, "list": [1, 2, 3]},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLICE", ["NODE", "list", 0], ["NODE", "count"], 9]
-      ],
-      "output": {"count": 2, "list": [9, 3]}
-    },
-    {
-      "name": "Compute a null count from input",
-      "input": {"count": null, "list": [1, 2, 3]},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLICE", ["NODE", "list", 1], ["NODE", "count"], 9]
-      ],
-      "output": {"count": null, "list": [1, 9]}
-    },
-    {
-      "name": "Compute a negative count from input",
-      "input": {"count": -1, "list": [1, 2, 3, 4]},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLICE", ["NODE", "list", 1], ["NODE", "count"], 9]
-      ],
-      "output": {"count": -1, "list": [1, 9, 4]}
-    },
-    {
-      "name": "Read replacements from positions that will be removed",
-      "input": [1, 2, 3],
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLICE", 0, 3, ["NODE", 2], ["NODE", 1], ["NODE", 0]]
-      ],
-      "output": [3, 2, 1]
-    },
-    {
-      "name": "All replacements see the original array",
-      "desc": "The second replacement still reads original index zero, even though it is being replaced.",
-      "input": [1, 2],
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLICE", 0, 1, ["NODE", 1], ["NODE", 0]]
-      ],
-      "output": [2, 1, 2]
-    },
-    {
-      "name": "Count expressions see the original array",
-      "input": [2, "a", "b", "c"],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 0, ["NODE", 0], "x"]],
-      "output": ["x", "b", "c"]
-    },
-    {
-      "name": "Insert a snapshot of the target array",
-      "desc": "Referencing the target array creates a logical copy of its pre-edit value rather than a cycle.",
-      "input": [1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 1, 0, ["NODE"]]],
-      "output": [1, [1, 2], 2]
-    },
-    {
-      "name": "Replacement arrays are not expanded even when returned by SLICE",
-      "input": [1, 2, 3],
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLICE", 1, 1, ["SLICE", ["NODE"], 0, 2]]
-      ],
-      "output": [1, [1, 2], 3]
-    },
-    {
-      "name": "Repeated references produce independently editable inserted subtrees",
-      "input": [{"x": 1}],
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        [
-          "AT",
-          ["NODE"],
-          ["SPLICE", 0, 1, ["NODE", 0], ["NODE", 0]],
-          ["COPY", 9, ["NODE", 0, "x"]]
-        ]
-      ],
-      "output": [{"x": 9}, {"x": 1}]
-    },
-    {
-      "name": "Inserted subtrees remain independent of their source",
-      "input": {"source": {"x": [1, 2]}, "list": []},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        [
-          "AT",
-          ["NODE"],
-          ["SPLICE", ["NODE", "list", 0], 0, ["NODE", "source"]],
-          ["COPY", 9, ["NODE", "list", 0, "x", 0]]
-        ]
-      ],
-      "output": {"source": {"x": [1, 2]}, "list": [{"x": [9, 2]}]}
-    },
-    {
-      "name": "Later actions see the updated length and indices",
-      "input": [1, 2, 3],
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        [
-          "AT",
-          ["NODE"],
-          ["SPLICE", 0, 2],
-          ["SPLICE", false, 0, 4],
-          ["SPLICE", 0, 1, 9]
-        ]
-      ],
-      "output": [9, 4]
-    },
-    {
-      "name": "Splice a nested array without changing its siblings",
-      "input": {"a": {"list": [1, 2, 3], "keep": true}, "b": [4]},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLICE", ["NODE", "a", "list", 1], 1, 9]
-      ],
-      "output": {"a": {"list": [1, 9, 3], "keep": true}, "b": [4]}
-    },
-    {
-      "name": "Splice an array selected by AT",
-      "input": {"list": [1, 2], "keep": 3},
-      "jgraft": ["JGRAFT", {"v": 1}, ["AT", "list", ["SPLICE", 0, 1, 9]]],
-      "output": {"list": [9, 2], "keep": 3}
-    },
-    {
-      "name": "Splice an array under an empty property name",
-      "input": {"": [1, 2]},
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", ["NODE", "", 0], 1, 9]],
-      "output": {"": [9, 2]}
-    },
-    {
-      "name": "Splice an array under a __proto__ property",
-      "needProto": true,
-      "input": {"__proto__": [1, 2]},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLICE", ["NODE", "__proto__", 0], 1, 9]
-      ],
-      "output": {"__proto__": [9, 2]}
-    },
-    {
-      "name": "Use numeric SPLICE and NODE identifiers",
-      "input": {"list": [1, 2]},
-      "jgraft": ["JGRAFT", {"v": 1}, [5, [0, "list", 1], 1, 9]],
-      "output": {"list": [1, 9]}
-    },
-    {
-      "name": "Splice a STASH array independently of its copied source",
-      "input": {"list": [1, 2, 3]},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        [
-          "AT",
-          ["NODE"],
-          ["COPY", ["NODE", "list"], ["STASH", 0]],
-          ["SPLICE", ["STASH", 0, 1], 1, 9, 8],
-          ["COPY", ["STASH", 0], "result"]
-        ]
-      ],
-      "output": {"list": [1, 2, 3], "result": [1, 9, 8, 3]}
-    },
-    {
-      "name": "Insert constant data without modifying the constant",
-      "input": [],
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1, "const": ["data", {"x": 1}]},
-        [
-          "AT",
-          ["NODE"],
-          ["SPLICE", 0, 0, ["CONST", "data"]],
-          ["COPY", 9, ["NODE", 0, "x"]],
-          ["SPLICE", false, 0, ["CONST", "data"]]
-        ]
-      ],
-      "output": [{"x": 9}, {"x": 1}]
-    },
-    {
-      "name": "Cannot splice non-array input null",
-      "desc": "The destination must identify an array position; SPLICE does not convert the target into an array.",
-      "input": null,
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 0, 0, 1]],
-      "errors": {
-        "INVALID_TARGET": true
-      }
-    },
-    {
-      "name": "Cannot splice non-array input false",
-      "desc": "The destination must identify an array position; SPLICE does not convert the target into an array.",
-      "input": false,
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 0, 0, 1]],
-      "errors": {
-        "INVALID_TARGET": true
-      }
-    },
-    {
-      "name": "Cannot splice non-array input 7",
-      "desc": "The destination must identify an array position; SPLICE does not convert the target into an array.",
-      "input": 7,
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 0, 0, 1]],
-      "errors": {
-        "INVALID_TARGET": true
-      }
-    },
-    {
-      "name": "Cannot splice non-array input \"text\"",
-      "desc": "The destination must identify an array position; SPLICE does not convert the target into an array.",
-      "input": "text",
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 0, 0, 1]],
-      "errors": {
-        "INVALID_TARGET": true
-      }
-    },
-    {
-      "name": "Cannot splice non-array input {}",
-      "desc": "The destination must identify an array position; SPLICE does not convert the target into an array.",
-      "input": {},
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 0, 0, 1]],
-      "errors": {
-        "INVALID_TARGET": true
-      }
-    },
-    {
-      "name": "An object property holding an array is not an array element",
-      "desc": "The final path component must address an element of the array, such as NODE list 0.",
-      "input": {"list": [1, 2]},
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", "list", 1, 9]],
-      "errors": {
-        "INVALID_TARGET": true
-      }
-    },
-    {
-      "name": "An object property holding a scalar is not an array element",
-      "desc": "Array-element paths are required even for zero deletion counts.",
-      "input": {"value": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", "value", 0, 9]],
-      "errors": {
-        "INVALID_TARGET": true
-      }
-    },
-    {
-      "name": "Missing array parents are not auto-vivified",
-      "desc": "SPLICE requires an existing array rather than creating the path.",
-      "input": {},
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", ["NODE", "list", 0], 0, 9]],
-      "errors": {
-        "INVALID_TARGET": true
-      }
-    },
-    {
-      "name": "Cannot descend through a scalar parent",
-      "desc": "Resolving the destination may not convert a scalar to an array.",
-      "input": {"list": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", ["NODE", "list", 0], 0, 9]],
-      "errors": {
-        "INVALID_TARGET": true
-      }
-    },
-    {
-      "name": "Cannot use a numeric-looking string as an array selector",
-      "desc": "Only integer selectors and the false append alias address array positions.",
-      "input": [1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", "0", 1, 9]],
-      "errors": {
-        "INVALID_TARGET": true
-      }
-    },
-    {
-      "name": "Cannot splice beyond the array length",
-      "desc": "SPLICE does not clamp the offset or create a hole.",
-      "input": [1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 3, 0, 9]],
-      "errors": {
-        "INVALID_TARGET": true
-      }
-    },
-    {
-      "name": "Cannot splice before the beginning",
-      "desc": "A negative offset is invalid when its alias resolves below zero.",
-      "input": [1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", -3, 0, 9]],
-      "errors": {
-        "INVALID_TARGET": true
-      }
-    },
-    {
-      "name": "Cannot remove more elements than remain",
-      "desc": "The count must not exceed length minus offset; it is not clamped.",
-      "input": [1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 1, 2]],
-      "errors": {
-        "INVALID_TARGET": true
-      }
-    },
-    {
-      "name": "Cannot remove elements at the append position",
-      "desc": "Only a normalized zero count is valid at length.",
-      "input": [1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", false, 1]],
-      "errors": {
-        "INVALID_TARGET": true
-      }
-    },
-    {
-      "name": "A negative count may not end before the offset",
-      "desc": "The limiting offset is one, which precedes the starting offset two.",
-      "input": [1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 2, -3]],
-      "errors": {
-        "INVALID_TARGET": true
-      }
-    },
-    {
-      "name": "A negative count may not end before the array",
-      "desc": "A limiting offset below zero is invalid.",
-      "input": [1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 0, -3]],
-      "errors": {
-        "INVALID_TARGET": true
-      }
-    },
-    {
-      "name": "A negative count is not clamped at an empty array",
-      "desc": "The normalized count is negative; this graft can succeed on longer arrays.",
-      "input": [],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 0, -1]],
-      "errors": {
-        "INVALID_TARGET": true
-      }
-    },
-    {
-      "name": "Reject literal count true",
-      "desc": "A count must be an integer or null. A minimalist evaluator can report INVALID_OPERAND; static analysis can reject the intrinsic type violation as INVALID_GRAFT.",
-      "input": [1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 0, true]],
-      "errors": {
-        "INVALID_OPERAND": true,
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "Reject literal count false",
-      "desc": "A count must be an integer or null. A minimalist evaluator can report INVALID_OPERAND; static analysis can reject the intrinsic type violation as INVALID_GRAFT.",
-      "input": [1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 0, false]],
-      "errors": {
-        "INVALID_OPERAND": true,
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "Reject literal count 1.5",
-      "desc": "A count must be an integer or null. A minimalist evaluator can report INVALID_OPERAND; static analysis can reject the intrinsic type violation as INVALID_GRAFT.",
-      "input": [1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 0, 1.5]],
-      "errors": {
-        "INVALID_OPERAND": true,
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "Reject literal count \"1\"",
-      "desc": "A count must be an integer or null. A minimalist evaluator can report INVALID_OPERAND; static analysis can reject the intrinsic type violation as INVALID_GRAFT.",
-      "input": [1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 0, "1"]],
-      "errors": {
-        "INVALID_OPERAND": true,
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "Reject literal count {}",
-      "desc": "A count must be an integer or null. A minimalist evaluator can report INVALID_OPERAND; static analysis can reject the intrinsic type violation as INVALID_GRAFT.",
-      "input": [1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 0, {}]],
-      "errors": {
-        "INVALID_OPERAND": true,
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "Reject literal count [[]]",
-      "desc": "A count must be an integer or null. A minimalist evaluator can report INVALID_OPERAND; static analysis can reject the intrinsic type violation as INVALID_GRAFT.",
-      "input": [1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 0, [[]]]],
-      "errors": {
-        "INVALID_OPERAND": true,
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "Reject computed count true",
-      "desc": "The count expression is valid but its input-dependent result is neither an integer nor null.",
-      "input": {"count": true, "list": [1, 2]},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLICE", ["NODE", "list", 0], ["NODE", "count"]]
-      ],
-      "errors": {
-        "INVALID_OPERAND": true
-      }
-    },
-    {
-      "name": "Reject computed count false",
-      "desc": "The count expression is valid but its input-dependent result is neither an integer nor null.",
-      "input": {"count": false, "list": [1, 2]},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLICE", ["NODE", "list", 0], ["NODE", "count"]]
-      ],
-      "errors": {
-        "INVALID_OPERAND": true
-      }
-    },
-    {
-      "name": "Reject computed count 1.5",
-      "desc": "The count expression is valid but its input-dependent result is neither an integer nor null.",
-      "input": {"count": 1.5, "list": [1, 2]},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLICE", ["NODE", "list", 0], ["NODE", "count"]]
-      ],
-      "errors": {
-        "INVALID_OPERAND": true
-      }
-    },
-    {
-      "name": "Reject computed count \"1\"",
-      "desc": "The count expression is valid but its input-dependent result is neither an integer nor null.",
-      "input": {"count": "1", "list": [1, 2]},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLICE", ["NODE", "list", 0], ["NODE", "count"]]
-      ],
-      "errors": {
-        "INVALID_OPERAND": true
-      }
-    },
-    {
-      "name": "Reject computed count {}",
-      "desc": "The count expression is valid but its input-dependent result is neither an integer nor null.",
-      "input": {"count": {}, "list": [1, 2]},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLICE", ["NODE", "list", 0], ["NODE", "count"]]
-      ],
-      "errors": {
-        "INVALID_OPERAND": true
-      }
-    },
-    {
-      "name": "Reject computed count []",
-      "desc": "The count expression is valid but its input-dependent result is neither an integer nor null.",
-      "input": {"count": [], "list": [1, 2]},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLICE", ["NODE", "list", 0], ["NODE", "count"]]
-      ],
-      "errors": {
-        "INVALID_OPERAND": true
-      }
-    },
-    {
-      "name": "Reject literal array selector true",
-      "desc": "Literal null, true, and fractional selectors are invalid paths. Half-index destinations are specific to MOVE.",
-      "input": [1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", ["NODE", true], 0, 9]],
-      "errors": {
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "Reject literal array selector null",
-      "desc": "Literal null, true, and fractional selectors are invalid paths. Half-index destinations are specific to MOVE.",
-      "input": [1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", ["NODE", null], 0, 9]],
-      "errors": {
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "Reject literal array selector 0.5",
-      "desc": "Literal null, true, and fractional selectors are invalid paths. Half-index destinations are specific to MOVE.",
-      "input": [1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", ["NODE", 0.5], 0, 9]],
-      "errors": {
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "Reject computed array selector null",
-      "desc": "A computed selector has an invalid type; the valid graft can succeed on other input values.",
-      "input": {"index": null, "list": [1, 2]},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLICE", ["NODE", "list", ["NODE", "index"]], 0, 9]
-      ],
-      "errors": {
-        "INVALID_OPERAND": true
-      }
-    },
-    {
-      "name": "Reject computed array selector true",
-      "desc": "A computed selector has an invalid type; the valid graft can succeed on other input values.",
-      "input": {"index": true, "list": [1, 2]},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLICE", ["NODE", "list", ["NODE", "index"]], 0, 9]
-      ],
-      "errors": {
-        "INVALID_OPERAND": true
-      }
-    },
-    {
-      "name": "Reject computed array selector 0.5",
-      "desc": "A computed selector has an invalid type; the valid graft can succeed on other input values.",
-      "input": {"index": 0.5, "list": [1, 2]},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLICE", ["NODE", "list", ["NODE", "index"]], 0, 9]
-      ],
-      "errors": {
-        "INVALID_OPERAND": true
-      }
-    },
-    {
-      "name": "Reject computed array selector {}",
-      "desc": "A computed selector has an invalid type; the valid graft can succeed on other input values.",
-      "input": {"index": {}, "list": [1, 2]},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLICE", ["NODE", "list", ["NODE", "index"]], 0, 9]
-      ],
-      "errors": {
-        "INVALID_OPERAND": true
-      }
-    },
-    {
-      "name": "Reject nested arrays after one level of path expansion",
-      "desc": "Expanded path elements cannot themselves remain arrays.",
-      "input": {"path": [["list", 0]], "list": [1]},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLICE", ["NODE", ["NODE", "path"]], 0, 9]
-      ],
-      "errors": {
-        "INVALID_OPERAND": true
-      }
-    },
-    {
-      "name": "Reject invalid destination structure {}",
-      "desc": "A splice destination is path context and must be a reference expression or an implicit NODE selector.",
-      "input": {"list": [1]},
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", {}, 0, 9]],
-      "errors": {
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "Reject invalid destination structure [[\"list\",0]]",
-      "desc": "A splice destination is path context and must be a reference expression or an implicit NODE selector.",
-      "input": {"list": [1]},
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", [["list", 0]], 0, 9]],
-      "errors": {
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "Reject invalid destination structure [\"LENGTH\",[\"NODE\"]]",
-      "desc": "A splice destination is path context and must be a reference expression or an implicit NODE selector.",
-      "input": {"list": [1]},
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", ["LENGTH", ["NODE"]], 0, 9]],
-      "errors": {
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "Reject a missing destination and count",
-      "desc": "SPLICE requires both a path and a count.",
-      "input": [],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE"]],
-      "errors": {
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "Reject an omitted count",
-      "desc": "Omitting count does not imply null or zero.",
-      "input": [1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 0]],
-      "errors": {
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "Reject an unescaped empty replacement array",
-      "desc": "Literal arrays in value context require an extra array wrapper.",
-      "input": [],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 0, 0, []]],
-      "errors": {
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "Reject an unknown replacement expression",
-      "desc": "An unescaped replacement array must name a defined expression.",
-      "input": [],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 0, 0, ["UNKNOWN"]]],
-      "errors": {
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "Cannot read a missing replacement source",
-      "desc": "Every replacement is evaluated even when the removal count is zero.",
-      "input": {"list": [1]},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLICE", ["NODE", "list", 0], 0, ["NODE", "missing"]]
-      ],
-      "errors": {
-        "INVALID_TARGET": true
-      }
-    },
-    {
-      "name": "Cannot read an append position as a replacement",
-      "desc": "Replacement references must exist in the original array.",
-      "input": [1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 0, 1, ["NODE", false]]],
-      "errors": {
-        "INVALID_TARGET": true
-      }
-    },
-    {
-      "name": "A later replacement failure aborts the splice",
-      "desc": "All replacements must evaluate successfully before any alteration. No partial-result shape is mandated.",
-      "input": [1, 2],
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLICE", 0, 2, ["NODE", 1], ["NODE", 2]]
-      ],
-      "errors": {
-        "INVALID_TARGET": true
-      }
-    },
-    {
-      "name": "A missing count reference is INVALID_TARGET",
-      "desc": "Reading an absent property fails before count validation.",
-      "input": {"list": [1]},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLICE", ["NODE", "list", 0], ["NODE", "missing"]]
-      ],
-      "errors": {
-        "INVALID_TARGET": true
-      }
-    },
-    {
-      "name": "An intentional failure in count is not upgraded",
-      "desc": "Explicit FAIL expressions remain INVALID_TARGET even when known statically.",
-      "input": [1],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 0, ["FAIL"]]],
-      "errors": {
-        "INVALID_TARGET": true
-      }
-    },
-    {
-      "name": "An intentional failure in a replacement is not upgraded",
-      "desc": "Explicit FAIL expressions remain INVALID_TARGET.",
-      "input": [1],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 0, 1, ["FAIL"]]],
-      "errors": {
-        "INVALID_TARGET": true
-      }
-    },
-    {
-      "name": "An intrinsically failing replacement may be diagnosed statically",
-      "desc": "LENGTH of a number always fails, independently of the input array.",
-      "input": [1],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 0, 1, ["LENGTH", 5]]],
-      "errors": {
-        "INVALID_TARGET": true,
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "A previous replacement action can prove a range failure",
-      "desc": "The first action guarantees an empty array, so the positive removal count can never succeed.",
-      "input": [1],
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["AT", ["NODE"], ["COPY", [[]], ["NODE"]], ["SPLICE", 0, 1]]
-      ],
-      "errors": {
-        "INVALID_TARGET": true,
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "A literal constant count expression can be rejected statically",
-      "desc": "NOT true always yields false, which is an invalid count rather than zero.",
-      "input": [1],
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLICE", 0, ["NOT", true]]],
-      "errors": {
-        "INVALID_OPERAND": true,
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "Cannot splice a read-only constant array",
-      "desc": "CONST is read-only; a write attempt is an invalid operand that may be rejected statically.",
-      "input": {},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1, "const": ["list", [[1, 2]]]},
-        ["SPLICE", ["CONST", "list", 0], 1, 9]
-      ],
-      "errors": {
-        "INVALID_OPERAND": true,
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "Deleting elements also deletes their SPLIT metadata",
-      "input": " a , b , c ",
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLIT", {"sep": ",", "trim": " "}, ["SPLICE", 1, 1]]
-      ],
-      "output": " a , c "
-    },
-    {
-      "name": "Splice replacement receives adjacent trimming rather than overwritten trimming",
-      "desc": "Replacement is removal followed by insertion. The new value inherits preceding left trimming and has no right trimming.",
-      "input": " a , b , c ",
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLIT", {"sep": ",", "trim": " "}, ["SPLICE", 1, 1, "x"]]
-      ],
-      "output": " a , x, c "
-    },
-    {
-      "name": "Inserting at the start receives no left or right trimming",
-      "input": " a , b ",
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLIT", {"sep": ",", "trim": " "}, ["SPLICE", 0, 0, "x"]]
-      ],
-      "output": "x, a , b "
-    },
-    {
-      "name": "Multiple new elements inherit left trimming without right trimming",
-      "input": " a , b ",
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLIT", {"sep": ",", "trim": " "}, ["SPLICE", 1, 0, "x", "y"]]
-      ],
-      "output": " a , x, y, b "
-    },
-    {
-      "name": "Appending uses adjacent SPLIT trimming",
-      "input": " a , b ",
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLIT", {"sep": ",", "trim": " "}, ["SPLICE", false, 0, "x"]]
-      ],
-      "output": " a , b , x"
-    },
-    {
-      "name": "A direct replacement reference carries same-origin trimming",
-      "input": " a , b ",
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLIT", {"sep": ",", "trim": " "}, ["SPLICE", 1, 0, ["NODE", 0]]]
-      ],
-      "output": " a , a , b "
-    },
-    {
-      "name": "A derived string replacement receives adjacent trimming",
-      "desc": "A function derived from a reference does not preserve source element metadata.",
-      "input": " a , b ",
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        [
-          "SPLIT",
-          {"sep": ",", "trim": " "},
-          ["SPLICE", 1, 0, ["CONCAT", ["NODE", 0], "x"]]
-        ]
-      ],
-      "output": " a , ax, b "
-    },
-    {
-      "name": "Replacing the entire array drops old trimming metadata",
-      "input": " a , b ",
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLIT", {"sep": ",", "trim": " "}, ["SPLICE", 0, null, "x"]]
-      ],
-      "output": "x"
-    },
-    {
-      "name": "Deleting every split element produces an empty string",
-      "input": " a , b ",
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLIT", {"sep": ",", "trim": " "}, ["SPLICE", 0, null]]
-      ],
-      "output": ""
-    },
-    {
-      "name": "Deleting a value preserves the surviving variable separators",
-      "input": "a;b,c",
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLIT", {"sep": ["ANY", ",", ";"], "default": ","}, ["SPLICE", 1, 1]]
-      ],
-      "output": "a;c"
-    },
-    {
-      "name": "Inserted values inherit the preceding separator",
-      "input": "a;b,c",
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        [
-          "SPLIT",
-          {"sep": ["ANY", ",", ";"], "default": ","},
-          ["SPLICE", 1, 0, "x"]
-        ]
-      ],
-      "output": "a;x;b,c"
-    },
-    {
-      "name": "An inserted first value inherits the following separator",
-      "input": "a;b,c",
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        [
-          "SPLIT",
-          {"sep": ["ANY", ",", ";"], "default": ","},
-          ["SPLICE", 0, 0, "x"]
-        ]
-      ],
-      "output": "x;a;b,c"
-    },
-    {
-      "name": "A direct reference carries its own variable separator",
-      "input": "a;b,c",
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        [
-          "SPLIT",
-          {"sep": ["ANY", ",", ";"], "default": ","},
-          ["SPLICE", 1, 0, ["NODE", 1]]
-        ]
-      ],
-      "output": "a;b,b,c"
-    },
-    {
-      "name": "Replacing all values uses the default separator",
-      "input": "a;b,c",
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        [
-          "SPLIT",
-          {"sep": ["ANY", ",", ";"], "default": ","},
-          ["SPLICE", 0, null, "x", "y"]
-        ]
-      ],
-      "output": "x,y"
-    },
-    {
-      "name": "Restore a removed trailing empty element",
-      "input": "a\nb\n",
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLIT", "\n", ["SPLICE", -1, 1], ["SPLICE", false, 0, ""]]
-      ],
-      "output": "a\nb\n"
-    },
-    {
-      "name": "A split array cannot rejoin a non-string replacement",
-      "desc": "SPLICE accepts any JSON replacement, but the enclosing SPLIT requires strings when rejoining. Static analysis may prove the inserted number makes this graft fail on every input.",
-      "input": "a,b",
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLIT", ",", ["SPLICE", 0, 1, 7]]],
-      "errors": {
-        "INVALID_TARGET": true,
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "Replacing every element with references preserves their metadata",
-      "desc": "Replacement values and their source metadata are captured before the original elements are removed.",
-      "input": " a , b ",
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        [
-          "SPLIT",
-          {"sep": ",", "trim": " "},
-          ["SPLICE", 0, null, ["NODE", 1], ["NODE", 0]]
-        ]
-      ],
-      "output": " b , a "
-    },
-    {
-      "name": "Splice can introduce metadata into a fresh array",
-      "desc": "A target array without metadata adopts metadata from directly referenced split elements.",
-      "input": {"source": " a ,b", "result": []},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        [
-          "AT",
-          ["NODE"],
-          ["COPY", [[]], ["STASH", 0]],
-          [
-            "AT",
-            "source",
-            [
-              "SPLIT",
-              {"sep": ",", "trim": " "},
-              ["SPLICE", ["STASH", 0, 0], 0, ["NODE", 0], ["NODE", 1]]
-            ]
-          ],
-          ["COPY", ["JOIN", {"sep": ",", "trim": " "}, ["STASH", 0]], "result"]
-        ]
-      ],
-      "output": {"source": " a ,b", "result": " a ,b"}
-    },
-    {
-      "name": "Metadata introduced into a populated array also covers existing elements",
-      "desc": "Existing elements receive adjacent metadata when referenced replacements introduce a metadata origin.",
-      "input": {"source": " a ", "result": null},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        [
-          "AT",
-          ["NODE"],
-          ["COPY", [["old"]], ["STASH", 0]],
-          [
-            "AT",
-            "source",
-            [
-              "SPLIT",
-              {"sep": ",", "trim": " "},
-              ["SPLICE", ["STASH", 0, false], 0, ["NODE", 0]]
-            ]
-          ],
-          ["COPY", ["JOIN", {"sep": ",", "trim": " "}, ["STASH", 0]], "result"]
-        ]
-      ],
-      "output": {"source": " a ", "result": "old, a "}
-    },
-    {
-      "name": "A different SPLIT origin uses adjacent destination metadata",
-      "desc": "A reference from another split does not carry its right trimming into the target array.",
-      "input": " a , b ",
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        [
-          "AT",
-          ["NODE"],
-          ["COPY", ["SPLIT", {"sep": ",", "trim": " "}, " x "], ["STASH", 0]],
-          [
-            "SPLIT",
-            {"sep": ",", "trim": " "},
-            ["SPLICE", 1, 0, ["STASH", 0, 0]]
-          ]
-        ]
-      ],
-      "output": " a , x, b "
+      "name": "Offset and count matrix",
+      "desc": "Deletion and replacement spans include empty spans and the append boundary.",
+      "tests": [
+        {
+          "name": "Delete 0 elements at offset 0",
+          "input": ["a","b","c"],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,0]],
+          "output": ["a","b","c"]
+        },
+        {
+          "name": "Replace 0 elements at offset 0",
+          "input": ["a","b","c"],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,0,"x","y"]],
+          "output": ["x","y","a","b","c"]
+        },
+        {
+          "name": "Delete 1 elements at offset 0",
+          "input": ["a","b","c"],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,1]],
+          "output": ["b","c"]
+        },
+        {
+          "name": "Replace 1 elements at offset 0",
+          "input": ["a","b","c"],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,1,"x","y"]],
+          "output": ["x","y","b","c"]
+        },
+        {
+          "name": "Delete 2 elements at offset 0",
+          "input": ["a","b","c"],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,2]],
+          "output": ["c"]
+        },
+        {
+          "name": "Replace 2 elements at offset 0",
+          "input": ["a","b","c"],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,2,"x","y"]],
+          "output": ["x","y","c"]
+        },
+        {
+          "name": "Delete 3 elements at offset 0",
+          "input": ["a","b","c"],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,3]],
+          "output": []
+        },
+        {
+          "name": "Replace 3 elements at offset 0",
+          "input": ["a","b","c"],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,3,"x","y"]],
+          "output": ["x","y"]
+        },
+        {
+          "name": "Delete 0 elements at offset 1",
+          "input": ["a","b","c"],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,0]],
+          "output": ["a","b","c"]
+        },
+        {
+          "name": "Replace 0 elements at offset 1",
+          "input": ["a","b","c"],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,0,"x","y"]],
+          "output": ["a","x","y","b","c"]
+        },
+        {
+          "name": "Delete 1 elements at offset 1",
+          "input": ["a","b","c"],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,1]],
+          "output": ["a","c"]
+        },
+        {
+          "name": "Replace 1 elements at offset 1",
+          "input": ["a","b","c"],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,1,"x","y"]],
+          "output": ["a","x","y","c"]
+        },
+        {
+          "name": "Delete 2 elements at offset 1",
+          "input": ["a","b","c"],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,2]],
+          "output": ["a"]
+        },
+        {
+          "name": "Replace 2 elements at offset 1",
+          "input": ["a","b","c"],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,2,"x","y"]],
+          "output": ["a","x","y"]
+        },
+        {
+          "name": "Delete 0 elements at offset 2",
+          "input": ["a","b","c"],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",2,0]],
+          "output": ["a","b","c"]
+        },
+        {
+          "name": "Replace 0 elements at offset 2",
+          "input": ["a","b","c"],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",2,0,"x","y"]],
+          "output": ["a","b","x","y","c"]
+        },
+        {
+          "name": "Delete 1 elements at offset 2",
+          "input": ["a","b","c"],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",2,1]],
+          "output": ["a","b"]
+        },
+        {
+          "name": "Replace 1 elements at offset 2",
+          "input": ["a","b","c"],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",2,1,"x","y"]],
+          "output": ["a","b","x","y"]
+        },
+        {
+          "name": "Delete 0 elements at offset 3",
+          "input": ["a","b","c"],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",3,0]],
+          "output": ["a","b","c"]
+        },
+        {
+          "name": "Replace 0 elements at offset 3",
+          "input": ["a","b","c"],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",3,0,"x","y"]],
+          "output": ["a","b","c","x","y"]
+        },
+        {
+          "name": "Empty splice on an empty array is a no-op",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,0]],
+          "output": []
+        }
+      ]
+    },
+    {
+      "name": "Append and negative spans",
+      "desc": "False, null, and negative offset/count forms normalize according to SPLICE rules.",
+      "tests": [
+        {
+          "name": "Append using false",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",false,0,3,4]],
+          "output": [1,2,3,4]
+        },
+        {
+          "name": "Append to an empty array using false",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",false,0,1]],
+          "output": [1]
+        },
+        {
+          "name": "Null count at the append position removes nothing",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",false,null,3]],
+          "output": [1,2,3]
+        },
+        {
+          "name": "Null count deletes the tail from offset 0",
+          "input": ["a","b","c"],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,null,"x"]],
+          "output": ["x"]
+        },
+        {
+          "name": "Null count deletes the tail from offset 1",
+          "input": ["a","b","c"],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,null,"x"]],
+          "output": ["a","x"]
+        },
+        {
+          "name": "Null count deletes the tail from offset 2",
+          "input": ["a","b","c"],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",2,null,"x"]],
+          "output": ["a","b","x"]
+        },
+        {
+          "name": "Null count deletes the tail from offset 3",
+          "input": ["a","b","c"],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",3,null,"x"]],
+          "output": ["a","b","c","x"]
+        },
+        {
+          "name": "Negative offset selects the final element",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",-1,1,9]],
+          "output": [1,2,9]
+        },
+        {
+          "name": "Negative offset selects the first element",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",-3,1,9]],
+          "output": [9,2,3]
+        },
+        {
+          "name": "Negative offset combines with a null count",
+          "input": [1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",-2,null,9]],
+          "output": [1,2,9]
+        },
+        {
+          "name": "Negative count leaves the last element",
+          "desc": "For length four, count -1 specifies limiting offset three, so two elements are removed.",
+          "input": [1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,-1,9]],
+          "output": [1,9,4]
+        },
+        {
+          "name": "Negative count leaves the last two elements",
+          "input": [1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,-2,9]],
+          "output": [9,3,4]
+        },
+        {
+          "name": "Negative count can normalize to zero",
+          "input": [1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",2,-2,9]],
+          "output": [1,2,9,3,4]
+        },
+        {
+          "name": "Negative count equal to minus length inserts at zero",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,-3,9]],
+          "output": [9,1,2,3]
+        },
+        {
+          "name": "Combine negative offset and negative count",
+          "input": [1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",-3,-1,9]],
+          "output": [1,9,4]
+        }
+      ]
+    },
+    {
+      "name": "Operand evaluation and ownership",
+      "desc": "All operands see the original target; inserted values remain isolated and later actions see completed edits.",
+      "tests": [
+        {
+          "name": "Compute the destination path from input",
+          "input": {"index":1,"list":[1,2,3]},
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list",["NODE","index"]],1,9]],
+          "output": {"index":1,"list":[1,9,3]}
+        },
+        {
+          "name": "Expand a computed path array",
+          "input": {"path":["list",1],"list":[1,2,3]},
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE",["NODE","path"]],1,9]],
+          "output": {"path":["list",1],"list":[1,9,3]}
+        },
+        {
+          "name": "Compute a positive count from input",
+          "input": {"count":2,"list":[1,2,3]},
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list",0],["NODE","count"],9]],
+          "output": {"count":2,"list":[9,3]}
+        },
+        {
+          "name": "Compute a null count from input",
+          "input": {"count":null,"list":[1,2,3]},
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list",1],["NODE","count"],9]],
+          "output": {"count":null,"list":[1,9]}
+        },
+        {
+          "name": "Compute a negative count from input",
+          "input": {"count":-1,"list":[1,2,3,4]},
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list",1],["NODE","count"],9]],
+          "output": {"count":-1,"list":[1,9,4]}
+        },
+        {
+          "name": "Read replacements from positions that will be removed",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,3,["NODE",2],["NODE",1],["NODE",0]]],
+          "output": [3,2,1]
+        },
+        {
+          "name": "All replacements see the original array",
+          "desc": "The second replacement still reads original index zero, even though it is being replaced.",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,1,["NODE",1],["NODE",0]]],
+          "output": [2,1,2]
+        },
+        {
+          "name": "Count expressions see the original array",
+          "input": [2,"a","b","c"],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,["NODE",0],"x"]],
+          "output": ["x","b","c"]
+        },
+        {
+          "name": "Insert a snapshot of the target array",
+          "desc": "Referencing the target array creates a logical copy of its pre-edit value rather than a cycle.",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,0,["NODE"]]],
+          "output": [1,[1,2],2]
+        },
+        {
+          "name": "Replacement arrays are not expanded even when returned by SLICE",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,1,["SLICE",["NODE"],0,2]]],
+          "output": [1,[1,2],3]
+        },
+        {
+          "name": "Repeated references produce independently editable inserted subtrees",
+          "input": [{"x":1}],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE"],["SPLICE",0,1,["NODE",0],["NODE",0]],["COPY",9,["NODE",0,"x"]]]],
+          "output": [{"x":9},{"x":1}]
+        },
+        {
+          "name": "Inserted subtrees remain independent of their source",
+          "input": {"source":{"x":[1,2]},"list":[]},
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE"],["SPLICE",["NODE","list",0],0,["NODE","source"]],["COPY",9,["NODE","list",0,"x",0]]]],
+          "output": {"source":{"x":[1,2]},"list":[{"x":[9,2]}]}
+        },
+        {
+          "name": "Later actions see the updated length and indices",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE"],["SPLICE",0,2],["SPLICE",false,0,4],["SPLICE",0,1,9]]],
+          "output": [9,4]
+        }
+      ]
+    },
+    {
+      "name": "Paths and namespaces",
+      "desc": "Nested paths, arbitrary names, numeric identifiers, AT, STASH, and constants select the intended array.",
+      "tests": [
+        {
+          "name": "Splice a nested array without changing its siblings",
+          "input": {"a":{"list":[1,2,3],"keep":true},"b":[4]},
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","a","list",1],1,9]],
+          "output": {"a":{"list":[1,9,3],"keep":true},"b":[4]}
+        },
+        {
+          "name": "Splice an array selected by AT",
+          "input": {"list":[1,2],"keep":3},
+          "jgraft": ["JGRAFT",{"v":1},["AT","list",["SPLICE",0,1,9]]],
+          "output": {"list":[9,2],"keep":3}
+        },
+        {
+          "name": "Splice an array under an empty property name",
+          "input": {"":[1,2]},
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","",0],1,9]],
+          "output": {"":[9,2]}
+        },
+        {
+          "name": "Splice an array under a __proto__ property",
+          "needProto": true,
+          "input": {"__proto__":[1,2]},
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","__proto__",0],1,9]],
+          "output": {"__proto__":[9,2]}
+        },
+        {
+          "name": "Use numeric SPLICE and NODE identifiers",
+          "input": {"list":[1,2]},
+          "jgraft": ["JGRAFT",{"v":1},[5,[0,"list",1],1,9]],
+          "output": {"list":[1,9]}
+        },
+        {
+          "name": "Splice a STASH array independently of its copied source",
+          "input": {"list":[1,2,3]},
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE"],["COPY",["NODE","list"],["STASH",0]],["SPLICE",["STASH",0,1],1,9,8],["COPY",["STASH",0],"result"]]],
+          "output": {"list":[1,2,3],"result":[1,9,8,3]}
+        },
+        {
+          "name": "Insert constant data without modifying the constant",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1,"const":["data",{"x":1}]},["AT",["NODE"],["SPLICE",0,0,["CONST","data"]],["COPY",9,["NODE",0,"x"]],["SPLICE",false,0,["CONST","data"]]]],
+          "output": [{"x":9},{"x":1}]
+        }
+      ]
+    },
+    {
+      "name": "Invalid targets and spans",
+      "desc": "Only valid array elements and in-range spans can be spliced; missing parents are not created.",
+      "tests": [
+        {
+          "name": "Cannot splice non-array input null",
+          "desc": "The destination must identify an array position; SPLICE does not convert the target into an array.",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,0,1]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Cannot splice non-array input false",
+          "desc": "The destination must identify an array position; SPLICE does not convert the target into an array.",
+          "input": false,
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,0,1]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Cannot splice non-array input 7",
+          "desc": "The destination must identify an array position; SPLICE does not convert the target into an array.",
+          "input": 7,
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,0,1]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Cannot splice non-array input \"text\"",
+          "desc": "The destination must identify an array position; SPLICE does not convert the target into an array.",
+          "input": "text",
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,0,1]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Cannot splice non-array input {}",
+          "desc": "The destination must identify an array position; SPLICE does not convert the target into an array.",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,0,1]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Object property holding an array is not an array element",
+          "desc": "The final path component must address an element of the array, such as NODE list 0.",
+          "input": {"list":[1,2]},
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE","list",1,9]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Object property holding a scalar is not an array element",
+          "desc": "Array-element paths are required even for zero deletion counts.",
+          "input": {"value":1},
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE","value",0,9]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Missing array parents are not auto-vivified",
+          "desc": "SPLICE requires an existing array rather than creating the path.",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list",0],0,9]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Cannot descend through a scalar parent",
+          "desc": "Resolving the destination may not convert a scalar to an array.",
+          "input": {"list":1},
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list",0],0,9]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Cannot use a numeric-looking string as an array selector",
+          "desc": "Only integer selectors and the false append alias address array positions.",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE","0",1,9]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Cannot splice beyond the array length",
+          "desc": "SPLICE does not clamp the offset or create a hole.",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",3,0,9]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Cannot splice before the beginning",
+          "desc": "A negative offset is invalid when its alias resolves below zero.",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",-3,0,9]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Cannot remove more elements than remain",
+          "desc": "The count must not exceed length minus offset; it is not clamped.",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,2]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Cannot remove elements at the append position",
+          "desc": "Only a normalized zero count is valid at length.",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",false,1]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Negative count may not end before the offset",
+          "desc": "The limiting offset is one, which precedes the starting offset two.",
+          "input": [1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",2,-3]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Negative count may not end before the array",
+          "desc": "A limiting offset below zero is invalid.",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,-3]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Negative count is not clamped at an empty array",
+          "desc": "The normalized count is negative; this graft can succeed on longer arrays.",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,-1]],
+          "errors": {"INVALID_TARGET":true}
+        }
+      ]
+    },
+    {
+      "name": "Operand and syntax validation",
+      "desc": "Count and selector types, path structure, arity, and replacement expressions must be valid.",
+      "tests": [
+        {
+          "name": "Reject literal count true",
+          "desc": "A count must be an integer or null. A minimalist evaluator can report INVALID_OPERAND; static analysis can reject the intrinsic type violation as INVALID_GRAFT.",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,true]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject literal count false",
+          "desc": "A count must be an integer or null. A minimalist evaluator can report INVALID_OPERAND; static analysis can reject the intrinsic type violation as INVALID_GRAFT.",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,false]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject literal count 1.5",
+          "desc": "A count must be an integer or null. A minimalist evaluator can report INVALID_OPERAND; static analysis can reject the intrinsic type violation as INVALID_GRAFT.",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,1.5]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject literal count \"1\"",
+          "desc": "A count must be an integer or null. A minimalist evaluator can report INVALID_OPERAND; static analysis can reject the intrinsic type violation as INVALID_GRAFT.",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,"1"]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject literal count {}",
+          "desc": "A count must be an integer or null. A minimalist evaluator can report INVALID_OPERAND; static analysis can reject the intrinsic type violation as INVALID_GRAFT.",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,{}]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject literal count [[]]",
+          "desc": "A count must be an integer or null. A minimalist evaluator can report INVALID_OPERAND; static analysis can reject the intrinsic type violation as INVALID_GRAFT.",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,[[]]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject computed count true",
+          "desc": "The count expression is valid but its input-dependent result is neither an integer nor null.",
+          "input": {"count":true,"list":[1,2]},
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list",0],["NODE","count"]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Reject computed count false",
+          "desc": "The count expression is valid but its input-dependent result is neither an integer nor null.",
+          "input": {"count":false,"list":[1,2]},
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list",0],["NODE","count"]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Reject computed count 1.5",
+          "desc": "The count expression is valid but its input-dependent result is neither an integer nor null.",
+          "input": {"count":1.5,"list":[1,2]},
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list",0],["NODE","count"]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Reject computed count \"1\"",
+          "desc": "The count expression is valid but its input-dependent result is neither an integer nor null.",
+          "input": {"count":"1","list":[1,2]},
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list",0],["NODE","count"]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Reject computed count {}",
+          "desc": "The count expression is valid but its input-dependent result is neither an integer nor null.",
+          "input": {"count":{},"list":[1,2]},
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list",0],["NODE","count"]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Reject computed count []",
+          "desc": "The count expression is valid but its input-dependent result is neither an integer nor null.",
+          "input": {"count":[],"list":[1,2]},
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list",0],["NODE","count"]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Reject literal array selector true",
+          "desc": "Literal null, true, and fractional selectors are invalid paths. Half-index destinations are specific to MOVE.",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE",true],0,9]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject literal array selector null",
+          "desc": "Literal null, true, and fractional selectors are invalid paths. Half-index destinations are specific to MOVE.",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE",null],0,9]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject literal array selector 0.5",
+          "desc": "Literal null, true, and fractional selectors are invalid paths. Half-index destinations are specific to MOVE.",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE",0.5],0,9]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject computed array selector null",
+          "desc": "A computed selector has an invalid type; the valid graft can succeed on other input values.",
+          "input": {"index":null,"list":[1,2]},
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list",["NODE","index"]],0,9]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Reject computed array selector true",
+          "desc": "A computed selector has an invalid type; the valid graft can succeed on other input values.",
+          "input": {"index":true,"list":[1,2]},
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list",["NODE","index"]],0,9]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Reject computed array selector 0.5",
+          "desc": "A computed selector has an invalid type; the valid graft can succeed on other input values.",
+          "input": {"index":0.5,"list":[1,2]},
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list",["NODE","index"]],0,9]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Reject computed array selector {}",
+          "desc": "A computed selector has an invalid type; the valid graft can succeed on other input values.",
+          "input": {"index":{},"list":[1,2]},
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list",["NODE","index"]],0,9]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Reject nested arrays after one level of path expansion",
+          "desc": "Expanded path elements cannot themselves remain arrays.",
+          "input": {"path":[["list",0]],"list":[1]},
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE",["NODE","path"]],0,9]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Reject invalid destination structure {}",
+          "desc": "A splice destination is path context and must be a reference expression or an implicit NODE selector.",
+          "input": {"list":[1]},
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{},0,9]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject invalid destination structure [[\"list\",0]]",
+          "desc": "A splice destination is path context and must be a reference expression or an implicit NODE selector.",
+          "input": {"list":[1]},
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[["list",0]],0,9]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject invalid destination structure [\"LENGTH\",[\"NODE\"]]",
+          "desc": "A splice destination is path context and must be a reference expression or an implicit NODE selector.",
+          "input": {"list":[1]},
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["LENGTH",["NODE"]],0,9]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject a missing destination and count",
+          "desc": "SPLICE requires both a path and a count.",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE"]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject an omitted count",
+          "desc": "Omitting count does not imply null or zero.",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject an unescaped empty replacement array",
+          "desc": "Literal arrays in value context require an extra array wrapper.",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,0,[]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject an unknown replacement expression",
+          "desc": "An unescaped replacement array must name a defined expression.",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,0,["UNKNOWN"]]],
+          "errors": {"INVALID_GRAFT":true}
+        }
+      ]
+    },
+    {
+      "name": "Runtime errors and static diagnoses",
+      "desc": "Replacement evaluation failures abort the splice; permitted static diagnoses do not change explicit FAIL semantics.",
+      "tests": [
+        {
+          "name": "Cannot read a missing replacement source",
+          "desc": "Every replacement is evaluated even when the removal count is zero.",
+          "input": {"list":[1]},
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list",0],0,["NODE","missing"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Cannot read an append position as a replacement",
+          "desc": "Replacement references must exist in the original array.",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,1,["NODE",false]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Later replacement failure aborts the splice",
+          "desc": "All replacements must evaluate successfully before any alteration. No partial-result shape is mandated.",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,2,["NODE",1],["NODE",2]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Missing count reference is INVALID_TARGET",
+          "desc": "Reading an absent property fails before count validation.",
+          "input": {"list":[1]},
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list",0],["NODE","missing"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Intentional failure in count is not upgraded",
+          "desc": "Explicit FAIL expressions remain INVALID_TARGET even when known statically.",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,["FAIL"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Intentional failure in a replacement is not upgraded",
+          "desc": "Explicit FAIL expressions remain INVALID_TARGET.",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,1,["FAIL"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Intrinsically failing replacement may be diagnosed statically",
+          "desc": "LENGTH of a number always fails, independently of the input array.",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,1,["LENGTH",5]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Previous replacement action can prove a range failure",
+          "desc": "The first action guarantees an empty array, so the positive removal count can never succeed.",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE"],["COPY",[[]],["NODE"]],["SPLICE",0,1]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Literal constant count expression can be rejected statically",
+          "desc": "NOT true always yields false, which is an invalid count rather than zero.",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,["NOT",true]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Cannot splice a read-only constant array",
+          "desc": "CONST is read-only; a write attempt is an invalid operand that may be rejected statically.",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["list",[[1,2]]]},["SPLICE",["CONST","list",0],1,9]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        }
+      ]
+    },
+    {
+      "name": "SPLIT metadata",
+      "desc": "Deletion, replacement, insertion, and direct references preserve or derive trimming and separators as specified.",
+      "tests": [
+        {
+          "name": "Deleting elements also deletes their SPLIT metadata",
+          "input": " a , b , c ",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","trim":" "},["SPLICE",1,1]]],
+          "output": " a , c "
+        },
+        {
+          "name": "Splice replacement receives adjacent trimming rather than overwritten trimming",
+          "desc": "Replacement is removal followed by insertion. The new value inherits preceding left trimming and has no right trimming.",
+          "input": " a , b , c ",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","trim":" "},["SPLICE",1,1,"x"]]],
+          "output": " a , x, c "
+        },
+        {
+          "name": "Inserting at the start receives no left or right trimming",
+          "input": " a , b ",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","trim":" "},["SPLICE",0,0,"x"]]],
+          "output": "x, a , b "
+        },
+        {
+          "name": "Multiple new elements inherit left trimming without right trimming",
+          "input": " a , b ",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","trim":" "},["SPLICE",1,0,"x","y"]]],
+          "output": " a , x, y, b "
+        },
+        {
+          "name": "Appending uses adjacent SPLIT trimming",
+          "input": " a , b ",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","trim":" "},["SPLICE",false,0,"x"]]],
+          "output": " a , b , x"
+        },
+        {
+          "name": "Direct replacement reference carries same-origin trimming",
+          "input": " a , b ",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","trim":" "},["SPLICE",1,0,["NODE",0]]]],
+          "output": " a , a , b "
+        },
+        {
+          "name": "Derived string replacement receives adjacent trimming",
+          "desc": "A function derived from a reference does not preserve source element metadata.",
+          "input": " a , b ",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","trim":" "},["SPLICE",1,0,["CONCAT",["NODE",0],"x"]]]],
+          "output": " a , ax, b "
+        },
+        {
+          "name": "Replacing the entire array drops old trimming metadata",
+          "input": " a , b ",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","trim":" "},["SPLICE",0,null,"x"]]],
+          "output": "x"
+        },
+        {
+          "name": "Deleting every split element produces an empty string",
+          "input": " a , b ",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","trim":" "},["SPLICE",0,null]]],
+          "output": ""
+        },
+        {
+          "name": "Deleting a value preserves the surviving variable separators",
+          "input": "a;b,c",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":["ANY",",",";"],"default":","},["SPLICE",1,1]]],
+          "output": "a;c"
+        },
+        {
+          "name": "Inserted values inherit the preceding separator",
+          "input": "a;b,c",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":["ANY",",",";"],"default":","},["SPLICE",1,0,"x"]]],
+          "output": "a;x;b,c"
+        },
+        {
+          "name": "Inserted first value inherits the following separator",
+          "input": "a;b,c",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":["ANY",",",";"],"default":","},["SPLICE",0,0,"x"]]],
+          "output": "x;a;b,c"
+        },
+        {
+          "name": "Direct reference carries its own variable separator",
+          "input": "a;b,c",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":["ANY",",",";"],"default":","},["SPLICE",1,0,["NODE",1]]]],
+          "output": "a;b,b,c"
+        },
+        {
+          "name": "Replacing all values uses the default separator",
+          "input": "a;b,c",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":["ANY",",",";"],"default":","},["SPLICE",0,null,"x","y"]]],
+          "output": "x,y"
+        },
+        {
+          "name": "Restore a removed trailing empty element",
+          "input": "a\nb\n",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT","\n",["SPLICE",-1,1],["SPLICE",false,0,""]]],
+          "output": "a\nb\n"
+        },
+        {
+          "name": "Split array cannot rejoin a non-string replacement",
+          "desc": "SPLICE accepts any JSON replacement, but the enclosing SPLIT requires strings when rejoining. Static analysis may prove the inserted number makes this graft fail on every input.",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",",",["SPLICE",0,1,7]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Replacing every element with references preserves their metadata",
+          "desc": "Replacement values and their source metadata are captured before the original elements are removed.",
+          "input": " a , b ",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","trim":" "},["SPLICE",0,null,["NODE",1],["NODE",0]]]],
+          "output": " b , a "
+        },
+        {
+          "name": "Splice can introduce metadata into a fresh array",
+          "desc": "A target array without metadata adopts metadata from directly referenced split elements.",
+          "input": {"source":" a ,b","result":[]},
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE"],["COPY",[[]],["STASH",0]],["AT","source",["SPLIT",{"sep":",","trim":" "},["SPLICE",["STASH",0,0],0,["NODE",0],["NODE",1]]]],["COPY",["JOIN",{"sep":",","trim":" "},["STASH",0]],"result"]]],
+          "output": {"source":" a ,b","result":" a ,b"}
+        },
+        {
+          "name": "Metadata introduced into a populated array also covers existing elements",
+          "desc": "Existing elements receive adjacent metadata when referenced replacements introduce a metadata origin.",
+          "input": {"source":" a ","result":null},
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE"],["COPY",[["old"]],["STASH",0]],["AT","source",["SPLIT",{"sep":",","trim":" "},["SPLICE",["STASH",0,false],0,["NODE",0]]]],["COPY",["JOIN",{"sep":",","trim":" "},["STASH",0]],"result"]]],
+          "output": {"source":" a ","result":"old, a "}
+        },
+        {
+          "name": "Different SPLIT origin uses adjacent destination metadata",
+          "desc": "A reference from another split does not carry its right trimming into the target array.",
+          "input": " a , b ",
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE"],["COPY",["SPLIT",{"sep":",","trim":" "}," x "],["STASH",0]],["SPLIT",{"sep":",","trim":" "},["SPLICE",1,0,["STASH",0,0]]]]],
+          "output": " a , x, b "
+        }
+      ]
     }
   ]
 }

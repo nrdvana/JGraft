@@ -58,7 +58,25 @@ The top level of each file is structured as:
     { version:      // version of JGraft required
       name:         // short phrase describing collection
       desc:         // describes what the collection have in common
-      tests: [      // one or more test structures
+      tests: [      // one or more cases or groups
         ...
       ]
     }
+
+Entries in a `tests` array may also be groups:
+
+    { name:         // short phrase describing the group
+      desc:         // optional explanation of the group's purpose
+      tests: [      // one or more cases or nested groups
+        ...
+      ]
+    }
+
+Groups contain only `name`, optional `desc`, and `tests`. They provide
+structure and documentation; inputs, grafts, expected outcomes, resource limits,
+and compatibility flags remain explicit on each case and are never inherited.
+Flat collections remain valid. Collection and group names provide context for
+the shorter names of their children; names should be unique among siblings.
+Collection descriptions explain the overall coverage. Group descriptions explain
+shared setups or related assertions, and case descriptions explain individual
+details.

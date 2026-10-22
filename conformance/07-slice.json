@@ -4,1627 +4,1805 @@
   "desc": "Array/string spans; positive and negative positional forms; range-object derivation, computed fields and reference paths; Unicode codepoint boundaries and flagged lone-surrogate cases; copying, SPLIT metadata, pending edits, numeric IDs, malformed syntax, invalid targets and operands, and match-context error handling. Literal operand faults and intrinsically impossible ranges permit stronger static diagnoses.",
   "tests": [
     {
-      "name": "array offset 0, omitted count",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0], ["NODE"]]],
-      "output": [0, 1, 2, 3, 4]
-    },
-    {
-      "name": "array offset 0, count 0",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0, 0], ["NODE"]]],
-      "output": []
-    },
-    {
-      "name": "array offset 0, count 1",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0, 1], ["NODE"]]],
-      "output": [0]
-    },
-    {
-      "name": "array offset 0, count 2",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0, 2], ["NODE"]]],
-      "output": [0, 1]
-    },
-    {
-      "name": "array offset 0, count -1",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0, -1], ["NODE"]]],
-      "output": [0, 1, 2, 3]
-    },
-    {
-      "name": "array offset 0, count -5",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0, -5], ["NODE"]]],
-      "output": []
-    },
-    {
-      "name": "array offset 1, omitted count",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 1], ["NODE"]]],
-      "output": [1, 2, 3, 4]
-    },
-    {
-      "name": "array offset 1, count 0",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 1, 0], ["NODE"]]],
-      "output": []
-    },
-    {
-      "name": "array offset 1, count 1",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 1, 1], ["NODE"]]],
-      "output": [1]
-    },
-    {
-      "name": "array offset 1, count 2",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 1, 2], ["NODE"]]],
-      "output": [1, 2]
-    },
-    {
-      "name": "array offset 1, count -1",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 1, -1], ["NODE"]]],
-      "output": [1, 2, 3]
-    },
-    {
-      "name": "array offset 1, count -5",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 1, -5], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "array offset 5, omitted count",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 5], ["NODE"]]],
-      "output": []
-    },
-    {
-      "name": "array offset 5, count 0",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 5, 0], ["NODE"]]],
-      "output": []
-    },
-    {
-      "name": "array offset 5, count 1",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 5, 1], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "array offset 5, count 2",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 5, 2], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "array offset 5, count -1",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 5, -1], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "array offset 5, count -5",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 5, -5], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "array offset -1, omitted count",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], -1], ["NODE"]]],
-      "output": [4]
-    },
-    {
-      "name": "array offset -1, count 0",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], -1, 0], ["NODE"]]],
-      "output": []
-    },
-    {
-      "name": "array offset -1, count 1",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], -1, 1], ["NODE"]]],
-      "output": [4]
-    },
-    {
-      "name": "array offset -1, count 2",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], -1, 2], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "array offset -1, count -1",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], -1, -1], ["NODE"]]],
-      "output": []
-    },
-    {
-      "name": "array offset -1, count -5",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], -1, -5], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "array offset -5, omitted count",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], -5], ["NODE"]]],
-      "output": [0, 1, 2, 3, 4]
-    },
-    {
-      "name": "array offset -5, count 0",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], -5, 0], ["NODE"]]],
-      "output": []
-    },
-    {
-      "name": "array offset -5, count 1",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], -5, 1], ["NODE"]]],
-      "output": [0]
-    },
-    {
-      "name": "array offset -5, count 2",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], -5, 2], ["NODE"]]],
-      "output": [0, 1]
-    },
-    {
-      "name": "array offset -5, count -1",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], -5, -1], ["NODE"]]],
-      "output": [0, 1, 2, 3]
-    },
-    {
-      "name": "array offset -5, count -5",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], -5, -5], ["NODE"]]],
-      "output": []
-    },
-    {
-      "name": "array range {}",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {}], ["NODE"]]],
-      "output": [0, 1, 2, 3, 4]
-    },
-    {
-      "name": "array range {\"ofs\":0}",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"ofs": 0}], ["NODE"]]],
-      "output": [0, 1, 2, 3, 4]
-    },
-    {
-      "name": "array range {\"ofs\":2}",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"ofs": 2}], ["NODE"]]],
-      "output": [2, 3, 4]
-    },
-    {
-      "name": "array range {\"ofs\":5}",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"ofs": 5}], ["NODE"]]],
-      "output": []
-    },
-    {
-      "name": "array range {\"len\":0}",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"len": 0}], ["NODE"]]],
-      "output": []
-    },
-    {
-      "name": "array range {\"len\":2}",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"len": 2}], ["NODE"]]],
-      "output": [0, 1]
-    },
-    {
-      "name": "array range {\"lim\":0}",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"lim": 0}], ["NODE"]]],
-      "output": []
-    },
-    {
-      "name": "array range {\"lim\":4}",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"lim": 4}], ["NODE"]]],
-      "output": [0, 1, 2, 3]
-    },
-    {
-      "name": "array range {\"ofs\":1,\"len\":2}",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"ofs": 1, "len": 2}], ["NODE"]]],
-      "output": [1, 2]
-    },
-    {
-      "name": "array range {\"ofs\":1,\"lim\":4}",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"ofs": 1, "lim": 4}], ["NODE"]]],
-      "output": [1, 2, 3]
-    },
-    {
-      "name": "array range {\"len\":2,\"lim\":4}",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"len": 2, "lim": 4}], ["NODE"]]],
-      "output": [2, 3]
-    },
-    {
-      "name": "array range {\"ofs\":1,\"len\":2,\"lim\":3}",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"ofs": 1, "len": 2, "lim": 3}], ["NODE"]]],
-      "output": [1, 2]
-    },
-    {
-      "name": "array range {\"ofs\":5,\"len\":0,\"lim\":5}",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"ofs": 5, "len": 0, "lim": 5}], ["NODE"]]],
-      "output": []
-    },
-    {
-      "name": "array rejects out-of-bounds [-6,0]",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], -6, 0], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "array rejects out-of-bounds [6,0]",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 6, 0], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "array rejects out-of-bounds [0,6]",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0, 6], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "array rejects out-of-bounds [4,2]",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 4, 2], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "array rejects out-of-bounds [0,-6]",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0, -6], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "array rejects range {\"ofs\":6}",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"ofs": 6}], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "array rejects range {\"len\":6}",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"len": 6}], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "array rejects range {\"lim\":6}",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"lim": 6}], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "array rejects range {\"ofs\":4,\"len\":2}",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"ofs": 4, "len": 2}], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "array rejects range {\"ofs\":3,\"lim\":2}",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"ofs": 3, "lim": 2}], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "array rejects range {\"len\":4,\"lim\":2}",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"len": 4, "lim": 2}], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "array rejects literal offset null",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], null, 1], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "array rejects literal count null",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0, null], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "array rejects literal offset true",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], true, 1], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "array rejects literal count true",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0, true], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "array rejects literal offset \"1\"",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], "1", 1], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "array rejects literal count \"1\"",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0, "1"], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "array rejects literal offset 0.5",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0.5, 1], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "array rejects literal count 0.5",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0, 0.5], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "array rejects literal offset []",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], [[]], 1], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "array rejects literal count []",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0, [[]]], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "array rejects literal offset {}",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], {}, 1], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "array rejects literal count {}",
-      "input": [0, 1, 2, 3, 4],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0, {}], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "string offset 0, omitted count",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0], ["NODE"]]],
-      "output": "abcde"
-    },
-    {
-      "name": "string offset 0, count 0",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0, 0], ["NODE"]]],
-      "output": ""
-    },
-    {
-      "name": "string offset 0, count 1",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0, 1], ["NODE"]]],
-      "output": "a"
-    },
-    {
-      "name": "string offset 0, count 2",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0, 2], ["NODE"]]],
-      "output": "ab"
-    },
-    {
-      "name": "string offset 0, count -1",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0, -1], ["NODE"]]],
-      "output": "abcd"
-    },
-    {
-      "name": "string offset 0, count -5",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0, -5], ["NODE"]]],
-      "output": ""
-    },
-    {
-      "name": "string offset 1, omitted count",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 1], ["NODE"]]],
-      "output": "bcde"
-    },
-    {
-      "name": "string offset 1, count 0",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 1, 0], ["NODE"]]],
-      "output": ""
-    },
-    {
-      "name": "string offset 1, count 1",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 1, 1], ["NODE"]]],
-      "output": "b"
-    },
-    {
-      "name": "string offset 1, count 2",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 1, 2], ["NODE"]]],
-      "output": "bc"
-    },
-    {
-      "name": "string offset 1, count -1",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 1, -1], ["NODE"]]],
-      "output": "bcd"
-    },
-    {
-      "name": "string offset 1, count -5",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 1, -5], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "string offset 5, omitted count",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 5], ["NODE"]]],
-      "output": ""
-    },
-    {
-      "name": "string offset 5, count 0",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 5, 0], ["NODE"]]],
-      "output": ""
-    },
-    {
-      "name": "string offset 5, count 1",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 5, 1], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "string offset 5, count 2",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 5, 2], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "string offset 5, count -1",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 5, -1], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "string offset 5, count -5",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 5, -5], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "string offset -1, omitted count",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], -1], ["NODE"]]],
-      "output": "e"
-    },
-    {
-      "name": "string offset -1, count 0",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], -1, 0], ["NODE"]]],
-      "output": ""
-    },
-    {
-      "name": "string offset -1, count 1",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], -1, 1], ["NODE"]]],
-      "output": "e"
-    },
-    {
-      "name": "string offset -1, count 2",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], -1, 2], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "string offset -1, count -1",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], -1, -1], ["NODE"]]],
-      "output": ""
-    },
-    {
-      "name": "string offset -1, count -5",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], -1, -5], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "string offset -5, omitted count",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], -5], ["NODE"]]],
-      "output": "abcde"
-    },
-    {
-      "name": "string offset -5, count 0",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], -5, 0], ["NODE"]]],
-      "output": ""
-    },
-    {
-      "name": "string offset -5, count 1",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], -5, 1], ["NODE"]]],
-      "output": "a"
-    },
-    {
-      "name": "string offset -5, count 2",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], -5, 2], ["NODE"]]],
-      "output": "ab"
-    },
-    {
-      "name": "string offset -5, count -1",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], -5, -1], ["NODE"]]],
-      "output": "abcd"
-    },
-    {
-      "name": "string offset -5, count -5",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], -5, -5], ["NODE"]]],
-      "output": ""
-    },
-    {
-      "name": "string range {}",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {}], ["NODE"]]],
-      "output": "abcde"
-    },
-    {
-      "name": "string range {\"ofs\":0}",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"ofs": 0}], ["NODE"]]],
-      "output": "abcde"
-    },
-    {
-      "name": "string range {\"ofs\":2}",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"ofs": 2}], ["NODE"]]],
-      "output": "cde"
-    },
-    {
-      "name": "string range {\"ofs\":5}",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"ofs": 5}], ["NODE"]]],
-      "output": ""
-    },
-    {
-      "name": "string range {\"len\":0}",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"len": 0}], ["NODE"]]],
-      "output": ""
-    },
-    {
-      "name": "string range {\"len\":2}",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"len": 2}], ["NODE"]]],
-      "output": "ab"
-    },
-    {
-      "name": "string range {\"lim\":0}",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"lim": 0}], ["NODE"]]],
-      "output": ""
-    },
-    {
-      "name": "string range {\"lim\":4}",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"lim": 4}], ["NODE"]]],
-      "output": "abcd"
-    },
-    {
-      "name": "string range {\"ofs\":1,\"len\":2}",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"ofs": 1, "len": 2}], ["NODE"]]],
-      "output": "bc"
-    },
-    {
-      "name": "string range {\"ofs\":1,\"lim\":4}",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"ofs": 1, "lim": 4}], ["NODE"]]],
-      "output": "bcd"
-    },
-    {
-      "name": "string range {\"len\":2,\"lim\":4}",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"len": 2, "lim": 4}], ["NODE"]]],
-      "output": "cd"
-    },
-    {
-      "name": "string range {\"ofs\":1,\"len\":2,\"lim\":3}",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"ofs": 1, "len": 2, "lim": 3}], ["NODE"]]],
-      "output": "bc"
-    },
-    {
-      "name": "string range {\"ofs\":5,\"len\":0,\"lim\":5}",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"ofs": 5, "len": 0, "lim": 5}], ["NODE"]]],
-      "output": ""
-    },
-    {
-      "name": "string rejects out-of-bounds [-6,0]",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], -6, 0], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "string rejects out-of-bounds [6,0]",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 6, 0], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "string rejects out-of-bounds [0,6]",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0, 6], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "string rejects out-of-bounds [4,2]",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 4, 2], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "string rejects out-of-bounds [0,-6]",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0, -6], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "string rejects range {\"ofs\":6}",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"ofs": 6}], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "string rejects range {\"len\":6}",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"len": 6}], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "string rejects range {\"lim\":6}",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"lim": 6}], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "string rejects range {\"ofs\":4,\"len\":2}",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"ofs": 4, "len": 2}], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "string rejects range {\"ofs\":3,\"lim\":2}",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"ofs": 3, "lim": 2}], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "string rejects range {\"len\":4,\"lim\":2}",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"len": 4, "lim": 2}], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "string rejects literal offset null",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], null, 1], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "string rejects literal count null",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0, null], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "string rejects literal offset true",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], true, 1], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "string rejects literal count true",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0, true], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "string rejects literal offset \"1\"",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], "1", 1], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "string rejects literal count \"1\"",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0, "1"], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "string rejects literal offset 0.5",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0.5, 1], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "string rejects literal count 0.5",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0, 0.5], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "string rejects literal offset []",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], [[]], 1], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "string rejects literal count []",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0, [[]]], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "string rejects literal offset {}",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], {}, 1], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "string rejects literal count {}",
-      "input": "abcde",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0, {}], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "Empty array slice",
-      "input": [],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0, 0], ["NODE"]]],
-      "output": []
-    },
-    {
-      "name": "Empty array range",
-      "input": [],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {}], ["NODE"]]],
-      "output": []
-    },
-    {
-      "name": "Empty string slice",
-      "input": "",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0, 0], ["NODE"]]],
-      "output": ""
-    },
-    {
-      "name": "Empty string range",
-      "input": "",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {}], ["NODE"]]],
-      "output": ""
-    },
-    {
-      "name": "Unicode whole span: BMP and combining characters",
-      "input": "é́中",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0], ["NODE"]]],
-      "output": "é́中"
-    },
-    {
-      "name": "Unicode element 0: BMP and combining characters",
-      "input": "é́中",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0, 1], ["NODE"]]],
-      "output": "é"
-    },
-    {
-      "name": "Unicode element 1: BMP and combining characters",
-      "input": "é́中",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 1, 1], ["NODE"]]],
-      "output": "́"
-    },
-    {
-      "name": "Unicode element 2: BMP and combining characters",
-      "input": "é́中",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 2, 1], ["NODE"]]],
-      "output": "中"
-    },
-    {
-      "name": "Unicode last element: BMP and combining characters",
-      "input": "é́中",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], -1, 1], ["NODE"]]],
-      "output": "中"
-    },
-    {
-      "name": "Unicode whole span: one supplementary character",
-      "input": "😀",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0], ["NODE"]]],
-      "output": "😀"
-    },
-    {
-      "name": "Unicode element 0: one supplementary character",
-      "input": "😀",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0, 1], ["NODE"]]],
-      "output": "😀"
-    },
-    {
-      "name": "Unicode last element: one supplementary character",
-      "input": "😀",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], -1, 1], ["NODE"]]],
-      "output": "😀"
-    },
-    {
-      "name": "Unicode whole span: supplementary characters among BMP characters",
-      "input": "a😀b",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0], ["NODE"]]],
-      "output": "a😀b"
-    },
-    {
-      "name": "Unicode element 0: supplementary characters among BMP characters",
-      "input": "a😀b",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0, 1], ["NODE"]]],
-      "output": "a"
-    },
-    {
-      "name": "Unicode element 1: supplementary characters among BMP characters",
-      "input": "a😀b",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 1, 1], ["NODE"]]],
-      "output": "😀"
-    },
-    {
-      "name": "Unicode element 2: supplementary characters among BMP characters",
-      "input": "a😀b",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 2, 1], ["NODE"]]],
-      "output": "b"
-    },
-    {
-      "name": "Unicode last element: supplementary characters among BMP characters",
-      "input": "a😀b",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], -1, 1], ["NODE"]]],
-      "output": "b"
-    },
-    {
-      "name": "Unicode whole span: minimum and maximum supplementary codepoints",
-      "input": "𐀀􏿿",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0], ["NODE"]]],
-      "output": "𐀀􏿿"
-    },
-    {
-      "name": "Unicode element 0: minimum and maximum supplementary codepoints",
-      "input": "𐀀􏿿",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0, 1], ["NODE"]]],
-      "output": "𐀀"
-    },
-    {
-      "name": "Unicode element 1: minimum and maximum supplementary codepoints",
-      "input": "𐀀􏿿",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 1, 1], ["NODE"]]],
-      "output": "􏿿"
-    },
-    {
-      "name": "Unicode last element: minimum and maximum supplementary codepoints",
-      "input": "𐀀􏿿",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], -1, 1], ["NODE"]]],
-      "output": "􏿿"
-    },
-    {
-      "name": "Unicode whole span: supplementary musical symbol",
-      "input": "𝄞",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0], ["NODE"]]],
-      "output": "𝄞"
-    },
-    {
-      "name": "Unicode element 0: supplementary musical symbol",
-      "input": "𝄞",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0, 1], ["NODE"]]],
-      "output": "𝄞"
-    },
-    {
-      "name": "Unicode last element: supplementary musical symbol",
-      "input": "𝄞",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], -1, 1], ["NODE"]]],
-      "output": "𝄞"
-    },
-    {
-      "name": "Unicode whole span: lone high surrogate",
-      "input": "\ud800",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0], ["NODE"]]],
-      "output": "\ud800",
-      "needLoneSurrogate": true
-    },
-    {
-      "name": "Unicode element 0: lone high surrogate",
-      "input": "\ud800",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0, 1], ["NODE"]]],
-      "output": "\ud800",
-      "needLoneSurrogate": true
-    },
-    {
-      "name": "Unicode last element: lone high surrogate",
-      "input": "\ud800",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], -1, 1], ["NODE"]]],
-      "output": "\ud800",
-      "needLoneSurrogate": true
-    },
-    {
-      "name": "Unicode whole span: lone low surrogate",
-      "input": "\udc00",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0], ["NODE"]]],
-      "output": "\udc00",
-      "needLoneSurrogate": true
-    },
-    {
-      "name": "Unicode element 0: lone low surrogate",
-      "input": "\udc00",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0, 1], ["NODE"]]],
-      "output": "\udc00",
-      "needLoneSurrogate": true
-    },
-    {
-      "name": "Unicode last element: lone low surrogate",
-      "input": "\udc00",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], -1, 1], ["NODE"]]],
-      "output": "\udc00",
-      "needLoneSurrogate": true
-    },
-    {
-      "name": "Unicode whole span: reversed surrogates",
-      "input": "\udc00\ud800",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0], ["NODE"]]],
-      "output": "\udc00\ud800",
-      "needLoneSurrogate": true
-    },
-    {
-      "name": "Unicode element 0: reversed surrogates",
-      "input": "\udc00\ud800",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0, 1], ["NODE"]]],
-      "output": "\udc00",
-      "needLoneSurrogate": true
-    },
-    {
-      "name": "Unicode element 1: reversed surrogates",
-      "input": "\udc00\ud800",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 1, 1], ["NODE"]]],
-      "output": "\ud800",
-      "needLoneSurrogate": true
-    },
-    {
-      "name": "Unicode last element: reversed surrogates",
-      "input": "\udc00\ud800",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], -1, 1], ["NODE"]]],
-      "output": "\ud800",
-      "needLoneSurrogate": true
-    },
-    {
-      "name": "Unicode whole span: surrogates separated by BMP text",
-      "input": "\ud800x\udc00",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0], ["NODE"]]],
-      "output": "\ud800x\udc00",
-      "needLoneSurrogate": true
-    },
-    {
-      "name": "Unicode element 0: surrogates separated by BMP text",
-      "input": "\ud800x\udc00",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0, 1], ["NODE"]]],
-      "output": "\ud800",
-      "needLoneSurrogate": true
-    },
-    {
-      "name": "Unicode element 1: surrogates separated by BMP text",
-      "input": "\ud800x\udc00",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 1, 1], ["NODE"]]],
-      "output": "x",
-      "needLoneSurrogate": true
-    },
-    {
-      "name": "Unicode element 2: surrogates separated by BMP text",
-      "input": "\ud800x\udc00",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 2, 1], ["NODE"]]],
-      "output": "\udc00",
-      "needLoneSurrogate": true
-    },
-    {
-      "name": "Unicode last element: surrogates separated by BMP text",
-      "input": "\ud800x\udc00",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], -1, 1], ["NODE"]]],
-      "output": "\udc00",
-      "needLoneSurrogate": true
-    },
-    {
-      "name": "Unicode whole span: lone and paired surrogates",
-      "input": "\ud800😀\udc00",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0], ["NODE"]]],
-      "output": "\ud800😀\udc00",
-      "needLoneSurrogate": true
-    },
-    {
-      "name": "Unicode element 0: lone and paired surrogates",
-      "input": "\ud800😀\udc00",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0, 1], ["NODE"]]],
-      "output": "\ud800",
-      "needLoneSurrogate": true
-    },
-    {
-      "name": "Unicode element 1: lone and paired surrogates",
-      "input": "\ud800😀\udc00",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 1, 1], ["NODE"]]],
-      "output": "😀",
-      "needLoneSurrogate": true
-    },
-    {
-      "name": "Unicode element 2: lone and paired surrogates",
-      "input": "\ud800😀\udc00",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 2, 1], ["NODE"]]],
-      "output": "\udc00",
-      "needLoneSurrogate": true
-    },
-    {
-      "name": "Unicode last element: lone and paired surrogates",
-      "input": "\ud800😀\udc00",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], -1, 1], ["NODE"]]],
-      "output": "\udc00",
-      "needLoneSurrogate": true
-    },
-    {
-      "name": "Numeric SLICE expression ID",
-      "input": [0, 1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", [57, ["NODE"], 1, 1], ["NODE"]]],
-      "output": [1]
-    },
-    {
-      "name": "Negative string limit uses codepoint length",
-      "input": "a😀b",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 1, -1], ["NODE"]]],
-      "output": "😀"
-    },
-    {
-      "name": "Empty span at a supplementary string end",
-      "input": "a😀b",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 3, 0], ["NODE"]]],
-      "output": ""
-    },
-    {
-      "name": "Native code-unit length is not a valid logical endpoint",
-      "input": "a😀b",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 4, 0], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "Slice a literal array",
-      "input": null,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", [[0, 1, 2]], 1, 1], ["NODE"]]],
-      "output": [1]
-    },
-    {
-      "name": "Slice a literal string",
-      "input": null,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", "abcd", 1, 2], ["NODE"]]],
-      "output": "bc"
-    },
-    {
-      "name": "Slice a constructed array",
-      "input": {"x": 7},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", [[["NODE", "x"], 2, 3]], 0, 2], ["NODE"]]],
-      "output": [7, 2]
-    },
-    {
-      "name": "Slice nested values literally",
-      "input": [{"x": [1, 2]}, ["IS", 1], null],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0, 2], ["NODE"]]],
-      "output": [{"x": [1, 2]}, ["IS", 1]]
-    },
-    {
-      "name": "Read a named reference",
-      "input": {"data": [0, 1, 2]},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE", "data"], 1, 1], ["NODE"]]],
-      "output": [1]
-    },
-    {
-      "name": "Read a constant operand",
-      "input": {},
-      "jgraft": ["JGRAFT", {"v": 1, "const": ["data", [[0, 1, 2]]]}, ["COPY", ["SLICE", ["CONST", "data"], 1, 1], ["NODE"]]],
-      "output": [1]
-    },
-    {
-      "name": "Expand a common slice expression",
-      "input": [0, 1, 2],
-      "jgraft": ["JGRAFT", {"v": 1, "expr": ["part", ["SLICE", ["NODE"], 1, 1]]}, ["COPY", ["EXPR", "part"], ["NODE"]]],
-      "output": [1]
-    },
-    {
-      "name": "Computed offset and count",
-      "input": {"data": [0, 1, 2, 3], "ofs": 1, "len": 2},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE", "data"], ["NODE", "ofs"], ["NODE", "len"]], ["NODE"]]],
-      "output": [1, 2]
-    },
-    {
-      "name": "Computed negative offset and limit",
-      "input": {"data": "a😀b", "ofs": -2, "len": -1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE", "data"], ["NODE", "ofs"], ["NODE", "len"]], ["NODE"]]],
-      "output": "😀"
-    },
-    {
-      "name": "Computed configuration fields",
-      "input": {"data": [0, 1, 2], "ofs": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"path": [["data"]], "ofs": ["NODE", "ofs"], "len": 1}], ["NODE"]]],
-      "output": [1]
-    },
-    {
-      "name": "Configuration path selects a nested array",
-      "input": {"a": {"data": [0, 1, 2]}},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"path": [["a", "data"]], "ofs": 1, "len": 1}], ["NODE"]]],
-      "output": [1]
-    },
-    {
-      "name": "Configuration path supports negative array selectors",
-      "input": {"data": [[0, 1, 2], [3, 4, 5]]},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"path": [["data", -1]], "ofs": 1, "len": 1}], ["NODE"]]],
-      "output": [4]
-    },
-    {
-      "name": "An empty configuration path selects the current node",
-      "input": [0, 1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"path": [[]], "ofs": 1, "len": 1}], ["NODE"]]],
-      "output": [1]
-    },
-    {
-      "name": "Configuration paths containing expression names remain literal",
-      "input": {"NODE": {"data": [1, 2]}},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"path": [["NODE", "data"]], "len": 1}], ["NODE"]]],
-      "output": [1]
-    },
-    {
-      "name": "Configuration path selects a Unicode string",
-      "input": {"text": "a😀b"},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"path": [["text"]], "ofs": 1, "lim": 2}], ["NODE"]]],
-      "output": "😀"
-    },
-    {
-      "name": "Configuration path can read an own __proto__ property",
-      "needProto": true,
-      "input": {"__proto__": [0, 1, 2]},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"path": [["__proto__"]], "ofs": 1, "len": 1}], ["NODE"]]],
-      "output": [1]
-    },
-    {
-      "name": "Reject current scalar target null",
-      "input": null,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {}], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "Reject explicit literal target null",
-      "input": null,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", null, 0, 0], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "Reject current scalar target false",
-      "input": false,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {}], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "Reject explicit literal target false",
-      "input": null,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", false, 0, 0], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "Reject current scalar target true",
-      "input": true,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {}], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "Reject explicit literal target true",
-      "input": null,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", true, 0, 0], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "Reject current scalar target 7",
-      "input": 7,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {}], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "Reject explicit literal target 7",
-      "input": null,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", 7, 0, 0], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "Reject current scalar target {}",
-      "input": {},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {}], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "Reject explicit literal target {}",
-      "input": null,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {}, 0, 0], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "Reject current scalar target {\"length\":3}",
-      "input": {"length": 3},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {}], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "Reject explicit literal target {\"length\":3}",
-      "input": null,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"length": 3}, 0, 0], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "Reject configuration ofs=-1",
-      "input": [0, 1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"ofs": -1}], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "Reject configuration ofs=null",
-      "input": [0, 1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"ofs": null}], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "Reject configuration ofs=true",
-      "input": [0, 1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"ofs": true}], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "Reject configuration ofs=\"1\"",
-      "input": [0, 1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"ofs": "1"}], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "Reject configuration ofs=0.5",
-      "input": [0, 1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"ofs": 0.5}], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "Reject configuration ofs={}",
-      "input": [0, 1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"ofs": {}}], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "Reject configuration ofs=[]",
-      "input": [0, 1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"ofs": [[]]}], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "Reject configuration len=-1",
-      "input": [0, 1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"len": -1}], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "Reject configuration len=null",
-      "input": [0, 1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"len": null}], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "Reject configuration len=true",
-      "input": [0, 1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"len": true}], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "Reject configuration len=\"1\"",
-      "input": [0, 1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"len": "1"}], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "Reject configuration len=0.5",
-      "input": [0, 1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"len": 0.5}], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "Reject configuration len={}",
-      "input": [0, 1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"len": {}}], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "Reject configuration len=[]",
-      "input": [0, 1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"len": [[]]}], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "Reject configuration lim=-1",
-      "input": [0, 1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"lim": -1}], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "Reject configuration lim=null",
-      "input": [0, 1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"lim": null}], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "Reject configuration lim=true",
-      "input": [0, 1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"lim": true}], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "Reject configuration lim=\"1\"",
-      "input": [0, 1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"lim": "1"}], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "Reject configuration lim=0.5",
-      "input": [0, 1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"lim": 0.5}], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "Reject configuration lim={}",
-      "input": [0, 1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"lim": {}}], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "Reject configuration lim=[]",
-      "input": [0, 1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"lim": [[]]}], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "Reject inconsistent configuration",
-      "input": [0, 1, 2, 3],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"ofs": 1, "len": 1, "lim": 3}], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "Reject a runtime inconsistent configuration",
-      "input": {"ofs": 1, "len": 1, "lim": 3, "data": [0, 1, 2, 3]},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"path": [["data"]], "ofs": ["NODE", "ofs"], "len": ["NODE", "len"], "lim": ["NODE", "lim"]}], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true}
-    },
-    {
-      "name": "Reject runtime negative configuration",
-      "input": {"data": [0, 1], "ofs": -1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"path": [["data"]], "ofs": ["NODE", "ofs"], "len": 1}], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true}
-    },
-    {
-      "name": "Reject a non-array configuration path null",
-      "input": [0, 1],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"path": null}], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "Reject a non-array configuration path true",
-      "input": [0, 1],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"path": true}], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "Reject a non-array configuration path 0",
-      "input": [0, 1],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"path": 0}], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "Reject a non-array configuration path \"data\"",
-      "input": [0, 1],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"path": "data"}], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "Reject a non-array configuration path {}",
-      "input": [0, 1],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"path": {}}], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "Reject a runtime non-array configuration path",
-      "input": {"path": "data", "data": [0, 1]},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"path": ["NODE", "path"]}], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true}
-    },
-    {
-      "name": "Reject a computed offset null",
-      "input": {"data": [0, 1], "ofs": null},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE", "data"], ["NODE", "ofs"], 1], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true}
-    },
-    {
-      "name": "Reject a computed count null",
-      "input": {"data": [0, 1], "len": null},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE", "data"], 0, ["NODE", "len"]], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true}
-    },
-    {
-      "name": "Reject a computed offset true",
-      "input": {"data": [0, 1], "ofs": true},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE", "data"], ["NODE", "ofs"], 1], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true}
-    },
-    {
-      "name": "Reject a computed count true",
-      "input": {"data": [0, 1], "len": true},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE", "data"], 0, ["NODE", "len"]], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true}
-    },
-    {
-      "name": "Reject a computed offset \"1\"",
-      "input": {"data": [0, 1], "ofs": "1"},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE", "data"], ["NODE", "ofs"], 1], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true}
-    },
-    {
-      "name": "Reject a computed count \"1\"",
-      "input": {"data": [0, 1], "len": "1"},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE", "data"], 0, ["NODE", "len"]], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true}
-    },
-    {
-      "name": "Reject a computed offset 0.5",
-      "input": {"data": [0, 1], "ofs": 0.5},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE", "data"], ["NODE", "ofs"], 1], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true}
-    },
-    {
-      "name": "Reject a computed count 0.5",
-      "input": {"data": [0, 1], "len": 0.5},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE", "data"], 0, ["NODE", "len"]], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true}
-    },
-    {
-      "name": "Reject a computed offset {}",
-      "input": {"data": [0, 1], "ofs": {}},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE", "data"], ["NODE", "ofs"], 1], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true}
-    },
-    {
-      "name": "Reject a computed count {}",
-      "input": {"data": [0, 1], "len": {}},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE", "data"], 0, ["NODE", "len"]], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true}
-    },
-    {
-      "name": "Reject a computed offset []",
-      "input": {"data": [0, 1], "ofs": []},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE", "data"], ["NODE", "ofs"], 1], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true}
-    },
-    {
-      "name": "Reject a computed count []",
-      "input": {"data": [0, 1], "len": []},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE", "data"], 0, ["NODE", "len"]], ["NODE"]]],
-      "errors": {"INVALID_OPERAND": true}
-    },
-    {
-      "name": "Missing operand reference",
-      "input": {},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE", "missing"], 0, 1], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "Missing configuration path",
-      "input": {},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", {"path": [["missing"]], "ofs": 0, "len": 0}], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "Explicit FAIL is not upgraded",
-      "input": [],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["FAIL"], 0, 1], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "FAIL in an offset is not upgraded",
-      "input": [],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], ["FAIL"], 0], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "Missing reference in a match produces false",
-      "input": {},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["IS", ["SLICE", ["NODE", "missing"], 0, 1], [[]]], ["NODE"]]],
-      "output": false
-    },
-    {
-      "name": "Runtime invalid operand in a match produces false",
-      "input": {"data": [1], "ofs": true},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["IS", ["SLICE", ["NODE", "data"], ["NODE", "ofs"], 1], [[1]]], ["NODE"]]],
-      "output": false
-    },
-    {
-      "name": "Out-of-bounds slice in a match produces false",
-      "input": [0],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["IS", ["SLICE", ["NODE"], 2, 1], [[]]], ["NODE"]]],
-      "output": false
-    },
-    {
-      "name": "SLICE needs an argument",
-      "input": [],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE"], ["NODE"]]],
-      "errors": {"INVALID_GRAFT": true}
-    },
-    {
-      "name": "An explicit array operand needs an offset",
-      "input": [0],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"]], ["NODE"]]],
-      "errors": {"INVALID_GRAFT": true}
-    },
-    {
-      "name": "An explicit string operand needs an offset",
-      "input": null,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", "abc"], ["NODE"]]],
-      "errors": {"INVALID_GRAFT": true}
-    },
-    {
-      "name": "Reject excessive operands",
-      "input": [],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE"], 0, 0, 0], ["NODE"]]],
-      "errors": {"INVALID_GRAFT": true}
-    },
-    {
-      "name": "AT supplies the current-node range target",
-      "input": {"data": "a😀b"},
-      "jgraft": ["JGRAFT", {"v": 1}, ["AT", "data", ["COPY", ["SLICE", {"ofs": 1, "len": 1}], ["NODE"]]]],
-      "output": {"data": "😀"}
-    },
-    {
-      "name": "A slice is independent of its source",
-      "input": {"data": [{"x": 1}, {"x": 2}]},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["SLICE", ["NODE", "data"], 0, 1], "part"], ["COPY", 9, ["NODE", "part", 0, "x"]]],
-      "output": {"data": [{"x": 1}, {"x": 2}], "part": [{"x": 9}]}
-    },
-    {
-      "name": "Sliced variable separators and trimming are preserved",
-      "input": " a ; b , c ",
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLIT", {"sep": ["ANY", ",", ";"], "default": ",", "trim": " "}, ["COPY", ["SLICE", ["NODE"], 1, 2], ["NODE"]]]],
-      "output": " b , c "
-    },
-    {
-      "name": "A singleton slice retains its own trimming",
-      "input": " a , b , c ",
-      "jgraft": ["JGRAFT", {"v": 1}, ["SPLIT", {"sep": ",", "trim": " "}, ["COPY", ["SLICE", ["NODE"], 1, 1], ["NODE"]]]],
-      "output": " b "
-    },
-    {
-      "name": "SLICE ignores pending deletions outside its span",
-      "input": [0, 1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", 2, null, null, ["NODE", ["SLICE", ["NODE"], 0, 1]]]],
-      "output": [null, 1]
-    },
-    {
-      "name": "SLICE rejects pending deletions inside its span",
-      "input": [0, 1],
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", 0, null, null, ["NODE", ["SLICE", ["NODE"], 0, 1]]]],
-      "errors": {"INVALID_TARGET": true, "INVALID_GRAFT": true}
+      "name": "Array offset and count",
+      "desc": "Positive, negative, omitted, and zero counts select the specified span.",
+      "tests": [
+        {
+          "name": "Offset 0",
+          "tests": [
+            {
+              "name": "Omitted count",
+              "input": [0,1,2,3,4],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0],["NODE"]]],
+              "output": [0,1,2,3,4]
+            },
+            {
+              "name": "Count 0",
+              "input": [0,1,2,3,4],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0,0],["NODE"]]],
+              "output": []
+            },
+            {
+              "name": "Count 1",
+              "input": [0,1,2,3,4],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0,1],["NODE"]]],
+              "output": [0]
+            },
+            {
+              "name": "Count 2",
+              "input": [0,1,2,3,4],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0,2],["NODE"]]],
+              "output": [0,1]
+            },
+            {
+              "name": "Count -1",
+              "input": [0,1,2,3,4],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0,-1],["NODE"]]],
+              "output": [0,1,2,3]
+            },
+            {
+              "name": "Count -5",
+              "input": [0,1,2,3,4],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0,-5],["NODE"]]],
+              "output": []
+            }
+          ]
+        },
+        {
+          "name": "Offset 1",
+          "tests": [
+            {
+              "name": "Omitted count",
+              "input": [0,1,2,3,4],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],1],["NODE"]]],
+              "output": [1,2,3,4]
+            },
+            {
+              "name": "Count 0",
+              "input": [0,1,2,3,4],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],1,0],["NODE"]]],
+              "output": []
+            },
+            {
+              "name": "Count 1",
+              "input": [0,1,2,3,4],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],1,1],["NODE"]]],
+              "output": [1]
+            },
+            {
+              "name": "Count 2",
+              "input": [0,1,2,3,4],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],1,2],["NODE"]]],
+              "output": [1,2]
+            },
+            {
+              "name": "Count -1",
+              "input": [0,1,2,3,4],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],1,-1],["NODE"]]],
+              "output": [1,2,3]
+            },
+            {
+              "name": "Count -5",
+              "input": [0,1,2,3,4],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],1,-5],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "Offset 5",
+          "tests": [
+            {
+              "name": "Omitted count",
+              "input": [0,1,2,3,4],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],5],["NODE"]]],
+              "output": []
+            },
+            {
+              "name": "Count 0",
+              "input": [0,1,2,3,4],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],5,0],["NODE"]]],
+              "output": []
+            },
+            {
+              "name": "Count 1",
+              "input": [0,1,2,3,4],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],5,1],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Count 2",
+              "input": [0,1,2,3,4],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],5,2],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Count -1",
+              "input": [0,1,2,3,4],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],5,-1],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Count -5",
+              "input": [0,1,2,3,4],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],5,-5],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "Offset -1",
+          "tests": [
+            {
+              "name": "Omitted count",
+              "input": [0,1,2,3,4],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],-1],["NODE"]]],
+              "output": [4]
+            },
+            {
+              "name": "Count 0",
+              "input": [0,1,2,3,4],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],-1,0],["NODE"]]],
+              "output": []
+            },
+            {
+              "name": "Count 1",
+              "input": [0,1,2,3,4],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],-1,1],["NODE"]]],
+              "output": [4]
+            },
+            {
+              "name": "Count 2",
+              "input": [0,1,2,3,4],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],-1,2],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Count -1",
+              "input": [0,1,2,3,4],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],-1,-1],["NODE"]]],
+              "output": []
+            },
+            {
+              "name": "Count -5",
+              "input": [0,1,2,3,4],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],-1,-5],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            }
+          ]
+        },
+        {
+          "name": "Offset -5",
+          "tests": [
+            {
+              "name": "Omitted count",
+              "input": [0,1,2,3,4],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],-5],["NODE"]]],
+              "output": [0,1,2,3,4]
+            },
+            {
+              "name": "Count 0",
+              "input": [0,1,2,3,4],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],-5,0],["NODE"]]],
+              "output": []
+            },
+            {
+              "name": "Count 1",
+              "input": [0,1,2,3,4],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],-5,1],["NODE"]]],
+              "output": [0]
+            },
+            {
+              "name": "Count 2",
+              "input": [0,1,2,3,4],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],-5,2],["NODE"]]],
+              "output": [0,1]
+            },
+            {
+              "name": "Count -1",
+              "input": [0,1,2,3,4],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],-5,-1],["NODE"]]],
+              "output": [0,1,2,3]
+            },
+            {
+              "name": "Count -5",
+              "input": [0,1,2,3,4],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],-5,-5],["NODE"]]],
+              "output": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Array range objects",
+      "desc": "Derive a span from consistent ofs, len, and lim fields.",
+      "tests": [
+        {
+          "name": "{}",
+          "input": [0,1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{}],["NODE"]]],
+          "output": [0,1,2,3,4]
+        },
+        {
+          "name": "{\"ofs\":0}",
+          "input": [0,1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"ofs":0}],["NODE"]]],
+          "output": [0,1,2,3,4]
+        },
+        {
+          "name": "{\"ofs\":2}",
+          "input": [0,1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"ofs":2}],["NODE"]]],
+          "output": [2,3,4]
+        },
+        {
+          "name": "{\"ofs\":5}",
+          "input": [0,1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"ofs":5}],["NODE"]]],
+          "output": []
+        },
+        {
+          "name": "{\"len\":0}",
+          "input": [0,1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"len":0}],["NODE"]]],
+          "output": []
+        },
+        {
+          "name": "{\"len\":2}",
+          "input": [0,1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"len":2}],["NODE"]]],
+          "output": [0,1]
+        },
+        {
+          "name": "{\"lim\":0}",
+          "input": [0,1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"lim":0}],["NODE"]]],
+          "output": []
+        },
+        {
+          "name": "{\"lim\":4}",
+          "input": [0,1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"lim":4}],["NODE"]]],
+          "output": [0,1,2,3]
+        },
+        {
+          "name": "{\"ofs\":1,\"len\":2}",
+          "input": [0,1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"ofs":1,"len":2}],["NODE"]]],
+          "output": [1,2]
+        },
+        {
+          "name": "{\"ofs\":1,\"lim\":4}",
+          "input": [0,1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"ofs":1,"lim":4}],["NODE"]]],
+          "output": [1,2,3]
+        },
+        {
+          "name": "{\"len\":2,\"lim\":4}",
+          "input": [0,1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"len":2,"lim":4}],["NODE"]]],
+          "output": [2,3]
+        },
+        {
+          "name": "{\"ofs\":1,\"len\":2,\"lim\":3}",
+          "input": [0,1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"ofs":1,"len":2,"lim":3}],["NODE"]]],
+          "output": [1,2]
+        },
+        {
+          "name": "{\"ofs\":5,\"len\":0,\"lim\":5}",
+          "input": [0,1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"ofs":5,"len":0,"lim":5}],["NODE"]]],
+          "output": []
+        }
+      ]
+    },
+    {
+      "name": "Invalid array spans",
+      "desc": "Out-of-bounds or ill-typed literal spans must fail.",
+      "tests": [
+        {
+          "name": "Rejects out-of-bounds [-6,0]",
+          "input": [0,1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],-6,0],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Rejects out-of-bounds [6,0]",
+          "input": [0,1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],6,0],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Rejects out-of-bounds [0,6]",
+          "input": [0,1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0,6],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Rejects out-of-bounds [4,2]",
+          "input": [0,1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],4,2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Rejects out-of-bounds [0,-6]",
+          "input": [0,1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0,-6],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Rejects range {\"ofs\":6}",
+          "input": [0,1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"ofs":6}],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Rejects range {\"len\":6}",
+          "input": [0,1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"len":6}],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Rejects range {\"lim\":6}",
+          "input": [0,1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"lim":6}],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Rejects range {\"ofs\":4,\"len\":2}",
+          "input": [0,1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"ofs":4,"len":2}],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Rejects range {\"ofs\":3,\"lim\":2}",
+          "input": [0,1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"ofs":3,"lim":2}],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Rejects range {\"len\":4,\"lim\":2}",
+          "input": [0,1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"len":4,"lim":2}],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Rejects literal offset null",
+          "input": [0,1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],null,1],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Rejects literal count null",
+          "input": [0,1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0,null],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Rejects literal offset true",
+          "input": [0,1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],true,1],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Rejects literal count true",
+          "input": [0,1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0,true],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Rejects literal offset \"1\"",
+          "input": [0,1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],"1",1],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Rejects literal count \"1\"",
+          "input": [0,1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0,"1"],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Rejects literal offset 0.5",
+          "input": [0,1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0.5,1],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Rejects literal count 0.5",
+          "input": [0,1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0,0.5],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Rejects literal offset []",
+          "input": [0,1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],[[]],1],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Rejects literal count []",
+          "input": [0,1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0,[[]]],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Rejects literal offset {}",
+          "input": [0,1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],{},1],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Rejects literal count {}",
+          "input": [0,1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0,{}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        }
+      ]
+    },
+    {
+      "name": "String offset and count",
+      "desc": "String spans use the same normalization rules as array spans.",
+      "tests": [
+        {
+          "name": "Offset 0",
+          "tests": [
+            {
+              "name": "Omitted count",
+              "input": "abcde",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0],["NODE"]]],
+              "output": "abcde"
+            },
+            {
+              "name": "Count 0",
+              "input": "abcde",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0,0],["NODE"]]],
+              "output": ""
+            },
+            {
+              "name": "Count 1",
+              "input": "abcde",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0,1],["NODE"]]],
+              "output": "a"
+            },
+            {
+              "name": "Count 2",
+              "input": "abcde",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0,2],["NODE"]]],
+              "output": "ab"
+            },
+            {
+              "name": "Count -1",
+              "input": "abcde",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0,-1],["NODE"]]],
+              "output": "abcd"
+            },
+            {
+              "name": "Count -5",
+              "input": "abcde",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0,-5],["NODE"]]],
+              "output": ""
+            }
+          ]
+        },
+        {
+          "name": "Offset 1",
+          "tests": [
+            {
+              "name": "Omitted count",
+              "input": "abcde",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],1],["NODE"]]],
+              "output": "bcde"
+            },
+            {
+              "name": "Count 0",
+              "input": "abcde",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],1,0],["NODE"]]],
+              "output": ""
+            },
+            {
+              "name": "Count 1",
+              "input": "abcde",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],1,1],["NODE"]]],
+              "output": "b"
+            },
+            {
+              "name": "Count 2",
+              "input": "abcde",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],1,2],["NODE"]]],
+              "output": "bc"
+            },
+            {
+              "name": "Count -1",
+              "input": "abcde",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],1,-1],["NODE"]]],
+              "output": "bcd"
+            },
+            {
+              "name": "Count -5",
+              "input": "abcde",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],1,-5],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "Offset 5",
+          "tests": [
+            {
+              "name": "Omitted count",
+              "input": "abcde",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],5],["NODE"]]],
+              "output": ""
+            },
+            {
+              "name": "Count 0",
+              "input": "abcde",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],5,0],["NODE"]]],
+              "output": ""
+            },
+            {
+              "name": "Count 1",
+              "input": "abcde",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],5,1],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Count 2",
+              "input": "abcde",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],5,2],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Count -1",
+              "input": "abcde",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],5,-1],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Count -5",
+              "input": "abcde",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],5,-5],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "Offset -1",
+          "tests": [
+            {
+              "name": "Omitted count",
+              "input": "abcde",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],-1],["NODE"]]],
+              "output": "e"
+            },
+            {
+              "name": "Count 0",
+              "input": "abcde",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],-1,0],["NODE"]]],
+              "output": ""
+            },
+            {
+              "name": "Count 1",
+              "input": "abcde",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],-1,1],["NODE"]]],
+              "output": "e"
+            },
+            {
+              "name": "Count 2",
+              "input": "abcde",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],-1,2],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Count -1",
+              "input": "abcde",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],-1,-1],["NODE"]]],
+              "output": ""
+            },
+            {
+              "name": "Count -5",
+              "input": "abcde",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],-1,-5],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            }
+          ]
+        },
+        {
+          "name": "Offset -5",
+          "tests": [
+            {
+              "name": "Omitted count",
+              "input": "abcde",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],-5],["NODE"]]],
+              "output": "abcde"
+            },
+            {
+              "name": "Count 0",
+              "input": "abcde",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],-5,0],["NODE"]]],
+              "output": ""
+            },
+            {
+              "name": "Count 1",
+              "input": "abcde",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],-5,1],["NODE"]]],
+              "output": "a"
+            },
+            {
+              "name": "Count 2",
+              "input": "abcde",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],-5,2],["NODE"]]],
+              "output": "ab"
+            },
+            {
+              "name": "Count -1",
+              "input": "abcde",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],-5,-1],["NODE"]]],
+              "output": "abcd"
+            },
+            {
+              "name": "Count -5",
+              "input": "abcde",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],-5,-5],["NODE"]]],
+              "output": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "String range objects",
+      "desc": "Range objects select string spans using logical character positions.",
+      "tests": [
+        {
+          "name": "{}",
+          "input": "abcde",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{}],["NODE"]]],
+          "output": "abcde"
+        },
+        {
+          "name": "{\"ofs\":0}",
+          "input": "abcde",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"ofs":0}],["NODE"]]],
+          "output": "abcde"
+        },
+        {
+          "name": "{\"ofs\":2}",
+          "input": "abcde",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"ofs":2}],["NODE"]]],
+          "output": "cde"
+        },
+        {
+          "name": "{\"ofs\":5}",
+          "input": "abcde",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"ofs":5}],["NODE"]]],
+          "output": ""
+        },
+        {
+          "name": "{\"len\":0}",
+          "input": "abcde",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"len":0}],["NODE"]]],
+          "output": ""
+        },
+        {
+          "name": "{\"len\":2}",
+          "input": "abcde",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"len":2}],["NODE"]]],
+          "output": "ab"
+        },
+        {
+          "name": "{\"lim\":0}",
+          "input": "abcde",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"lim":0}],["NODE"]]],
+          "output": ""
+        },
+        {
+          "name": "{\"lim\":4}",
+          "input": "abcde",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"lim":4}],["NODE"]]],
+          "output": "abcd"
+        },
+        {
+          "name": "{\"ofs\":1,\"len\":2}",
+          "input": "abcde",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"ofs":1,"len":2}],["NODE"]]],
+          "output": "bc"
+        },
+        {
+          "name": "{\"ofs\":1,\"lim\":4}",
+          "input": "abcde",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"ofs":1,"lim":4}],["NODE"]]],
+          "output": "bcd"
+        },
+        {
+          "name": "{\"len\":2,\"lim\":4}",
+          "input": "abcde",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"len":2,"lim":4}],["NODE"]]],
+          "output": "cd"
+        },
+        {
+          "name": "{\"ofs\":1,\"len\":2,\"lim\":3}",
+          "input": "abcde",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"ofs":1,"len":2,"lim":3}],["NODE"]]],
+          "output": "bc"
+        },
+        {
+          "name": "{\"ofs\":5,\"len\":0,\"lim\":5}",
+          "input": "abcde",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"ofs":5,"len":0,"lim":5}],["NODE"]]],
+          "output": ""
+        }
+      ]
+    },
+    {
+      "name": "Invalid string spans",
+      "desc": "Out-of-bounds or ill-typed literal string spans must fail.",
+      "tests": [
+        {
+          "name": "Rejects out-of-bounds [-6,0]",
+          "input": "abcde",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],-6,0],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Rejects out-of-bounds [6,0]",
+          "input": "abcde",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],6,0],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Rejects out-of-bounds [0,6]",
+          "input": "abcde",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0,6],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Rejects out-of-bounds [4,2]",
+          "input": "abcde",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],4,2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Rejects out-of-bounds [0,-6]",
+          "input": "abcde",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0,-6],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Rejects range {\"ofs\":6}",
+          "input": "abcde",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"ofs":6}],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Rejects range {\"len\":6}",
+          "input": "abcde",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"len":6}],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Rejects range {\"lim\":6}",
+          "input": "abcde",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"lim":6}],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Rejects range {\"ofs\":4,\"len\":2}",
+          "input": "abcde",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"ofs":4,"len":2}],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Rejects range {\"ofs\":3,\"lim\":2}",
+          "input": "abcde",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"ofs":3,"lim":2}],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Rejects range {\"len\":4,\"lim\":2}",
+          "input": "abcde",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"len":4,"lim":2}],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Rejects literal offset null",
+          "input": "abcde",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],null,1],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Rejects literal count null",
+          "input": "abcde",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0,null],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Rejects literal offset true",
+          "input": "abcde",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],true,1],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Rejects literal count true",
+          "input": "abcde",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0,true],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Rejects literal offset \"1\"",
+          "input": "abcde",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],"1",1],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Rejects literal count \"1\"",
+          "input": "abcde",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0,"1"],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Rejects literal offset 0.5",
+          "input": "abcde",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0.5,1],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Rejects literal count 0.5",
+          "input": "abcde",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0,0.5],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Rejects literal offset []",
+          "input": "abcde",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],[[]],1],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Rejects literal count []",
+          "input": "abcde",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0,[[]]],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Rejects literal offset {}",
+          "input": "abcde",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],{},1],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Rejects literal count {}",
+          "input": "abcde",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0,{}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        }
+      ]
+    },
+    {
+      "name": "Empty operands",
+      "desc": "Empty spans and ranges are valid at the empty array or string boundary.",
+      "tests": [
+        {
+          "name": "Empty array slice",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0,0],["NODE"]]],
+          "output": []
+        },
+        {
+          "name": "Empty array range",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{}],["NODE"]]],
+          "output": []
+        },
+        {
+          "name": "Empty string slice",
+          "input": "",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0,0],["NODE"]]],
+          "output": ""
+        },
+        {
+          "name": "Empty string range",
+          "input": "",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{}],["NODE"]]],
+          "output": ""
+        }
+      ]
+    },
+    {
+      "name": "Unicode boundaries",
+      "desc": "Whole spans, individual elements, and negative indices use codepoint boundaries, including supported lone surrogates.",
+      "tests": [
+        {
+          "name": "BMP and combining characters",
+          "tests": [
+            {
+              "name": "Whole span",
+              "input": "é́中",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0],["NODE"]]],
+              "output": "é́中"
+            },
+            {
+              "name": "Element 0",
+              "input": "é́中",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0,1],["NODE"]]],
+              "output": "é"
+            },
+            {
+              "name": "Element 1",
+              "input": "é́中",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],1,1],["NODE"]]],
+              "output": "́"
+            },
+            {
+              "name": "Element 2",
+              "input": "é́中",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],2,1],["NODE"]]],
+              "output": "中"
+            },
+            {
+              "name": "Last element",
+              "input": "é́中",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],-1,1],["NODE"]]],
+              "output": "中"
+            }
+          ]
+        },
+        {
+          "name": "One supplementary character",
+          "tests": [
+            {
+              "name": "Whole span",
+              "input": "😀",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0],["NODE"]]],
+              "output": "😀"
+            },
+            {
+              "name": "Element 0",
+              "input": "😀",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0,1],["NODE"]]],
+              "output": "😀"
+            },
+            {
+              "name": "Last element",
+              "input": "😀",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],-1,1],["NODE"]]],
+              "output": "😀"
+            }
+          ]
+        },
+        {
+          "name": "Supplementary characters among BMP characters",
+          "tests": [
+            {
+              "name": "Whole span",
+              "input": "a😀b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0],["NODE"]]],
+              "output": "a😀b"
+            },
+            {
+              "name": "Element 0",
+              "input": "a😀b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0,1],["NODE"]]],
+              "output": "a"
+            },
+            {
+              "name": "Element 1",
+              "input": "a😀b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],1,1],["NODE"]]],
+              "output": "😀"
+            },
+            {
+              "name": "Element 2",
+              "input": "a😀b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],2,1],["NODE"]]],
+              "output": "b"
+            },
+            {
+              "name": "Last element",
+              "input": "a😀b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],-1,1],["NODE"]]],
+              "output": "b"
+            }
+          ]
+        },
+        {
+          "name": "Minimum and maximum supplementary codepoints",
+          "tests": [
+            {
+              "name": "Whole span",
+              "input": "𐀀􏿿",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0],["NODE"]]],
+              "output": "𐀀􏿿"
+            },
+            {
+              "name": "Element 0",
+              "input": "𐀀􏿿",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0,1],["NODE"]]],
+              "output": "𐀀"
+            },
+            {
+              "name": "Element 1",
+              "input": "𐀀􏿿",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],1,1],["NODE"]]],
+              "output": "􏿿"
+            },
+            {
+              "name": "Last element",
+              "input": "𐀀􏿿",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],-1,1],["NODE"]]],
+              "output": "􏿿"
+            }
+          ]
+        },
+        {
+          "name": "Supplementary musical symbol",
+          "tests": [
+            {
+              "name": "Whole span",
+              "input": "𝄞",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0],["NODE"]]],
+              "output": "𝄞"
+            },
+            {
+              "name": "Element 0",
+              "input": "𝄞",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0,1],["NODE"]]],
+              "output": "𝄞"
+            },
+            {
+              "name": "Last element",
+              "input": "𝄞",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],-1,1],["NODE"]]],
+              "output": "𝄞"
+            }
+          ]
+        },
+        {
+          "name": "Lone high surrogate",
+          "tests": [
+            {
+              "name": "Whole span",
+              "input": "\ud800",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0],["NODE"]]],
+              "output": "\ud800",
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "Element 0",
+              "input": "\ud800",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0,1],["NODE"]]],
+              "output": "\ud800",
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "Last element",
+              "input": "\ud800",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],-1,1],["NODE"]]],
+              "output": "\ud800",
+              "needLoneSurrogate": true
+            }
+          ]
+        },
+        {
+          "name": "Lone low surrogate",
+          "tests": [
+            {
+              "name": "Whole span",
+              "input": "\udc00",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0],["NODE"]]],
+              "output": "\udc00",
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "Element 0",
+              "input": "\udc00",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0,1],["NODE"]]],
+              "output": "\udc00",
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "Last element",
+              "input": "\udc00",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],-1,1],["NODE"]]],
+              "output": "\udc00",
+              "needLoneSurrogate": true
+            }
+          ]
+        },
+        {
+          "name": "Reversed surrogates",
+          "tests": [
+            {
+              "name": "Whole span",
+              "input": "\udc00\ud800",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0],["NODE"]]],
+              "output": "\udc00\ud800",
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "Element 0",
+              "input": "\udc00\ud800",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0,1],["NODE"]]],
+              "output": "\udc00",
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "Element 1",
+              "input": "\udc00\ud800",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],1,1],["NODE"]]],
+              "output": "\ud800",
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "Last element",
+              "input": "\udc00\ud800",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],-1,1],["NODE"]]],
+              "output": "\ud800",
+              "needLoneSurrogate": true
+            }
+          ]
+        },
+        {
+          "name": "Surrogates separated by BMP text",
+          "tests": [
+            {
+              "name": "Whole span",
+              "input": "\ud800x\udc00",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0],["NODE"]]],
+              "output": "\ud800x\udc00",
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "Element 0",
+              "input": "\ud800x\udc00",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0,1],["NODE"]]],
+              "output": "\ud800",
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "Element 1",
+              "input": "\ud800x\udc00",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],1,1],["NODE"]]],
+              "output": "x",
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "Element 2",
+              "input": "\ud800x\udc00",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],2,1],["NODE"]]],
+              "output": "\udc00",
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "Last element",
+              "input": "\ud800x\udc00",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],-1,1],["NODE"]]],
+              "output": "\udc00",
+              "needLoneSurrogate": true
+            }
+          ]
+        },
+        {
+          "name": "Lone and paired surrogates",
+          "tests": [
+            {
+              "name": "Whole span",
+              "input": "\ud800😀\udc00",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0],["NODE"]]],
+              "output": "\ud800😀\udc00",
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "Element 0",
+              "input": "\ud800😀\udc00",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0,1],["NODE"]]],
+              "output": "\ud800",
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "Element 1",
+              "input": "\ud800😀\udc00",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],1,1],["NODE"]]],
+              "output": "😀",
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "Element 2",
+              "input": "\ud800😀\udc00",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],2,1],["NODE"]]],
+              "output": "\udc00",
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "Last element",
+              "input": "\ud800😀\udc00",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],-1,1],["NODE"]]],
+              "output": "\udc00",
+              "needLoneSurrogate": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Computed operands and paths",
+      "desc": "Numeric identifiers, constructed values, references, and range paths preserve literal data and codepoint indexing.",
+      "tests": [
+        {
+          "name": "Numeric SLICE expression ID",
+          "input": [0,1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[57,["NODE"],1,1],["NODE"]]],
+          "output": [1]
+        },
+        {
+          "name": "Negative string limit uses codepoint length",
+          "input": "a😀b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],1,-1],["NODE"]]],
+          "output": "😀"
+        },
+        {
+          "name": "Empty span at a supplementary string end",
+          "input": "a😀b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],3,0],["NODE"]]],
+          "output": ""
+        },
+        {
+          "name": "Native code-unit length is not a valid logical endpoint",
+          "input": "a😀b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],4,0],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Slice a literal array",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",[[0,1,2]],1,1],["NODE"]]],
+          "output": [1]
+        },
+        {
+          "name": "Slice a literal string",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE","abcd",1,2],["NODE"]]],
+          "output": "bc"
+        },
+        {
+          "name": "Slice a constructed array",
+          "input": {"x":7},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",[[["NODE","x"],2,3]],0,2],["NODE"]]],
+          "output": [7,2]
+        },
+        {
+          "name": "Slice nested values literally",
+          "input": [{"x":[1,2]},["IS",1],null],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0,2],["NODE"]]],
+          "output": [{"x":[1,2]},["IS",1]]
+        },
+        {
+          "name": "Read a named reference",
+          "input": {"data":[0,1,2]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE","data"],1,1],["NODE"]]],
+          "output": [1]
+        },
+        {
+          "name": "Read a constant operand",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["data",[[0,1,2]]]},["COPY",["SLICE",["CONST","data"],1,1],["NODE"]]],
+          "output": [1]
+        },
+        {
+          "name": "Expand a common slice expression",
+          "input": [0,1,2],
+          "jgraft": ["JGRAFT",{"v":1,"expr":["part",["SLICE",["NODE"],1,1]]},["COPY",["EXPR","part"],["NODE"]]],
+          "output": [1]
+        },
+        {
+          "name": "Computed offset and count",
+          "input": {"data":[0,1,2,3],"ofs":1,"len":2},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE","data"],["NODE","ofs"],["NODE","len"]],["NODE"]]],
+          "output": [1,2]
+        },
+        {
+          "name": "Computed negative offset and limit",
+          "input": {"data":"a😀b","ofs":-2,"len":-1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE","data"],["NODE","ofs"],["NODE","len"]],["NODE"]]],
+          "output": "😀"
+        },
+        {
+          "name": "Computed configuration fields",
+          "input": {"data":[0,1,2],"ofs":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"path":[["data"]],"ofs":["NODE","ofs"],"len":1}],["NODE"]]],
+          "output": [1]
+        },
+        {
+          "name": "Configuration path selects a nested array",
+          "input": {"a":{"data":[0,1,2]}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"path":[["a","data"]],"ofs":1,"len":1}],["NODE"]]],
+          "output": [1]
+        },
+        {
+          "name": "Configuration path supports negative array selectors",
+          "input": {"data":[[0,1,2],[3,4,5]]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"path":[["data",-1]],"ofs":1,"len":1}],["NODE"]]],
+          "output": [4]
+        },
+        {
+          "name": "Empty configuration path selects the current node",
+          "input": [0,1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"path":[[]],"ofs":1,"len":1}],["NODE"]]],
+          "output": [1]
+        },
+        {
+          "name": "Configuration paths containing expression names remain literal",
+          "input": {"NODE":{"data":[1,2]}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"path":[["NODE","data"]],"len":1}],["NODE"]]],
+          "output": [1]
+        },
+        {
+          "name": "Configuration path selects a Unicode string",
+          "input": {"text":"a😀b"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"path":[["text"]],"ofs":1,"lim":2}],["NODE"]]],
+          "output": "😀"
+        },
+        {
+          "name": "Configuration path can read an own __proto__ property",
+          "needProto": true,
+          "input": {"__proto__":[0,1,2]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"path":[["__proto__"]],"ofs":1,"len":1}],["NODE"]]],
+          "output": [1]
+        }
+      ]
+    },
+    {
+      "name": "Invalid target types",
+      "desc": "Only strings and arrays can be sliced.",
+      "tests": [
+        {
+          "name": "Reject current scalar target null",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{}],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Reject explicit literal target null",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",null,0,0],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject current scalar target false",
+          "input": false,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{}],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Reject explicit literal target false",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",false,0,0],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject current scalar target true",
+          "input": true,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{}],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Reject explicit literal target true",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",true,0,0],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject current scalar target 7",
+          "input": 7,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{}],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Reject explicit literal target 7",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",7,0,0],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject current scalar target {}",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{}],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Reject explicit literal target {}",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{},0,0],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject current scalar target {\"length\":3}",
+          "input": {"length":3},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{}],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Reject explicit literal target {\"length\":3}",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"length":3},0,0],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        }
+      ]
+    },
+    {
+      "name": "Invalid configurations",
+      "desc": "Configuration fields and computed offset/count/path values must have valid types and consistent bounds.",
+      "tests": [
+        {
+          "name": "Reject configuration ofs=-1",
+          "input": [0,1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"ofs":-1}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject configuration ofs=null",
+          "input": [0,1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"ofs":null}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject configuration ofs=true",
+          "input": [0,1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"ofs":true}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject configuration ofs=\"1\"",
+          "input": [0,1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"ofs":"1"}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject configuration ofs=0.5",
+          "input": [0,1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"ofs":0.5}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject configuration ofs={}",
+          "input": [0,1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"ofs":{}}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject configuration ofs=[]",
+          "input": [0,1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"ofs":[[]]}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject configuration len=-1",
+          "input": [0,1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"len":-1}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject configuration len=null",
+          "input": [0,1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"len":null}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject configuration len=true",
+          "input": [0,1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"len":true}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject configuration len=\"1\"",
+          "input": [0,1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"len":"1"}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject configuration len=0.5",
+          "input": [0,1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"len":0.5}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject configuration len={}",
+          "input": [0,1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"len":{}}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject configuration len=[]",
+          "input": [0,1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"len":[[]]}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject configuration lim=-1",
+          "input": [0,1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"lim":-1}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject configuration lim=null",
+          "input": [0,1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"lim":null}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject configuration lim=true",
+          "input": [0,1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"lim":true}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject configuration lim=\"1\"",
+          "input": [0,1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"lim":"1"}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject configuration lim=0.5",
+          "input": [0,1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"lim":0.5}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject configuration lim={}",
+          "input": [0,1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"lim":{}}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject configuration lim=[]",
+          "input": [0,1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"lim":[[]]}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject inconsistent configuration",
+          "input": [0,1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"ofs":1,"len":1,"lim":3}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject a runtime inconsistent configuration",
+          "input": {"ofs":1,"len":1,"lim":3,"data":[0,1,2,3]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"path":[["data"]],"ofs":["NODE","ofs"],"len":["NODE","len"],"lim":["NODE","lim"]}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Reject runtime negative configuration",
+          "input": {"data":[0,1],"ofs":-1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"path":[["data"]],"ofs":["NODE","ofs"],"len":1}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Reject a non-array configuration path null",
+          "input": [0,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"path":null}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject a non-array configuration path true",
+          "input": [0,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"path":true}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject a non-array configuration path 0",
+          "input": [0,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"path":0}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject a non-array configuration path \"data\"",
+          "input": [0,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"path":"data"}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject a non-array configuration path {}",
+          "input": [0,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"path":{}}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject a runtime non-array configuration path",
+          "input": {"path":"data","data":[0,1]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"path":["NODE","path"]}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Reject a computed offset null",
+          "input": {"data":[0,1],"ofs":null},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE","data"],["NODE","ofs"],1],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Reject a computed count null",
+          "input": {"data":[0,1],"len":null},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE","data"],0,["NODE","len"]],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Reject a computed offset true",
+          "input": {"data":[0,1],"ofs":true},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE","data"],["NODE","ofs"],1],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Reject a computed count true",
+          "input": {"data":[0,1],"len":true},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE","data"],0,["NODE","len"]],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Reject a computed offset \"1\"",
+          "input": {"data":[0,1],"ofs":"1"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE","data"],["NODE","ofs"],1],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Reject a computed count \"1\"",
+          "input": {"data":[0,1],"len":"1"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE","data"],0,["NODE","len"]],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Reject a computed offset 0.5",
+          "input": {"data":[0,1],"ofs":0.5},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE","data"],["NODE","ofs"],1],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Reject a computed count 0.5",
+          "input": {"data":[0,1],"len":0.5},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE","data"],0,["NODE","len"]],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Reject a computed offset {}",
+          "input": {"data":[0,1],"ofs":{}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE","data"],["NODE","ofs"],1],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Reject a computed count {}",
+          "input": {"data":[0,1],"len":{}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE","data"],0,["NODE","len"]],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Reject a computed offset []",
+          "input": {"data":[0,1],"ofs":[]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE","data"],["NODE","ofs"],1],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Reject a computed count []",
+          "input": {"data":[0,1],"len":[]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE","data"],0,["NODE","len"]],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true}
+        }
+      ]
+    },
+    {
+      "name": "Failures and arity",
+      "desc": "Recoverable probe failures produce false in match context; syntax and explicit operand requirements remain checked.",
+      "tests": [
+        {
+          "name": "Missing operand reference",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE","missing"],0,1],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Missing configuration path",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"path":[["missing"]],"ofs":0,"len":0}],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Explicit FAIL is not upgraded",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["FAIL"],0,1],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "FAIL in an offset is not upgraded",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],["FAIL"],0],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Missing reference in a match produces false",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["SLICE",["NODE","missing"],0,1],[[]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Runtime invalid operand in a match produces false",
+          "input": {"data":[1],"ofs":true},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["SLICE",["NODE","data"],["NODE","ofs"],1],[[1]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Out-of-bounds slice in a match produces false",
+          "input": [0],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["SLICE",["NODE"],2,1],[[]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "SLICE needs an argument",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE"],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Explicit array operand needs an offset",
+          "input": [0],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Explicit string operand needs an offset",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE","abc"],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject excessive operands",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE"],0,0,0],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        }
+      ]
+    },
+    {
+      "name": "Scope, ownership, and SPLIT metadata",
+      "desc": "AT selects the current node; slices remain independent, preserve metadata, and obey pending-deletion restrictions.",
+      "tests": [
+        {
+          "name": "AT supplies the current-node range target",
+          "input": {"data":"a😀b"},
+          "jgraft": ["JGRAFT",{"v":1},["AT","data",["COPY",["SLICE",{"ofs":1,"len":1}],["NODE"]]]],
+          "output": {"data":"😀"}
+        },
+        {
+          "name": "Slice is independent of its source",
+          "input": {"data":[{"x":1},{"x":2}]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE","data"],0,1],"part"],["COPY",9,["NODE","part",0,"x"]]],
+          "output": {"data":[{"x":1},{"x":2}],"part":[{"x":9}]}
+        },
+        {
+          "name": "Sliced variable separators and trimming are preserved",
+          "input": " a ; b , c ",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":["ANY",",",";"],"default":",","trim":" "},["COPY",["SLICE",["NODE"],1,2],["NODE"]]]],
+          "output": " b , c "
+        },
+        {
+          "name": "Singleton slice retains its own trimming",
+          "input": " a , b , c ",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","trim":" "},["COPY",["SLICE",["NODE"],1,1],["NODE"]]]],
+          "output": " b "
+        },
+        {
+          "name": "SLICE ignores pending deletions outside its span",
+          "input": [0,1,2],
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",2,null,null,["NODE",["SLICE",["NODE"],0,1]]]],
+          "output": [null,1]
+        },
+        {
+          "name": "SLICE rejects pending deletions inside its span",
+          "input": [0,1],
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",0,null,null,["NODE",["SLICE",["NODE"],0,1]]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        }
+      ]
     }
   ]
 }

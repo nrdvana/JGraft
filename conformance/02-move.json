@@ -4,1556 +4,1247 @@
   "desc": "MOVE relocation and deletion of JSON values, subtree overwrites, sequential path evaluation, auto-vivification after detachment, namespace restrictions, deferred array deletion and half-index insertion, immediate appends, current-node replacement, and SPLIT metadata. Error flags distinguish input-dependent runtime failures from stronger diagnoses justified by static analysis. No optional features or resource limits are required.",
   "tests": [
     {
-      "name": "Move null to a new property",
-      "input": {"source": null, "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"keep": 1, "dest": null}
-    },
-    {
-      "name": "Move false to a new property",
-      "input": {"source": false, "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"keep": 1, "dest": false}
-    },
-    {
-      "name": "Move true to a new property",
-      "input": {"source": true, "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"keep": 1, "dest": true}
-    },
-    {
-      "name": "Move zero to a new property",
-      "input": {"source": 0, "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"keep": 1, "dest": 0}
-    },
-    {
-      "name": "Move a negative fraction to a new property",
-      "input": {"source": -12.5, "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"keep": 1, "dest": -12.5}
-    },
-    {
-      "name": "Move an empty string to a new property",
-      "input": {"source": "", "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"keep": 1, "dest": ""}
-    },
-    {
-      "name": "Move a Unicode string to a new property",
-      "input": {"source": "a\n\u0000é𝄞", "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"keep": 1, "dest": "a\n\u0000é𝄞"}
-    },
-    {
-      "name": "Move an empty array to a new property",
-      "input": {"source": [], "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"keep": 1, "dest": []}
-    },
-    {
-      "name": "Move an empty object to a new property",
-      "input": {"source": {}, "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"keep": 1, "dest": {}}
-    },
-    {
-      "name": "Move a heterogeneous array to a new property",
-      "input": {"source": [null, true, 1, "x", [], {}], "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"keep": 1, "dest": [null, true, 1, "x", [], {}]}
-    },
-    {
-      "name": "Move a nested object to a new property",
-      "input": {"source": {"a": {"b": [1, 2]}}, "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"keep": 1, "dest": {"a": {"b": [1, 2]}}}
-    },
-    {
-      "name": "Move null over null",
-      "desc": "The source property is removed and the destination subtree is replaced in full.",
-      "input": {"source": null, "dest": null, "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"dest": null, "keep": 1}
-    },
-    {
-      "name": "Move null over boolean",
-      "desc": "The source property is removed and the destination subtree is replaced in full.",
-      "input": {"source": null, "dest": true, "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"dest": null, "keep": 1}
-    },
-    {
-      "name": "Move null over number",
-      "desc": "The source property is removed and the destination subtree is replaced in full.",
-      "input": {"source": null, "dest": 17, "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"dest": null, "keep": 1}
-    },
-    {
-      "name": "Move null over string",
-      "desc": "The source property is removed and the destination subtree is replaced in full.",
-      "input": {"source": null, "dest": "text", "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"dest": null, "keep": 1}
-    },
-    {
-      "name": "Move null over array",
-      "desc": "The source property is removed and the destination subtree is replaced in full.",
-      "input": {"source": null, "dest": [1, {"a": 2}], "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"dest": null, "keep": 1}
-    },
-    {
-      "name": "Move null over object",
-      "desc": "The source property is removed and the destination subtree is replaced in full.",
-      "input": {"source": null, "dest": {"a": [1, 2]}, "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"dest": null, "keep": 1}
-    },
-    {
-      "name": "Move boolean over null",
-      "desc": "The source property is removed and the destination subtree is replaced in full.",
-      "input": {"source": true, "dest": null, "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"dest": true, "keep": 1}
-    },
-    {
-      "name": "Move boolean over boolean",
-      "desc": "The source property is removed and the destination subtree is replaced in full.",
-      "input": {"source": true, "dest": true, "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"dest": true, "keep": 1}
-    },
-    {
-      "name": "Move boolean over number",
-      "desc": "The source property is removed and the destination subtree is replaced in full.",
-      "input": {"source": true, "dest": 17, "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"dest": true, "keep": 1}
-    },
-    {
-      "name": "Move boolean over string",
-      "desc": "The source property is removed and the destination subtree is replaced in full.",
-      "input": {"source": true, "dest": "text", "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"dest": true, "keep": 1}
-    },
-    {
-      "name": "Move boolean over array",
-      "desc": "The source property is removed and the destination subtree is replaced in full.",
-      "input": {"source": true, "dest": [1, {"a": 2}], "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"dest": true, "keep": 1}
-    },
-    {
-      "name": "Move boolean over object",
-      "desc": "The source property is removed and the destination subtree is replaced in full.",
-      "input": {"source": true, "dest": {"a": [1, 2]}, "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"dest": true, "keep": 1}
-    },
-    {
-      "name": "Move number over null",
-      "desc": "The source property is removed and the destination subtree is replaced in full.",
-      "input": {"source": 17, "dest": null, "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"dest": 17, "keep": 1}
-    },
-    {
-      "name": "Move number over boolean",
-      "desc": "The source property is removed and the destination subtree is replaced in full.",
-      "input": {"source": 17, "dest": true, "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"dest": 17, "keep": 1}
-    },
-    {
-      "name": "Move number over number",
-      "desc": "The source property is removed and the destination subtree is replaced in full.",
-      "input": {"source": 17, "dest": 17, "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"dest": 17, "keep": 1}
-    },
-    {
-      "name": "Move number over string",
-      "desc": "The source property is removed and the destination subtree is replaced in full.",
-      "input": {"source": 17, "dest": "text", "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"dest": 17, "keep": 1}
-    },
-    {
-      "name": "Move number over array",
-      "desc": "The source property is removed and the destination subtree is replaced in full.",
-      "input": {"source": 17, "dest": [1, {"a": 2}], "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"dest": 17, "keep": 1}
-    },
-    {
-      "name": "Move number over object",
-      "desc": "The source property is removed and the destination subtree is replaced in full.",
-      "input": {"source": 17, "dest": {"a": [1, 2]}, "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"dest": 17, "keep": 1}
-    },
-    {
-      "name": "Move string over null",
-      "desc": "The source property is removed and the destination subtree is replaced in full.",
-      "input": {"source": "text", "dest": null, "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"dest": "text", "keep": 1}
-    },
-    {
-      "name": "Move string over boolean",
-      "desc": "The source property is removed and the destination subtree is replaced in full.",
-      "input": {"source": "text", "dest": true, "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"dest": "text", "keep": 1}
-    },
-    {
-      "name": "Move string over number",
-      "desc": "The source property is removed and the destination subtree is replaced in full.",
-      "input": {"source": "text", "dest": 17, "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"dest": "text", "keep": 1}
-    },
-    {
-      "name": "Move string over string",
-      "desc": "The source property is removed and the destination subtree is replaced in full.",
-      "input": {"source": "text", "dest": "text", "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"dest": "text", "keep": 1}
-    },
-    {
-      "name": "Move string over array",
-      "desc": "The source property is removed and the destination subtree is replaced in full.",
-      "input": {"source": "text", "dest": [1, {"a": 2}], "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"dest": "text", "keep": 1}
-    },
-    {
-      "name": "Move string over object",
-      "desc": "The source property is removed and the destination subtree is replaced in full.",
-      "input": {"source": "text", "dest": {"a": [1, 2]}, "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"dest": "text", "keep": 1}
-    },
-    {
-      "name": "Move array over null",
-      "desc": "The source property is removed and the destination subtree is replaced in full.",
-      "input": {"source": [1, {"a": 2}], "dest": null, "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"dest": [1, {"a": 2}], "keep": 1}
-    },
-    {
-      "name": "Move array over boolean",
-      "desc": "The source property is removed and the destination subtree is replaced in full.",
-      "input": {"source": [1, {"a": 2}], "dest": true, "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"dest": [1, {"a": 2}], "keep": 1}
-    },
-    {
-      "name": "Move array over number",
-      "desc": "The source property is removed and the destination subtree is replaced in full.",
-      "input": {"source": [1, {"a": 2}], "dest": 17, "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"dest": [1, {"a": 2}], "keep": 1}
-    },
-    {
-      "name": "Move array over string",
-      "desc": "The source property is removed and the destination subtree is replaced in full.",
-      "input": {"source": [1, {"a": 2}], "dest": "text", "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"dest": [1, {"a": 2}], "keep": 1}
-    },
-    {
-      "name": "Move array over array",
-      "desc": "The source property is removed and the destination subtree is replaced in full.",
-      "input": {"source": [1, {"a": 2}], "dest": [1, {"a": 2}], "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"dest": [1, {"a": 2}], "keep": 1}
-    },
-    {
-      "name": "Move array over object",
-      "desc": "The source property is removed and the destination subtree is replaced in full.",
-      "input": {"source": [1, {"a": 2}], "dest": {"a": [1, 2]}, "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"dest": [1, {"a": 2}], "keep": 1}
-    },
-    {
-      "name": "Move object over null",
-      "desc": "The source property is removed and the destination subtree is replaced in full.",
-      "input": {"source": {"a": [1, 2]}, "dest": null, "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"dest": {"a": [1, 2]}, "keep": 1}
-    },
-    {
-      "name": "Move object over boolean",
-      "desc": "The source property is removed and the destination subtree is replaced in full.",
-      "input": {"source": {"a": [1, 2]}, "dest": true, "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"dest": {"a": [1, 2]}, "keep": 1}
-    },
-    {
-      "name": "Move object over number",
-      "desc": "The source property is removed and the destination subtree is replaced in full.",
-      "input": {"source": {"a": [1, 2]}, "dest": 17, "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"dest": {"a": [1, 2]}, "keep": 1}
-    },
-    {
-      "name": "Move object over string",
-      "desc": "The source property is removed and the destination subtree is replaced in full.",
-      "input": {"source": {"a": [1, 2]}, "dest": "text", "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"dest": {"a": [1, 2]}, "keep": 1}
-    },
-    {
-      "name": "Move object over array",
-      "desc": "The source property is removed and the destination subtree is replaced in full.",
-      "input": {"source": {"a": [1, 2]}, "dest": [1, {"a": 2}], "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"dest": {"a": [1, 2]}, "keep": 1}
-    },
-    {
-      "name": "Move object over object",
-      "desc": "The source property is removed and the destination subtree is replaced in full.",
-      "input": {"source": {"a": [1, 2]}, "dest": {"a": [1, 2]}, "keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", "dest"]],
-      "output": {"dest": {"a": [1, 2]}, "keep": 1}
-    },
-    {
-      "name": "Move an object property into an array",
-      "input": {"a": {"x": 1}, "list": [0]},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "a", ["NODE", "list", false]]],
-      "output": {"list": [0, {"x": 1}]}
-    },
-    {
-      "name": "Move an array element into an object",
-      "input": {"list": [{"x": 1}, 2]},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", ["NODE", "list", 0], "value"]],
-      "output": {"list": [2], "value": {"x": 1}}
-    },
-    {
-      "name": "Delete an object property",
-      "input": {"a": {"x": 1}, "keep": 2},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "a", null]],
-      "output": {"keep": 2}
-    },
-    {
-      "name": "Delete several original array positions",
-      "desc": "Array deletions do not shift indices until the action ends.",
-      "input": ["a", "b", "c", "d"],
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", 0, null, 2, null]],
-      "output": ["b", "d"]
-    },
-    {
-      "name": "Delete every array element",
-      "input": [1, 2, 3],
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", 0, null, 1, null, 2, null]],
-      "output": []
-    },
-    {
-      "name": "Write literal null without a source",
-      "input": {"keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", null, "a"]],
-      "output": {"keep": 1, "a": null}
-    },
-    {
-      "name": "Overwrite a subtree with literal null",
-      "input": {"a": {"x": [1]}},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", null, "a"]],
-      "output": {"a": null}
-    },
-    {
-      "name": "Append literal null",
-      "input": [],
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", null, false]],
-      "output": [null]
-    },
-    {
-      "name": "A null-to-null pair is a no-op",
-      "input": {"keep": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", null, null]],
-      "output": {"keep": 1}
-    },
-    {
-      "name": "Preserve a moved object property as null",
-      "input": {"a": {"x": 1}},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "a", "b", null, "a"]],
-      "output": {"a": null, "b": {"x": 1}}
-    },
-    {
-      "name": "A source equal to its destination is a no-op",
-      "input": {"a": {"x": [1]}},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "a", "a"]],
-      "output": {"a": {"x": [1]}}
-    },
-    {
-      "name": "Array aliases can identify the same source and destination",
-      "input": [1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", 0, -2]],
-      "output": [1, 2]
-    },
-    {
-      "name": "Moving the current root onto itself is a no-op",
-      "input": {"a": [1]},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", ["NODE"], ["NODE"]]],
-      "output": {"a": [1]}
-    },
-    {
-      "name": "Auto-vivify mixed parents",
-      "input": {"source": {"x": 1}},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["MOVE", "source", ["NODE", "a", 0, "b"]]
-      ],
-      "output": {"a": [{"b": {"x": 1}}]}
-    },
-    {
-      "name": "Recreate a removed source property as an object",
-      "desc": "Destination validity is checked in the state after removing the source.",
-      "input": {"a": 7},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "a", ["NODE", "a", "child"]]],
-      "output": {"a": {"child": 7}}
-    },
-    {
-      "name": "Recreate a removed source property as an array",
-      "input": {"a": {"x": 1}},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "a", ["NODE", "a", 0]]],
-      "output": {"a": [{"x": 1}]}
-    },
-    {
-      "name": "Move a descendant over its ancestor",
-      "input": {"a": {"b": {"value": 1}, "old": 2}, "keep": 3},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", ["NODE", "a", "b"], "a"]],
-      "output": {"a": {"value": 1}, "keep": 3}
-    },
-    {
-      "name": "Replace the root with a descendant",
-      "input": {"a": {"value": 1}, "old": 2},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "a", ["NODE"]]],
-      "output": {"value": 1}
-    },
-    {
-      "name": "Move the root through TEMP and restore it",
-      "input": {"a": 1},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["MOVE", ["NODE"], ["TEMP", 0], ["TEMP", 0], ["NODE"]]
-      ],
-      "output": {"a": 1}
-    },
-    {
-      "name": "Replace a deleted root with null",
-      "input": {"a": 1},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["MOVE", ["NODE"], ["TEMP", 0], null, ["NODE"]]
-      ],
-      "output": null
-    },
-    {
-      "name": "Swap object properties using TEMP",
-      "input": {"a": {"x": 1}, "b": [2]},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["MOVE", "a", ["TEMP", 0], "b", "a", ["TEMP", 0], "b"]
-      ],
-      "output": {"a": [2], "b": {"x": 1}}
-    },
-    {
-      "name": "Rotate object properties in pair order",
-      "input": {"a": 1, "b": 2, "c": 3},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["MOVE", "a", ["TEMP", 0], "b", "a", "c", "b", ["TEMP", 0], "c"]
-      ],
-      "output": {"a": 2, "b": 3, "c": 1}
-    },
-    {
-      "name": "Later pairs can move an earlier destination",
-      "input": {"a": {"x": 1}},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "a", "b", "b", "c"]],
-      "output": {"c": {"x": 1}}
-    },
-    {
-      "name": "Resolve destination expressions before deleting the source",
-      "input": {"key": "dest"},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["MOVE", "key", ["NODE", ["NODE", "key"]]]
-      ],
-      "output": {"dest": "dest"}
-    },
-    {
-      "name": "Compute both paths from the input",
-      "input": {"from": "a", "to": "b", "a": 7},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["MOVE", ["NODE", ["NODE", "from"]], ["NODE", ["NODE", "to"]]]
-      ],
-      "output": {"from": "a", "to": "b", "b": 7}
-    },
-    {
-      "name": "Expand array-valued path expressions",
-      "input": {"from": ["a", 0], "to": ["b", 0], "a": [7]},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["MOVE", ["NODE", ["NODE", "from"]], ["NODE", ["NODE", "to"]]]
-      ],
-      "output": {"from": ["a", 0], "to": ["b", 0], "a": [], "b": [7]}
-    },
-    {
-      "name": "Move an empty property name",
-      "input": {"": 7},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "", "a"]],
-      "output": {"a": 7}
-    },
-    {
-      "name": "Treat punctuation and numeric-looking names as literal object keys",
-      "input": {"0": 8, "a.b": 7},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "a.b", "a/b", "0", "-1"]],
-      "output": {"a/b": 7, "-1": 8}
-    },
-    {
-      "name": "Move properties special to JavaScript objects",
-      "needProto": true,
-      "desc": "Moves own __proto__, constructor, and toString properties.",
-      "input": {"__proto__": {"x": 1}, "constructor": 2, "toString": 3},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        [
-          "MOVE",
-          "__proto__", "prototype",
-          "constructor", "__PROTO__",
-          "toString", "hasOwnProperty"
-        ]
-      ],
-      "output": {"prototype": {"x": 1}, "__PROTO__": 2, "hasOwnProperty": 3}
-    },
-    {
-      "name": "Move into a literal __proto__ property",
-      "needProto": true,
-      "input": {"a": {"x": 1}},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "a", "__proto__"]],
-      "output": {"__proto__": {"x": 1}}
-    },
-    {
-      "name": "Use numeric MOVE and NODE identifiers",
-      "input": {"a": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, [4, [0, "a"], [0, "b"]]],
-      "output": {"b": 1}
-    },
-    {
-      "name": "Swap array endpoints using TEMP",
-      "input": [1, 2, 3],
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["MOVE", 0, ["TEMP", 0], -1, 0, ["TEMP", 0], -1]
-      ],
-      "output": [3, 2, 1]
-    },
-    {
-      "name": "Overwrite an original array position",
-      "desc": "Index 0 is deleted and index 1 overwritten; only then is the gap removed.",
-      "input": [1, 2, 3],
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", 0, 1]],
-      "output": [1, 3]
-    },
-    {
-      "name": "Append an original element immediately",
-      "input": [1, 2, 3],
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", 0, false]],
-      "output": [2, 3, 1]
-    },
-    {
-      "name": "Append at the numeric length",
-      "input": [1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", 0, 2]],
-      "output": [2, 1]
-    },
-    {
-      "name": "Appends change LENGTH before later pairs",
-      "input": [1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", 0, false, 1, false]],
-      "output": [1, 2]
-    },
-    {
-      "name": "Negative aliases see the length after an append",
-      "input": [1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", 0, false, -1, 1]],
-      "output": [1]
-    },
-    {
-      "name": "Move an immediately appended value again",
-      "input": [1, 2],
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["MOVE", 0, false, 2, ["TEMP", 0], ["TEMP", 0], 0]
-      ],
-      "output": [1, 2]
-    },
-    {
-      "name": "Deletion alone does not change negative aliases",
-      "input": [1, 2, 3],
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", 0, null, -1, 0]],
-      "output": [3, 2]
-    },
-    {
-      "name": "Writing a deleted array index cancels deletion",
-      "input": [1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", 0, null, null, 0]],
-      "output": [null, 2]
-    },
-    {
-      "name": "Auto-vivify through a deleted array index",
-      "input": [{"old": 1}, 2],
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["MOVE", 0, ["TEMP", 0], ["TEMP", 0], ["NODE", 0, "child"]]
-      ],
-      "output": [{"child": {"old": 1}}, 2]
-    },
-    {
-      "name": "Move an array with pending deletions",
-      "input": {"a": [1, 2, 3]},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["MOVE", ["NODE", "a", 1], null, "a", "b"]
-      ],
-      "output": {"b": [1, 3]}
-    },
-    {
-      "name": "Pending deletions follow an array through TEMP",
-      "input": {"a": [1, 2, 3]},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["MOVE", ["NODE", "a", 0], null, "a", ["TEMP", 0], ["TEMP", 0], "b"]
-      ],
-      "output": {"b": [2, 3]}
-    },
-    {
-      "name": "Repair a deletion after moving its array",
-      "input": {"a": [1, 2]},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        [
-          "MOVE",
-          ["NODE", "a", 0], ["TEMP", 0],
-          "a", "b",
-          ["TEMP", 0], ["NODE", "b", 0]
-        ]
-      ],
-      "output": {"b": [1, 2]}
-    },
-    {
-      "name": "Discard an array with pending deletions",
-      "input": {"a": [1, 2], "b": 9},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["MOVE", ["NODE", "a", 0], null, "b", "a"]
-      ],
-      "output": {"a": 9}
-    },
-    {
-      "name": "Array destination -0.5",
-      "input": {"source": "x", "list": ["a", "b"]},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["MOVE", "source", ["NODE", "list", -0.5]]
-      ],
-      "output": {"list": ["x", "a", "b"]}
-    },
-    {
-      "name": "Array destination 0",
-      "input": {"source": "x", "list": ["a", "b"]},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", ["NODE", "list", 0]]],
-      "output": {"list": ["x", "b"]}
-    },
-    {
-      "name": "Array destination 0.5",
-      "input": {"source": "x", "list": ["a", "b"]},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["MOVE", "source", ["NODE", "list", 0.5]]
-      ],
-      "output": {"list": ["a", "x", "b"]}
-    },
-    {
-      "name": "Array destination 1",
-      "input": {"source": "x", "list": ["a", "b"]},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", ["NODE", "list", 1]]],
-      "output": {"list": ["a", "x"]}
-    },
-    {
-      "name": "Array destination 1.5",
-      "input": {"source": "x", "list": ["a", "b"]},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["MOVE", "source", ["NODE", "list", 1.5]]
-      ],
-      "output": {"list": ["a", "b", "x"]}
-    },
-    {
-      "name": "Array destination 2",
-      "input": {"source": "x", "list": ["a", "b"]},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", ["NODE", "list", 2]]],
-      "output": {"list": ["a", "b", "x"]}
-    },
-    {
-      "name": "Array destination false",
-      "input": {"source": "x", "list": ["a", "b"]},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["MOVE", "source", ["NODE", "list", false]]
-      ],
-      "output": {"list": ["a", "b", "x"]}
-    },
-    {
-      "name": "Array destination -1",
-      "input": {"source": "x", "list": ["a", "b"]},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", ["NODE", "list", -1]]],
-      "output": {"list": ["a", "x"]}
-    },
-    {
-      "name": "Array destination -1.5",
-      "input": {"source": "x", "list": ["a", "b"]},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["MOVE", "source", ["NODE", "list", -1.5]]
-      ],
-      "output": {"list": ["a", "x", "b"]}
-    },
-    {
-      "name": "Array destination -2",
-      "input": {"source": "x", "list": ["a", "b"]},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", ["NODE", "list", -2]]],
-      "output": {"list": ["x", "b"]}
-    },
-    {
-      "name": "Array destination -2.5",
-      "input": {"source": "x", "list": ["a", "b"]},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["MOVE", "source", ["NODE", "list", -2.5]]
-      ],
-      "output": {"list": ["x", "a", "b"]}
-    },
-    {
-      "name": "Insert before an empty array at minus one half",
-      "input": {"source": "x", "list": []},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["MOVE", "source", ["NODE", "list", -0.5]]
-      ],
-      "output": {"list": ["x"]}
-    },
-    {
-      "name": "Preserve insertion order at a shared half index",
-      "input": {"a": "x", "b": "y", "list": [1, 2]},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["MOVE", "a", ["NODE", "list", 0.5], "b", ["NODE", "list", 0.5]]
-      ],
-      "output": {"list": [1, "x", "y", 2]}
-    },
-    {
-      "name": "Queued insertions do not change LENGTH",
-      "input": [1, 2, 3],
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", 0, 1.5, 1, -0.5, 2, false]],
-      "output": [2, 1, 3]
-    },
-    {
-      "name": "Queued insertions follow their array when moved",
-      "input": {"a": [1, 2]},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["MOVE", ["NODE", "a", 0], ["NODE", "a", 1.5], "a", "b"]
-      ],
-      "output": {"b": [2, 1]}
-    },
-    {
-      "name": "Discard queued insertions when their array is overwritten",
-      "input": {"a": [1, 2], "b": 9},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["MOVE", ["NODE", "a", 0], ["NODE", "a", 1.5], "b", "a"]
-      ],
-      "output": {"a": 9}
-    },
-    {
-      "name": "Modify a value in TEMP before queuing its insertion",
-      "input": [{"x": 1}, 2],
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["MOVE", 0, ["TEMP", 0], null, ["TEMP", 0, "x"], ["TEMP", 0], 1.5]
-      ],
-      "output": [2, {"x": null}]
-    },
-    {
-      "name": "MOVE completion makes compacted indices visible to the next action",
-      "input": [1, 2, 3],
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["AT", ["NODE"], ["MOVE", 0, null], ["MOVE", 0, null]]
-      ],
-      "output": [3]
-    },
-    {
-      "name": "MOVE completion makes queued insertions readable to the next action",
-      "input": [1, 2],
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["AT", ["NODE"], ["MOVE", 0, 1.5], ["MOVE", 1, 0]]
-      ],
-      "output": [1]
-    },
-    {
-      "name": "Move through STASH across actions",
-      "input": {"a": {"x": 1}},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        [
-          "AT",
-          ["NODE"],
-          ["MOVE", "a", ["STASH", 0]],
-          ["MOVE", ["STASH", 0], "b"]
-        ]
-      ],
-      "output": {"b": {"x": 1}}
-    },
-    {
-      "name": "Move between TEMP and STASH within an action",
-      "input": {"a": [1]},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        [
-          "MOVE",
-          "a", ["TEMP", 0],
-          ["TEMP", 0], ["STASH", 0],
-          ["STASH", 0], "b"
-        ]
-      ],
-      "output": {"b": [1]}
-    },
-    {
-      "name": "Replace the current node under AT",
-      "input": {"a": {"b": 7}, "keep": 2},
-      "jgraft": ["JGRAFT", {"v": 1}, ["AT", "a", ["MOVE", "b", ["NODE"]]]],
-      "output": {"a": 7, "keep": 2}
-    },
-    {
-      "name": "Restore a temporarily removed current node under AT",
-      "input": {"a": [1, 2], "keep": 3},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["AT", "a", ["MOVE", ["NODE"], ["TEMP", 0], ["TEMP", 0], ["NODE"]]]
-      ],
-      "output": {"a": [1, 2], "keep": 3}
-    },
-    {
-      "name": "A missing source cannot be moved",
-      "desc": "Missing source properties are INVALID_TARGET, even when the destination could be auto-vivified.",
-      "input": {},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "missing", "a"]],
-      "errors": {
-        "INVALID_TARGET": true
-      }
-    },
-    {
-      "name": "A missing source is not a self-move no-op",
-      "desc": "Equal paths still require an existing source.",
-      "input": {},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "missing", "missing"]],
-      "errors": {
-        "INVALID_TARGET": true
-      }
-    },
-    {
-      "name": "Cannot descend through scalar null",
-      "desc": "MOVE cannot convert an existing scalar parent into an object.",
-      "input": {"source": 1, "a": null},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", ["NODE", "a", "b"]]],
-      "errors": {
-        "INVALID_TARGET": true
-      }
-    },
-    {
-      "name": "Cannot descend through scalar false",
-      "desc": "MOVE cannot convert an existing scalar parent into an object.",
-      "input": {"source": 1, "a": false},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", ["NODE", "a", "b"]]],
-      "errors": {
-        "INVALID_TARGET": true
-      }
-    },
-    {
-      "name": "Cannot descend through scalar 7",
-      "desc": "MOVE cannot convert an existing scalar parent into an object.",
-      "input": {"source": 1, "a": 7},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", ["NODE", "a", "b"]]],
-      "errors": {
-        "INVALID_TARGET": true
-      }
-    },
-    {
-      "name": "Cannot descend through scalar \"text\"",
-      "desc": "MOVE cannot convert an existing scalar parent into an object.",
-      "input": {"source": 1, "a": "text"},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", ["NODE", "a", "b"]]],
-      "errors": {
-        "INVALID_TARGET": true
-      }
-    },
-    {
-      "name": "Cannot use a numeric selector on an existing object",
-      "desc": "An existing object cannot become an array while resolving the destination.",
-      "input": {"source": 1, "a": {}},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", ["NODE", "a", 0]]],
-      "errors": {
-        "INVALID_TARGET": true
-      }
-    },
-    {
-      "name": "Cannot use a string selector on an existing array",
-      "desc": "Numeric-looking strings remain object selectors.",
-      "input": {"source": 1, "a": []},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", ["NODE", "a", "0"]]],
-      "errors": {
-        "INVALID_TARGET": true
-      }
-    },
-    {
-      "name": "Reject out-of-range array destination 2.5",
-      "desc": "The index lies outside the writable integer and half-index boundaries.",
-      "input": {"source": "x", "list": ["a", "b"]},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["MOVE", "source", ["NODE", "list", 2.5]]
-      ],
-      "errors": {
-        "INVALID_TARGET": true
-      }
-    },
-    {
-      "name": "Reject out-of-range array destination -3",
-      "desc": "The index lies outside the writable integer and half-index boundaries.",
-      "input": {"source": "x", "list": ["a", "b"]},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", ["NODE", "list", -3]]],
-      "errors": {
-        "INVALID_TARGET": true
-      }
-    },
-    {
-      "name": "Reject out-of-range array destination -3.5",
-      "desc": "The index lies outside the writable integer and half-index boundaries.",
-      "input": {"source": "x", "list": ["a", "b"]},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["MOVE", "source", ["NODE", "list", -3.5]]
-      ],
-      "errors": {
-        "INVALID_TARGET": true
-      }
-    },
-    {
-      "name": "Reject out-of-range array destination 3",
-      "desc": "The index lies outside the writable integer and half-index boundaries.",
-      "input": {"source": "x", "list": ["a", "b"]},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "source", ["NODE", "list", 3]]],
-      "errors": {
-        "INVALID_TARGET": true
-      }
-    },
-    {
-      "name": "Cannot auto-vivify an array with a leading hole",
-      "desc": "A new array may only begin at index zero.",
-      "input": {"source": 1},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["MOVE", "source", ["NODE", "a", 1, "x"]]
-      ],
-      "errors": {
-        "INVALID_TARGET": true
-      }
-    },
-    {
-      "name": "Cannot read the append position as a source",
-      "desc": "false resolves to length, where no source element exists.",
-      "input": [1],
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", false, null]],
-      "errors": {
-        "INVALID_TARGET": true
-      }
-    },
-    {
-      "name": "Cannot read a source index before the array",
-      "desc": "Negative aliases must resolve to existing source elements.",
-      "input": [1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", -3, null]],
-      "errors": {
-        "INVALID_TARGET": true
-      }
-    },
-    {
-      "name": "Cannot move an array element twice",
-      "desc": "The first pair makes index zero inaccessible for the remaining pairs; static analysis can prove failure whenever that pair succeeds.",
-      "input": [1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", 0, ["TEMP", 0], 0, null]],
-      "errors": {
-        "INVALID_TARGET": true,
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "Cannot read through a deleted element",
-      "desc": "A pending deletion also makes all descendants inaccessible.",
-      "input": [{"x": 1}, 2],
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["MOVE", 0, ["TEMP", 0], ["NODE", 0, "x"], null]
-      ],
-      "errors": {
-        "INVALID_TARGET": true,
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "Path expressions cannot read a pending deletion",
-      "desc": "References evaluated within paths must respect pending array deletions.",
-      "input": [0, 1],
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["MOVE", 0, null, null, ["NODE", ["NODE", 0]]]
-      ],
-      "errors": {
-        "INVALID_TARGET": true,
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "SLICE cannot enumerate a pending deletion",
-      "desc": "The source array still has length two, but SLICE cannot read its deleted element.",
-      "input": [1, 2],
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["MOVE", 0, null, null, ["NODE", ["SLICE", ["NODE"], 0, 2]]]
-      ],
-      "errors": {
-        "INVALID_TARGET": true,
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "Cannot move a removed object property twice",
-      "desc": "Object deletion takes effect immediately.",
-      "input": {"a": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "a", "b", "a", "c"]],
-      "errors": {
-        "INVALID_TARGET": true,
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "Cannot move an object property into itself twice after deletion",
-      "desc": "Equal paths do not bypass the missing-source check.",
-      "input": {"a": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "a", null, "a", "a"]],
-      "errors": {
-        "INVALID_TARGET": true,
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "Cannot leave the current root deleted",
-      "desc": "The current node must be replaced before MOVE ends for every input.",
-      "input": {"a": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", ["NODE"], null]],
-      "errors": {
-        "INVALID_TARGET": true,
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "Cannot leave an AT current node deleted",
-      "desc": "Moving the current node into TEMP without replacement is forbidden.",
-      "input": {"a": 1},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["AT", "a", ["MOVE", ["NODE"], ["TEMP", 0]]]
-      ],
-      "errors": {
-        "INVALID_TARGET": true,
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "TEMP does not persist between MOVE actions",
-      "desc": "Each action receives fresh temporaries, so the second source is always missing.",
-      "input": {"a": 1},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        [
-          "AT",
-          ["NODE"],
-          ["MOVE", "a", ["TEMP", 0]],
-          ["MOVE", ["TEMP", 0], "b"]
-        ]
-      ],
-      "errors": {
-        "INVALID_TARGET": true,
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "Cannot move from CONST",
-      "desc": "Read-only namespace paths are INVALID_OPERAND; their use as MOVE sources can be rejected statically.",
-      "input": {},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1, "const": ["x", 1]},
-        ["MOVE", ["CONST", "x"], "a"]
-      ],
-      "errors": {
-        "INVALID_OPERAND": true,
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "Cannot move to CONST",
-      "desc": "Read-only namespace paths are INVALID_OPERAND even when the path would otherwise be writable.",
-      "input": {"a": 1},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1, "const": ["x", 1]},
-        ["MOVE", "a", ["CONST", "x"]]
-      ],
-      "errors": {
-        "INVALID_OPERAND": true,
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "Cannot move from CAP",
-      "desc": "Read-only namespace paths are INVALID_OPERAND; their use as MOVE sources can be rejected statically.",
-      "input": {},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", ["CAP", "x"], "a"]],
-      "errors": {
-        "INVALID_OPERAND": true,
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "Cannot move to CAP",
-      "desc": "Read-only namespace paths are INVALID_OPERAND even when the path would otherwise be writable.",
-      "input": {"a": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "a", ["CAP", "x"]]],
-      "errors": {
-        "INVALID_OPERAND": true,
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "Cannot move from the STASH root",
-      "desc": "MOVE explicitly forbids either endpoint being a non-current namespace root.",
-      "input": {"a": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", ["STASH"], "a"]],
-      "errors": {
-        "INVALID_OPERAND": true,
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "Cannot move to the STASH root",
-      "desc": "MOVE explicitly forbids either endpoint being a non-current namespace root.",
-      "input": {"a": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "a", ["STASH"]]],
-      "errors": {
-        "INVALID_OPERAND": true,
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "Cannot move from the TEMP root",
-      "desc": "MOVE forbids other namespace roots; TEMP also requires a nonempty path.",
-      "input": {"a": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", ["TEMP"], "a"]],
-      "errors": {
-        "INVALID_OPERAND": true,
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "Cannot move to the TEMP root",
-      "desc": "MOVE forbids other namespace roots; TEMP also requires a nonempty path.",
-      "input": {"a": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "a", ["TEMP"]]],
-      "errors": {
-        "INVALID_OPERAND": true,
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "Reject literal path selector true",
-      "desc": "Illegal literal path elements must be classified as INVALID_GRAFT.",
-      "input": {"a": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "a", ["NODE", true]]],
-      "errors": {
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "Reject literal path selector 0.25",
-      "desc": "Illegal literal path elements must be classified as INVALID_GRAFT.",
-      "input": {"a": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "a", ["NODE", 0.25]]],
-      "errors": {
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "Nested null is not the literal-null source shorthand",
-      "desc": "Only a whole endpoint written as null has MOVE shorthand semantics.",
-      "input": {"a": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", ["NODE", null], "a"]],
-      "errors": {
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "Reject computed destination selector null",
-      "desc": "The expression is valid but its input-dependent value is not a permitted selector.",
-      "input": {"a": 1, "key": null},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "a", ["NODE", ["NODE", "key"]]]],
-      "errors": {
-        "INVALID_OPERAND": true
-      }
-    },
-    {
-      "name": "Reject computed destination selector true",
-      "desc": "The expression is valid but its input-dependent value is not a permitted selector.",
-      "input": {"a": 1, "key": true},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "a", ["NODE", ["NODE", "key"]]]],
-      "errors": {
-        "INVALID_OPERAND": true
-      }
-    },
-    {
-      "name": "Reject computed destination selector 0.25",
-      "desc": "The expression is valid but its input-dependent value is not a permitted selector.",
-      "input": {"a": 1, "key": 0.25},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "a", ["NODE", ["NODE", "key"]]]],
-      "errors": {
-        "INVALID_OPERAND": true
-      }
-    },
-    {
-      "name": "Reject computed destination selector {}",
-      "desc": "The expression is valid but its input-dependent value is not a permitted selector.",
-      "input": {"a": 1, "key": {}},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "a", ["NODE", ["NODE", "key"]]]],
-      "errors": {
-        "INVALID_OPERAND": true
-      }
-    },
-    {
-      "name": "Reject a nested array after path expansion",
-      "desc": "Array path expressions expand only one level.",
-      "input": {"a": 1, "path": [["b"]]},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["MOVE", "a", ["NODE", ["NODE", "path"]]]
-      ],
-      "errors": {
-        "INVALID_OPERAND": true
-      }
-    },
-    {
-      "name": "Reject an object as the source path",
-      "desc": "MOVE calls structurally invalid endpoints INVALID_TARGET; general path validation may diagnose INVALID_GRAFT statically.",
-      "input": {"a": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", {}, "a"]],
-      "errors": {
-        "INVALID_TARGET": true,
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "Reject an object as the destination path",
-      "desc": "MOVE calls structurally invalid endpoints INVALID_TARGET; general path validation may diagnose INVALID_GRAFT statically.",
-      "input": {"a": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "a", {}]],
-      "errors": {
-        "INVALID_TARGET": true,
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "Reject an escaped-array destination",
-      "desc": "An escaped literal array is not a reference expression; MOVE allows INVALID_TARGET and static path validation may return INVALID_GRAFT.",
-      "input": {"a": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "a", [["b"]]]],
-      "errors": {
-        "INVALID_TARGET": true,
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "Reject an incomplete MOVE pair",
-      "desc": "Each source must have a destination.",
-      "input": {"a": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "a", "b", "c"]],
-      "errors": {
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "An intentional failure in a path is not upgraded",
-      "desc": "FAIL intentionally produces INVALID_TARGET, which static analysis must not upgrade.",
-      "input": {"a": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", "a", ["NODE", ["FAIL"]]]],
-      "errors": {
-        "INVALID_TARGET": true
-      }
-    },
-    {
-      "name": "Half-index insertion carries SPLIT trimming metadata",
-      "desc": "Moving the first element to an insertion point preserves its original left and right trimming.",
-      "input": " a ,b, c ",
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLIT", {"sep": ",", "trim": " "}, ["MOVE", 0, 1.5]]
-      ],
-      "output": "b, a , c "
-    },
-    {
-      "name": "Overwriting an element preserves destination SPLIT metadata",
-      "desc": "The moved value adopts the existing destination trimming instead of carrying its source trimming.",
-      "input": " a ,b, c ",
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLIT", {"sep": ",", "trim": " "}, ["MOVE", 0, 1]]
-      ],
-      "output": "a, c "
-    },
-    {
-      "name": "Appending carries SPLIT trimming metadata",
-      "input": " a ,b, c ",
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLIT", {"sep": ",", "trim": " "}, ["MOVE", 0, false]]
-      ],
-      "output": "b, c , a "
-    },
-    {
-      "name": "A TEMP object property drops element SPLIT metadata",
-      "desc": "The inserted value receives adjacent metadata, which is applied after the final element order is known.",
-      "input": " a ,b, c ",
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        [
-          "SPLIT",
-          {"sep": ",", "trim": " "},
-          ["MOVE", 0, ["TEMP", "saved"], ["TEMP", "saved"], 1.5]
-        ]
-      ],
-      "output": "b,a, c "
-    },
-    {
-      "name": "An auto-vivified TEMP array preserves element SPLIT metadata",
-      "input": " a ,b, c ",
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        [
-          "SPLIT",
-          {"sep": ",", "trim": " "},
-          ["MOVE", 0, ["TEMP", "saved", 0], ["TEMP", "saved", 0], 1.5]
-        ]
-      ],
-      "output": "b, a , c "
-    },
-    {
-      "name": "Restoring a deleted position restores SPLIT element metadata",
-      "input": " a ,b, c ",
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        [
-          "SPLIT",
-          {"sep": ",", "trim": " "},
-          ["MOVE", 0, ["TEMP", "saved", 0], ["TEMP", "saved", 0], 0]
-        ]
-      ],
-      "output": " a ,b, c "
-    },
-    {
-      "name": "Queued half-index insertions cannot be read as sources",
-      "desc": "Queued values are inaccessible. An implementation may reject the computed half-index source as an invalid operand before attempting the read.",
-      "input": {"a": "x", "list": [1, 2], "index": 0.5},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        [
-          "MOVE",
-          "a", ["NODE", "list", 0.5],
-          ["NODE", "list", ["NODE", "index"]], null
-        ]
-      ],
-      "errors": {
-        "INVALID_TARGET": true,
-        "INVALID_OPERAND": true
-      }
-    },
-    {
-      "name": "Cannot descend through a queued half-index insertion",
-      "desc": "A half index is permitted only as the final destination selector; queued insertions cannot be modified through deeper paths.",
-      "input": {"a": {"x": 1}, "list": [2], "index": 0.5},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        [
-          "MOVE",
-          "a", ["NODE", "list", 0.5],
-          null, ["NODE", "list", ["NODE", "index"], "x"]
-        ]
-      ],
-      "errors": {
-        "INVALID_TARGET": true,
-        "INVALID_OPERAND": true
-      }
-    },
-    {
-      "name": "Cannot auto-vivify through a half index",
-      "desc": "Half-index paths cannot create intermediate parents, even if no insertion has been queued yet.",
-      "input": {"index": 0.5, "list": [1]},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["MOVE", null, ["NODE", "list", ["NODE", "index"], "x"]]
-      ],
-      "errors": {
-        "INVALID_TARGET": true,
-        "INVALID_OPERAND": true
-      }
-    },
-    {
-      "name": "Pending deletion restrictions follow an array into TEMP",
-      "desc": "Moving the array does not make its pending-deletion positions readable.",
-      "input": {"a": [1, 2]},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        [
-          "MOVE",
-          ["NODE", "a", 0], null,
-          "a", ["TEMP", 0],
-          ["TEMP", 0, 0], null
-        ]
-      ],
-      "errors": {
-        "INVALID_TARGET": true,
-        "INVALID_GRAFT": true
-      }
-    },
-    {
-      "name": "Half-index insertion carries variable separator metadata",
-      "desc": "The semicolon follows the moved a while the comma follows b.",
-      "input": "a;b,c",
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLIT", {"sep": ["ANY", ",", ";"], "default": ","}, ["MOVE", 0, 1.5]]
-      ],
-      "output": "b,a;c"
-    },
-    {
-      "name": "Overwrite retains destination separator metadata",
-      "desc": "Overwriting b preserves its comma separator instead of moving the source semicolon.",
-      "input": "a;b,c",
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        ["SPLIT", {"sep": ["ANY", ",", ";"], "default": ","}, ["MOVE", 0, 1]]
-      ],
-      "output": "a,c"
-    },
-    {
-      "name": "Different SPLIT origins do not transfer element metadata",
-      "desc": "The source metadata belongs to a different split, so the inserted x receives adjacent destination metadata.",
-      "input": {"a": " x ", "b": "b, c "},
-      "jgraft": [
-        "JGRAFT",
-        {"v": 1},
-        [
-          "AT",
-          ["NODE"],
-          [
-            "AT",
-            "a",
-            [
-              "SPLIT",
-              {"sep": ",", "trim": " "},
-              ["MOVE", 0, ["STASH", "saved", 0]]
-            ]
+      "name": "New properties",
+      "desc": "Move each JSON type to a new property.",
+      "tests": [
+        {
+          "name": "Null",
+          "input": {"source":null,"keep":1},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+          "output": {"keep":1,"dest":null}
+        },
+        {
+          "name": "False",
+          "input": {"source":false,"keep":1},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+          "output": {"keep":1,"dest":false}
+        },
+        {
+          "name": "True",
+          "input": {"source":true,"keep":1},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+          "output": {"keep":1,"dest":true}
+        },
+        {
+          "name": "Zero",
+          "input": {"source":0,"keep":1},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+          "output": {"keep":1,"dest":0}
+        },
+        {
+          "name": "A negative fraction",
+          "input": {"source":-12.5,"keep":1},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+          "output": {"keep":1,"dest":-12.5}
+        },
+        {
+          "name": "An empty string",
+          "input": {"source":"","keep":1},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+          "output": {"keep":1,"dest":""}
+        },
+        {
+          "name": "A Unicode string",
+          "input": {"source":"a\n\u0000é𝄞","keep":1},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+          "output": {"keep":1,"dest":"a\n\u0000é𝄞"}
+        },
+        {
+          "name": "An empty array",
+          "input": {"source":[],"keep":1},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+          "output": {"keep":1,"dest":[]}
+        },
+        {
+          "name": "An empty object",
+          "input": {"source":{},"keep":1},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+          "output": {"keep":1,"dest":{}}
+        },
+        {
+          "name": "A heterogeneous array",
+          "input": {"source":[null,true,1,"x",[],{}],"keep":1},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+          "output": {"keep":1,"dest":[null,true,1,"x",[],{}]}
+        },
+        {
+          "name": "A nested object",
+          "input": {"source":{"a":{"b":[1,2]}},"keep":1},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+          "output": {"keep":1,"dest":{"a":{"b":[1,2]}}}
+        }
+      ]
+    },
+    {
+      "name": "Overwrite type matrix",
+      "desc": "Moved values can replace any existing JSON type.",
+      "tests": [
+        {
+          "name": "Existing null",
+          "tests": [
+            {
+              "name": "With null",
+              "desc": "The source property is removed and the destination subtree is replaced in full.",
+              "input": {"source":null,"dest":null,"keep":1},
+              "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+              "output": {"dest":null,"keep":1}
+            },
+            {
+              "name": "With boolean",
+              "desc": "The source property is removed and the destination subtree is replaced in full.",
+              "input": {"source":null,"dest":true,"keep":1},
+              "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+              "output": {"dest":null,"keep":1}
+            },
+            {
+              "name": "With number",
+              "desc": "The source property is removed and the destination subtree is replaced in full.",
+              "input": {"source":null,"dest":17,"keep":1},
+              "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+              "output": {"dest":null,"keep":1}
+            },
+            {
+              "name": "With string",
+              "desc": "The source property is removed and the destination subtree is replaced in full.",
+              "input": {"source":null,"dest":"text","keep":1},
+              "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+              "output": {"dest":null,"keep":1}
+            },
+            {
+              "name": "With array",
+              "desc": "The source property is removed and the destination subtree is replaced in full.",
+              "input": {"source":null,"dest":[1,{"a":2}],"keep":1},
+              "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+              "output": {"dest":null,"keep":1}
+            },
+            {
+              "name": "With object",
+              "desc": "The source property is removed and the destination subtree is replaced in full.",
+              "input": {"source":null,"dest":{"a":[1,2]},"keep":1},
+              "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+              "output": {"dest":null,"keep":1}
+            }
           ],
-          [
-            "AT",
-            "b",
-            [
-              "SPLIT",
-              {"sep": ",", "trim": " "},
-              ["MOVE", ["STASH", "saved", 0], 0.5]
-            ]
-          ]
-        ]
-      ],
-      "output": {"a": "", "b": "b,x, c "}
+          "desc": "Replace an existing null value with each JSON type."
+        },
+        {
+          "name": "Existing boolean",
+          "tests": [
+            {
+              "name": "With null",
+              "desc": "The source property is removed and the destination subtree is replaced in full.",
+              "input": {"source":true,"dest":null,"keep":1},
+              "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+              "output": {"dest":true,"keep":1}
+            },
+            {
+              "name": "With boolean",
+              "desc": "The source property is removed and the destination subtree is replaced in full.",
+              "input": {"source":true,"dest":true,"keep":1},
+              "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+              "output": {"dest":true,"keep":1}
+            },
+            {
+              "name": "With number",
+              "desc": "The source property is removed and the destination subtree is replaced in full.",
+              "input": {"source":true,"dest":17,"keep":1},
+              "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+              "output": {"dest":true,"keep":1}
+            },
+            {
+              "name": "With string",
+              "desc": "The source property is removed and the destination subtree is replaced in full.",
+              "input": {"source":true,"dest":"text","keep":1},
+              "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+              "output": {"dest":true,"keep":1}
+            },
+            {
+              "name": "With array",
+              "desc": "The source property is removed and the destination subtree is replaced in full.",
+              "input": {"source":true,"dest":[1,{"a":2}],"keep":1},
+              "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+              "output": {"dest":true,"keep":1}
+            },
+            {
+              "name": "With object",
+              "desc": "The source property is removed and the destination subtree is replaced in full.",
+              "input": {"source":true,"dest":{"a":[1,2]},"keep":1},
+              "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+              "output": {"dest":true,"keep":1}
+            }
+          ],
+          "desc": "Replace an existing boolean value with each JSON type."
+        },
+        {
+          "name": "Existing number",
+          "tests": [
+            {
+              "name": "With null",
+              "desc": "The source property is removed and the destination subtree is replaced in full.",
+              "input": {"source":17,"dest":null,"keep":1},
+              "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+              "output": {"dest":17,"keep":1}
+            },
+            {
+              "name": "With boolean",
+              "desc": "The source property is removed and the destination subtree is replaced in full.",
+              "input": {"source":17,"dest":true,"keep":1},
+              "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+              "output": {"dest":17,"keep":1}
+            },
+            {
+              "name": "With number",
+              "desc": "The source property is removed and the destination subtree is replaced in full.",
+              "input": {"source":17,"dest":17,"keep":1},
+              "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+              "output": {"dest":17,"keep":1}
+            },
+            {
+              "name": "With string",
+              "desc": "The source property is removed and the destination subtree is replaced in full.",
+              "input": {"source":17,"dest":"text","keep":1},
+              "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+              "output": {"dest":17,"keep":1}
+            },
+            {
+              "name": "With array",
+              "desc": "The source property is removed and the destination subtree is replaced in full.",
+              "input": {"source":17,"dest":[1,{"a":2}],"keep":1},
+              "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+              "output": {"dest":17,"keep":1}
+            },
+            {
+              "name": "With object",
+              "desc": "The source property is removed and the destination subtree is replaced in full.",
+              "input": {"source":17,"dest":{"a":[1,2]},"keep":1},
+              "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+              "output": {"dest":17,"keep":1}
+            }
+          ],
+          "desc": "Replace an existing number value with each JSON type."
+        },
+        {
+          "name": "Existing string",
+          "tests": [
+            {
+              "name": "With null",
+              "desc": "The source property is removed and the destination subtree is replaced in full.",
+              "input": {"source":"text","dest":null,"keep":1},
+              "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+              "output": {"dest":"text","keep":1}
+            },
+            {
+              "name": "With boolean",
+              "desc": "The source property is removed and the destination subtree is replaced in full.",
+              "input": {"source":"text","dest":true,"keep":1},
+              "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+              "output": {"dest":"text","keep":1}
+            },
+            {
+              "name": "With number",
+              "desc": "The source property is removed and the destination subtree is replaced in full.",
+              "input": {"source":"text","dest":17,"keep":1},
+              "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+              "output": {"dest":"text","keep":1}
+            },
+            {
+              "name": "With string",
+              "desc": "The source property is removed and the destination subtree is replaced in full.",
+              "input": {"source":"text","dest":"text","keep":1},
+              "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+              "output": {"dest":"text","keep":1}
+            },
+            {
+              "name": "With array",
+              "desc": "The source property is removed and the destination subtree is replaced in full.",
+              "input": {"source":"text","dest":[1,{"a":2}],"keep":1},
+              "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+              "output": {"dest":"text","keep":1}
+            },
+            {
+              "name": "With object",
+              "desc": "The source property is removed and the destination subtree is replaced in full.",
+              "input": {"source":"text","dest":{"a":[1,2]},"keep":1},
+              "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+              "output": {"dest":"text","keep":1}
+            }
+          ],
+          "desc": "Replace an existing string value with each JSON type."
+        },
+        {
+          "name": "Existing array",
+          "tests": [
+            {
+              "name": "With null",
+              "desc": "The source property is removed and the destination subtree is replaced in full.",
+              "input": {"source":[1,{"a":2}],"dest":null,"keep":1},
+              "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+              "output": {"dest":[1,{"a":2}],"keep":1}
+            },
+            {
+              "name": "With boolean",
+              "desc": "The source property is removed and the destination subtree is replaced in full.",
+              "input": {"source":[1,{"a":2}],"dest":true,"keep":1},
+              "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+              "output": {"dest":[1,{"a":2}],"keep":1}
+            },
+            {
+              "name": "With number",
+              "desc": "The source property is removed and the destination subtree is replaced in full.",
+              "input": {"source":[1,{"a":2}],"dest":17,"keep":1},
+              "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+              "output": {"dest":[1,{"a":2}],"keep":1}
+            },
+            {
+              "name": "With string",
+              "desc": "The source property is removed and the destination subtree is replaced in full.",
+              "input": {"source":[1,{"a":2}],"dest":"text","keep":1},
+              "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+              "output": {"dest":[1,{"a":2}],"keep":1}
+            },
+            {
+              "name": "With array",
+              "desc": "The source property is removed and the destination subtree is replaced in full.",
+              "input": {"source":[1,{"a":2}],"dest":[1,{"a":2}],"keep":1},
+              "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+              "output": {"dest":[1,{"a":2}],"keep":1}
+            },
+            {
+              "name": "With object",
+              "desc": "The source property is removed and the destination subtree is replaced in full.",
+              "input": {"source":[1,{"a":2}],"dest":{"a":[1,2]},"keep":1},
+              "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+              "output": {"dest":[1,{"a":2}],"keep":1}
+            }
+          ],
+          "desc": "Replace an existing array value with each JSON type."
+        },
+        {
+          "name": "Existing object",
+          "tests": [
+            {
+              "name": "With null",
+              "desc": "The source property is removed and the destination subtree is replaced in full.",
+              "input": {"source":{"a":[1,2]},"dest":null,"keep":1},
+              "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+              "output": {"dest":{"a":[1,2]},"keep":1}
+            },
+            {
+              "name": "With boolean",
+              "desc": "The source property is removed and the destination subtree is replaced in full.",
+              "input": {"source":{"a":[1,2]},"dest":true,"keep":1},
+              "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+              "output": {"dest":{"a":[1,2]},"keep":1}
+            },
+            {
+              "name": "With number",
+              "desc": "The source property is removed and the destination subtree is replaced in full.",
+              "input": {"source":{"a":[1,2]},"dest":17,"keep":1},
+              "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+              "output": {"dest":{"a":[1,2]},"keep":1}
+            },
+            {
+              "name": "With string",
+              "desc": "The source property is removed and the destination subtree is replaced in full.",
+              "input": {"source":{"a":[1,2]},"dest":"text","keep":1},
+              "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+              "output": {"dest":{"a":[1,2]},"keep":1}
+            },
+            {
+              "name": "With array",
+              "desc": "The source property is removed and the destination subtree is replaced in full.",
+              "input": {"source":{"a":[1,2]},"dest":[1,{"a":2}],"keep":1},
+              "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+              "output": {"dest":{"a":[1,2]},"keep":1}
+            },
+            {
+              "name": "With object",
+              "desc": "The source property is removed and the destination subtree is replaced in full.",
+              "input": {"source":{"a":[1,2]},"dest":{"a":[1,2]},"keep":1},
+              "jgraft": ["JGRAFT",{"v":1},["MOVE","source","dest"]],
+              "output": {"dest":{"a":[1,2]},"keep":1}
+            }
+          ],
+          "desc": "Replace an existing object value with each JSON type."
+        }
+      ]
+    },
+    {
+      "name": "Transfers, deletion, and no-ops",
+      "desc": "Object and array transfers, literal null, and aliases follow MOVE semantics.",
+      "tests": [
+        {
+          "name": "Move an object property into an array",
+          "input": {"a":{"x":1},"list":[0]},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","a",["NODE","list",false]]],
+          "output": {"list":[0,{"x":1}]}
+        },
+        {
+          "name": "Move an array element into an object",
+          "input": {"list":[{"x":1},2]},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",["NODE","list",0],"value"]],
+          "output": {"list":[2],"value":{"x":1}}
+        },
+        {
+          "name": "Delete an object property",
+          "input": {"a":{"x":1},"keep":2},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","a",null]],
+          "output": {"keep":2}
+        },
+        {
+          "name": "Delete several original array positions",
+          "desc": "Array deletions do not shift indices until the action ends.",
+          "input": ["a","b","c","d"],
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",0,null,2,null]],
+          "output": ["b","d"]
+        },
+        {
+          "name": "Delete every array element",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",0,null,1,null,2,null]],
+          "output": []
+        },
+        {
+          "name": "Write literal null without a source",
+          "input": {"keep":1},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",null,"a"]],
+          "output": {"keep":1,"a":null}
+        },
+        {
+          "name": "Overwrite a subtree with literal null",
+          "input": {"a":{"x":[1]}},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",null,"a"]],
+          "output": {"a":null}
+        },
+        {
+          "name": "Append literal null",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",null,false]],
+          "output": [null]
+        },
+        {
+          "name": "Null-to-null pair is a no-op",
+          "input": {"keep":1},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",null,null]],
+          "output": {"keep":1}
+        },
+        {
+          "name": "Preserve a moved object property as null",
+          "input": {"a":{"x":1}},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","a","b",null,"a"]],
+          "output": {"a":null,"b":{"x":1}}
+        },
+        {
+          "name": "Source equal to its destination is a no-op",
+          "input": {"a":{"x":[1]}},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","a","a"]],
+          "output": {"a":{"x":[1]}}
+        },
+        {
+          "name": "Array aliases can identify the same source and destination",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",0,-2]],
+          "output": [1,2]
+        },
+        {
+          "name": "Moving the current root onto itself is a no-op",
+          "input": {"a":[1]},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",["NODE"],["NODE"]]],
+          "output": {"a":[1]}
+        }
+      ]
+    },
+    {
+      "name": "Parents, overlap, and evaluation order",
+      "desc": "Resolve paths in pair order while preserving ownership and supporting overlapping moves.",
+      "tests": [
+        {
+          "name": "Auto-vivify mixed parents",
+          "input": {"source":{"x":1}},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","source",["NODE","a",0,"b"]]],
+          "output": {"a":[{"b":{"x":1}}]}
+        },
+        {
+          "name": "Recreate a removed source property as an object",
+          "desc": "Destination validity is checked in the state after removing the source.",
+          "input": {"a":7},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","a",["NODE","a","child"]]],
+          "output": {"a":{"child":7}}
+        },
+        {
+          "name": "Recreate a removed source property as an array",
+          "input": {"a":{"x":1}},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","a",["NODE","a",0]]],
+          "output": {"a":[{"x":1}]}
+        },
+        {
+          "name": "Move a descendant over its ancestor",
+          "input": {"a":{"b":{"value":1},"old":2},"keep":3},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",["NODE","a","b"],"a"]],
+          "output": {"a":{"value":1},"keep":3}
+        },
+        {
+          "name": "Replace the root with a descendant",
+          "input": {"a":{"value":1},"old":2},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","a",["NODE"]]],
+          "output": {"value":1}
+        },
+        {
+          "name": "Move the root through TEMP and restore it",
+          "input": {"a":1},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",["NODE"],["TEMP",0],["TEMP",0],["NODE"]]],
+          "output": {"a":1}
+        },
+        {
+          "name": "Replace a deleted root with null",
+          "input": {"a":1},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",["NODE"],["TEMP",0],null,["NODE"]]],
+          "output": null
+        },
+        {
+          "name": "Swap object properties using TEMP",
+          "input": {"a":{"x":1},"b":[2]},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","a",["TEMP",0],"b","a",["TEMP",0],"b"]],
+          "output": {"a":[2],"b":{"x":1}}
+        },
+        {
+          "name": "Rotate object properties in pair order",
+          "input": {"a":1,"b":2,"c":3},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","a",["TEMP",0],"b","a","c","b",["TEMP",0],"c"]],
+          "output": {"a":2,"b":3,"c":1}
+        },
+        {
+          "name": "Later pairs can move an earlier destination",
+          "input": {"a":{"x":1}},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","a","b","b","c"]],
+          "output": {"c":{"x":1}}
+        },
+        {
+          "name": "Resolve destination expressions before deleting the source",
+          "input": {"key":"dest"},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","key",["NODE",["NODE","key"]]]],
+          "output": {"dest":"dest"}
+        },
+        {
+          "name": "Compute both paths from the input",
+          "input": {"from":"a","to":"b","a":7},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",["NODE",["NODE","from"]],["NODE",["NODE","to"]]]],
+          "output": {"from":"a","to":"b","b":7}
+        },
+        {
+          "name": "Expand array-valued path expressions",
+          "input": {"from":["a",0],"to":["b",0],"a":[7]},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",["NODE",["NODE","from"]],["NODE",["NODE","to"]]]],
+          "output": {"from":["a",0],"to":["b",0],"a":[],"b":[7]}
+        }
+      ]
+    },
+    {
+      "name": "Property names and identifiers",
+      "desc": "Arbitrary own property names and numeric identifiers retain their defined meanings.",
+      "tests": [
+        {
+          "name": "Move an empty property name",
+          "input": {"":7},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","","a"]],
+          "output": {"a":7}
+        },
+        {
+          "name": "Treat punctuation and numeric-looking names as literal object keys",
+          "input": {"0":8,"a.b":7},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","a.b","a/b","0","-1"]],
+          "output": {"a/b":7,"-1":8}
+        },
+        {
+          "name": "Move properties special to JavaScript objects",
+          "needProto": true,
+          "desc": "Moves own __proto__, constructor, and toString properties.",
+          "input": {"__proto__":{"x":1},"constructor":2,"toString":3},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","__proto__","prototype","constructor","__PROTO__","toString","hasOwnProperty"]],
+          "output": {"prototype":{"x":1},"__PROTO__":2,"hasOwnProperty":3}
+        },
+        {
+          "name": "Move into a literal __proto__ property",
+          "needProto": true,
+          "input": {"a":{"x":1}},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","a","__proto__"]],
+          "output": {"__proto__":{"x":1}}
+        },
+        {
+          "name": "Use numeric MOVE and NODE identifiers",
+          "input": {"a":1},
+          "jgraft": ["JGRAFT",{"v":1},[4,[0,"a"],[0,"b"]]],
+          "output": {"b":1}
+        }
+      ]
+    },
+    {
+      "name": "Immediate array writes and deferred deletions",
+      "desc": "Appends are immediate; deletions retain original indices until the action completes.",
+      "tests": [
+        {
+          "name": "Swap array endpoints using TEMP",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",0,["TEMP",0],-1,0,["TEMP",0],-1]],
+          "output": [3,2,1]
+        },
+        {
+          "name": "Overwrite an original array position",
+          "desc": "Index 0 is deleted and index 1 overwritten; only then is the gap removed.",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",0,1]],
+          "output": [1,3]
+        },
+        {
+          "name": "Append an original element immediately",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",0,false]],
+          "output": [2,3,1]
+        },
+        {
+          "name": "Append at the numeric length",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",0,2]],
+          "output": [2,1]
+        },
+        {
+          "name": "Appends change LENGTH before later pairs",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",0,false,1,false]],
+          "output": [1,2]
+        },
+        {
+          "name": "Negative aliases see the length after an append",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",0,false,-1,1]],
+          "output": [1]
+        },
+        {
+          "name": "Move an immediately appended value again",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",0,false,2,["TEMP",0],["TEMP",0],0]],
+          "output": [1,2]
+        },
+        {
+          "name": "Deletion alone does not change negative aliases",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",0,null,-1,0]],
+          "output": [3,2]
+        },
+        {
+          "name": "Writing a deleted array index cancels deletion",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",0,null,null,0]],
+          "output": [null,2]
+        },
+        {
+          "name": "Auto-vivify through a deleted array index",
+          "input": [{"old":1},2],
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",0,["TEMP",0],["TEMP",0],["NODE",0,"child"]]],
+          "output": [{"child":{"old":1}},2]
+        },
+        {
+          "name": "Move an array with pending deletions",
+          "input": {"a":[1,2,3]},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",["NODE","a",1],null,"a","b"]],
+          "output": {"b":[1,3]}
+        },
+        {
+          "name": "Pending deletions follow an array through TEMP",
+          "input": {"a":[1,2,3]},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",["NODE","a",0],null,"a",["TEMP",0],["TEMP",0],"b"]],
+          "output": {"b":[2,3]}
+        },
+        {
+          "name": "Repair a deletion after moving its array",
+          "input": {"a":[1,2]},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",["NODE","a",0],["TEMP",0],"a","b",["TEMP",0],["NODE","b",0]]],
+          "output": {"b":[1,2]}
+        },
+        {
+          "name": "Discard an array with pending deletions",
+          "input": {"a":[1,2],"b":9},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",["NODE","a",0],null,"b","a"]],
+          "output": {"a":9}
+        }
+      ]
+    },
+    {
+      "name": "Queued array insertions",
+      "desc": "Half indices queue insertions without changing the visible length or allowing reads.",
+      "tests": [
+        {
+          "name": "Array destination -0.5",
+          "input": {"source":"x","list":["a","b"]},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","source",["NODE","list",-0.5]]],
+          "output": {"list":["x","a","b"]}
+        },
+        {
+          "name": "Array destination 0",
+          "input": {"source":"x","list":["a","b"]},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","source",["NODE","list",0]]],
+          "output": {"list":["x","b"]}
+        },
+        {
+          "name": "Array destination 0.5",
+          "input": {"source":"x","list":["a","b"]},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","source",["NODE","list",0.5]]],
+          "output": {"list":["a","x","b"]}
+        },
+        {
+          "name": "Array destination 1",
+          "input": {"source":"x","list":["a","b"]},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","source",["NODE","list",1]]],
+          "output": {"list":["a","x"]}
+        },
+        {
+          "name": "Array destination 1.5",
+          "input": {"source":"x","list":["a","b"]},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","source",["NODE","list",1.5]]],
+          "output": {"list":["a","b","x"]}
+        },
+        {
+          "name": "Array destination 2",
+          "input": {"source":"x","list":["a","b"]},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","source",["NODE","list",2]]],
+          "output": {"list":["a","b","x"]}
+        },
+        {
+          "name": "Array destination false",
+          "input": {"source":"x","list":["a","b"]},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","source",["NODE","list",false]]],
+          "output": {"list":["a","b","x"]}
+        },
+        {
+          "name": "Array destination -1",
+          "input": {"source":"x","list":["a","b"]},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","source",["NODE","list",-1]]],
+          "output": {"list":["a","x"]}
+        },
+        {
+          "name": "Array destination -1.5",
+          "input": {"source":"x","list":["a","b"]},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","source",["NODE","list",-1.5]]],
+          "output": {"list":["a","x","b"]}
+        },
+        {
+          "name": "Array destination -2",
+          "input": {"source":"x","list":["a","b"]},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","source",["NODE","list",-2]]],
+          "output": {"list":["x","b"]}
+        },
+        {
+          "name": "Array destination -2.5",
+          "input": {"source":"x","list":["a","b"]},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","source",["NODE","list",-2.5]]],
+          "output": {"list":["x","a","b"]}
+        },
+        {
+          "name": "Insert before an empty array at minus one half",
+          "input": {"source":"x","list":[]},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","source",["NODE","list",-0.5]]],
+          "output": {"list":["x"]}
+        },
+        {
+          "name": "Preserve insertion order at a shared half index",
+          "input": {"a":"x","b":"y","list":[1,2]},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","a",["NODE","list",0.5],"b",["NODE","list",0.5]]],
+          "output": {"list":[1,"x","y",2]}
+        },
+        {
+          "name": "Queued insertions do not change LENGTH",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",0,1.5,1,-0.5,2,false]],
+          "output": [2,1,3]
+        },
+        {
+          "name": "Queued insertions follow their array when moved",
+          "input": {"a":[1,2]},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",["NODE","a",0],["NODE","a",1.5],"a","b"]],
+          "output": {"b":[2,1]}
+        },
+        {
+          "name": "Discard queued insertions when their array is overwritten",
+          "input": {"a":[1,2],"b":9},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",["NODE","a",0],["NODE","a",1.5],"b","a"]],
+          "output": {"a":9}
+        },
+        {
+          "name": "Modify a value in TEMP before queuing its insertion",
+          "input": [{"x":1},2],
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",0,["TEMP",0],null,["TEMP",0,"x"],["TEMP",0],1.5]],
+          "output": [2,{"x":null}]
+        }
+      ]
+    },
+    {
+      "name": "Completion and namespaces",
+      "desc": "Compacted indices become visible after completion; moved data can cross TEMP, STASH, and AT scopes.",
+      "tests": [
+        {
+          "name": "MOVE completion makes compacted indices visible to the next action",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE"],["MOVE",0,null],["MOVE",0,null]]],
+          "output": [3]
+        },
+        {
+          "name": "MOVE completion makes queued insertions readable to the next action",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE"],["MOVE",0,1.5],["MOVE",1,0]]],
+          "output": [1]
+        },
+        {
+          "name": "Move through STASH across actions",
+          "input": {"a":{"x":1}},
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE"],["MOVE","a",["STASH",0]],["MOVE",["STASH",0],"b"]]],
+          "output": {"b":{"x":1}}
+        },
+        {
+          "name": "Move between TEMP and STASH within an action",
+          "input": {"a":[1]},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","a",["TEMP",0],["TEMP",0],["STASH",0],["STASH",0],"b"]],
+          "output": {"b":[1]}
+        },
+        {
+          "name": "Replace the current node under AT",
+          "input": {"a":{"b":7},"keep":2},
+          "jgraft": ["JGRAFT",{"v":1},["AT","a",["MOVE","b",["NODE"]]]],
+          "output": {"a":7,"keep":2}
+        },
+        {
+          "name": "Restore a temporarily removed current node under AT",
+          "input": {"a":[1,2],"keep":3},
+          "jgraft": ["JGRAFT",{"v":1},["AT","a",["MOVE",["NODE"],["TEMP",0],["TEMP",0],["NODE"]]]],
+          "output": {"a":[1,2],"keep":3}
+        }
+      ]
+    },
+    {
+      "name": "Target and deletion failures",
+      "desc": "Missing or removed sources, invalid indices, and unrepaired current nodes must fail.",
+      "tests": [
+        {
+          "name": "Missing source cannot be moved",
+          "desc": "Missing source properties are INVALID_TARGET, even when the destination could be auto-vivified.",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","missing","a"]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Missing source is not a self-move no-op",
+          "desc": "Equal paths still require an existing source.",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","missing","missing"]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Cannot descend through scalar null",
+          "desc": "MOVE cannot convert an existing scalar parent into an object.",
+          "input": {"source":1,"a":null},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","source",["NODE","a","b"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Cannot descend through scalar false",
+          "desc": "MOVE cannot convert an existing scalar parent into an object.",
+          "input": {"source":1,"a":false},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","source",["NODE","a","b"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Cannot descend through scalar 7",
+          "desc": "MOVE cannot convert an existing scalar parent into an object.",
+          "input": {"source":1,"a":7},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","source",["NODE","a","b"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Cannot descend through scalar \"text\"",
+          "desc": "MOVE cannot convert an existing scalar parent into an object.",
+          "input": {"source":1,"a":"text"},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","source",["NODE","a","b"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Cannot use a numeric selector on an existing object",
+          "desc": "An existing object cannot become an array while resolving the destination.",
+          "input": {"source":1,"a":{}},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","source",["NODE","a",0]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Cannot use a string selector on an existing array",
+          "desc": "Numeric-looking strings remain object selectors.",
+          "input": {"source":1,"a":[]},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","source",["NODE","a","0"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Reject out-of-range array destination 2.5",
+          "desc": "The index lies outside the writable integer and half-index boundaries.",
+          "input": {"source":"x","list":["a","b"]},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","source",["NODE","list",2.5]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Reject out-of-range array destination -3",
+          "desc": "The index lies outside the writable integer and half-index boundaries.",
+          "input": {"source":"x","list":["a","b"]},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","source",["NODE","list",-3]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Reject out-of-range array destination -3.5",
+          "desc": "The index lies outside the writable integer and half-index boundaries.",
+          "input": {"source":"x","list":["a","b"]},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","source",["NODE","list",-3.5]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Reject out-of-range array destination 3",
+          "desc": "The index lies outside the writable integer and half-index boundaries.",
+          "input": {"source":"x","list":["a","b"]},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","source",["NODE","list",3]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Cannot auto-vivify an array with a leading hole",
+          "desc": "A new array may only begin at index zero.",
+          "input": {"source":1},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","source",["NODE","a",1,"x"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Cannot read the append position as a source",
+          "desc": "false resolves to length, where no source element exists.",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",false,null]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Cannot read a source index before the array",
+          "desc": "Negative aliases must resolve to existing source elements.",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",-3,null]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Cannot move an array element twice",
+          "desc": "The first pair makes index zero inaccessible for the remaining pairs; static analysis can prove failure whenever that pair succeeds.",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",0,["TEMP",0],0,null]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Cannot read through a deleted element",
+          "desc": "A pending deletion also makes all descendants inaccessible.",
+          "input": [{"x":1},2],
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",0,["TEMP",0],["NODE",0,"x"],null]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Path expressions cannot read a pending deletion",
+          "desc": "References evaluated within paths must respect pending array deletions.",
+          "input": [0,1],
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",0,null,null,["NODE",["NODE",0]]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "SLICE cannot enumerate a pending deletion",
+          "desc": "The source array still has length two, but SLICE cannot read its deleted element.",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",0,null,null,["NODE",["SLICE",["NODE"],0,2]]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Cannot move a removed object property twice",
+          "desc": "Object deletion takes effect immediately.",
+          "input": {"a":1},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","a","b","a","c"]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Cannot move an object property into itself twice after deletion",
+          "desc": "Equal paths do not bypass the missing-source check.",
+          "input": {"a":1},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","a",null,"a","a"]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Cannot leave the current root deleted",
+          "desc": "The current node must be replaced before MOVE ends for every input.",
+          "input": {"a":1},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",["NODE"],null]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Cannot leave an AT current node deleted",
+          "desc": "Moving the current node into TEMP without replacement is forbidden.",
+          "input": {"a":1},
+          "jgraft": ["JGRAFT",{"v":1},["AT","a",["MOVE",["NODE"],["TEMP",0]]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "TEMP does not persist between MOVE actions",
+          "desc": "Each action receives fresh temporaries, so the second source is always missing.",
+          "input": {"a":1},
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE"],["MOVE","a",["TEMP",0]],["MOVE",["TEMP",0],"b"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        }
+      ]
+    },
+    {
+      "name": "Namespace restrictions",
+      "desc": "MOVE cannot read or write restricted namespaces or their prohibited roots.",
+      "tests": [
+        {
+          "name": "Cannot move from CONST",
+          "desc": "Read-only namespace paths are INVALID_OPERAND; their use as MOVE sources can be rejected statically.",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",1]},["MOVE",["CONST","x"],"a"]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Cannot move to CONST",
+          "desc": "Read-only namespace paths are INVALID_OPERAND even when the path would otherwise be writable.",
+          "input": {"a":1},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",1]},["MOVE","a",["CONST","x"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Cannot move from CAP",
+          "desc": "Read-only namespace paths are INVALID_OPERAND; their use as MOVE sources can be rejected statically.",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",["CAP","x"],"a"]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Cannot move to CAP",
+          "desc": "Read-only namespace paths are INVALID_OPERAND even when the path would otherwise be writable.",
+          "input": {"a":1},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","a",["CAP","x"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Cannot move from the STASH root",
+          "desc": "MOVE explicitly forbids either endpoint being a non-current namespace root.",
+          "input": {"a":1},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",["STASH"],"a"]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Cannot move to the STASH root",
+          "desc": "MOVE explicitly forbids either endpoint being a non-current namespace root.",
+          "input": {"a":1},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","a",["STASH"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Cannot move from the TEMP root",
+          "desc": "MOVE forbids other namespace roots; TEMP also requires a nonempty path.",
+          "input": {"a":1},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",["TEMP"],"a"]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Cannot move to the TEMP root",
+          "desc": "MOVE forbids other namespace roots; TEMP also requires a nonempty path.",
+          "input": {"a":1},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","a",["TEMP"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        }
+      ]
+    },
+    {
+      "name": "Operand and syntax validation",
+      "desc": "Path selectors and pair encodings are checked without upgrading intentional runtime failures.",
+      "tests": [
+        {
+          "name": "Reject literal path selector true",
+          "desc": "Illegal literal path elements must be classified as INVALID_GRAFT.",
+          "input": {"a":1},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","a",["NODE",true]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject literal path selector 0.25",
+          "desc": "Illegal literal path elements must be classified as INVALID_GRAFT.",
+          "input": {"a":1},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","a",["NODE",0.25]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Nested null is not the literal-null source shorthand",
+          "desc": "Only a whole endpoint written as null has MOVE shorthand semantics.",
+          "input": {"a":1},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",["NODE",null],"a"]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject computed destination selector null",
+          "desc": "The expression is valid but its input-dependent value is not a permitted selector.",
+          "input": {"a":1,"key":null},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","a",["NODE",["NODE","key"]]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Reject computed destination selector true",
+          "desc": "The expression is valid but its input-dependent value is not a permitted selector.",
+          "input": {"a":1,"key":true},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","a",["NODE",["NODE","key"]]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Reject computed destination selector 0.25",
+          "desc": "The expression is valid but its input-dependent value is not a permitted selector.",
+          "input": {"a":1,"key":0.25},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","a",["NODE",["NODE","key"]]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Reject computed destination selector {}",
+          "desc": "The expression is valid but its input-dependent value is not a permitted selector.",
+          "input": {"a":1,"key":{}},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","a",["NODE",["NODE","key"]]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Reject a nested array after path expansion",
+          "desc": "Array path expressions expand only one level.",
+          "input": {"a":1,"path":[["b"]]},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","a",["NODE",["NODE","path"]]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Reject an object as the source path",
+          "desc": "MOVE calls structurally invalid endpoints INVALID_TARGET; general path validation may diagnose INVALID_GRAFT statically.",
+          "input": {"a":1},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",{},"a"]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject an object as the destination path",
+          "desc": "MOVE calls structurally invalid endpoints INVALID_TARGET; general path validation may diagnose INVALID_GRAFT statically.",
+          "input": {"a":1},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","a",{}]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject an escaped-array destination",
+          "desc": "An escaped literal array is not a reference expression; MOVE allows INVALID_TARGET and static path validation may return INVALID_GRAFT.",
+          "input": {"a":1},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","a",[["b"]]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reject an incomplete MOVE pair",
+          "desc": "Each source must have a destination.",
+          "input": {"a":1},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","a","b","c"]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Intentional failure in a path is not upgraded",
+          "desc": "FAIL intentionally produces INVALID_TARGET, which static analysis must not upgrade.",
+          "input": {"a":1},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","a",["NODE",["FAIL"]]]],
+          "errors": {"INVALID_TARGET":true}
+        }
+      ]
+    },
+    {
+      "name": "SPLIT metadata and queued-position restrictions",
+      "desc": "Ownership and separator/trimming metadata follow moves, while queued positions remain unreadable.",
+      "tests": [
+        {
+          "name": "Half-index insertion carries SPLIT trimming metadata",
+          "desc": "Moving the first element to an insertion point preserves its original left and right trimming.",
+          "input": " a ,b, c ",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","trim":" "},["MOVE",0,1.5]]],
+          "output": "b, a , c "
+        },
+        {
+          "name": "Overwriting an element preserves destination SPLIT metadata",
+          "desc": "The moved value adopts the existing destination trimming instead of carrying its source trimming.",
+          "input": " a ,b, c ",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","trim":" "},["MOVE",0,1]]],
+          "output": "a, c "
+        },
+        {
+          "name": "Appending carries SPLIT trimming metadata",
+          "input": " a ,b, c ",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","trim":" "},["MOVE",0,false]]],
+          "output": "b, c , a "
+        },
+        {
+          "name": "TEMP object property drops element SPLIT metadata",
+          "desc": "The inserted value receives adjacent metadata, which is applied after the final element order is known.",
+          "input": " a ,b, c ",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","trim":" "},["MOVE",0,["TEMP","saved"],["TEMP","saved"],1.5]]],
+          "output": "b,a, c "
+        },
+        {
+          "name": "Auto-vivified TEMP array preserves element SPLIT metadata",
+          "input": " a ,b, c ",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","trim":" "},["MOVE",0,["TEMP","saved",0],["TEMP","saved",0],1.5]]],
+          "output": "b, a , c "
+        },
+        {
+          "name": "Restoring a deleted position restores SPLIT element metadata",
+          "input": " a ,b, c ",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","trim":" "},["MOVE",0,["TEMP","saved",0],["TEMP","saved",0],0]]],
+          "output": " a ,b, c "
+        },
+        {
+          "name": "Queued half-index insertions cannot be read as sources",
+          "desc": "Queued values are inaccessible. An implementation may reject the computed half-index source as an invalid operand before attempting the read.",
+          "input": {"a":"x","list":[1,2],"index":0.5},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","a",["NODE","list",0.5],["NODE","list",["NODE","index"]],null]],
+          "errors": {"INVALID_TARGET":true,"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Cannot descend through a queued half-index insertion",
+          "desc": "A half index is permitted only as the final destination selector; queued insertions cannot be modified through deeper paths.",
+          "input": {"a":{"x":1},"list":[2],"index":0.5},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","a",["NODE","list",0.5],null,["NODE","list",["NODE","index"],"x"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Cannot auto-vivify through a half index",
+          "desc": "Half-index paths cannot create intermediate parents, even if no insertion has been queued yet.",
+          "input": {"index":0.5,"list":[1]},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",null,["NODE","list",["NODE","index"],"x"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Pending deletion restrictions follow an array into TEMP",
+          "desc": "Moving the array does not make its pending-deletion positions readable.",
+          "input": {"a":[1,2]},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",["NODE","a",0],null,"a",["TEMP",0],["TEMP",0,0],null]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Half-index insertion carries variable separator metadata",
+          "desc": "The semicolon follows the moved a while the comma follows b.",
+          "input": "a;b,c",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":["ANY",",",";"],"default":","},["MOVE",0,1.5]]],
+          "output": "b,a;c"
+        },
+        {
+          "name": "Overwrite retains destination separator metadata",
+          "desc": "Overwriting b preserves its comma separator instead of moving the source semicolon.",
+          "input": "a;b,c",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":["ANY",",",";"],"default":","},["MOVE",0,1]]],
+          "output": "a,c"
+        },
+        {
+          "name": "Different SPLIT origins do not transfer element metadata",
+          "desc": "The source metadata belongs to a different split, so the inserted x receives adjacent destination metadata.",
+          "input": {"a":" x ","b":"b, c "},
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE"],["AT","a",["SPLIT",{"sep":",","trim":" "},["MOVE",0,["STASH","saved",0]]]],["AT","b",["SPLIT",{"sep":",","trim":" "},["MOVE",["STASH","saved",0],0.5]]]]],
+          "output": {"a":"","b":"b,x, c "}
+        }
+      ]
     }
   ]
 }

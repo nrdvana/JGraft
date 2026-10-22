@@ -4,418 +4,484 @@
   "desc": "Array cardinality and Unicode codepoint string length; current and explicit operands, constructed and referenced values, lexical scope, pending array edits, numeric IDs, malformed arity, and error propagation/probing. needLoneSurrogate marks cases that require lone-surrogate preservation. Literal type faults permit stronger static diagnoses.",
   "tests": [
     {
-      "name": "Current-node LENGTH: empty string",
-      "input": "",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH"], ["NODE"]]],
-      "output": 0
-    },
-    {
-      "name": "Explicit-value LENGTH: empty string",
-      "input": null,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH", ""], ["NODE"]]],
-      "output": 0
-    },
-    {
-      "name": "Current-node LENGTH: ASCII",
-      "input": "hello",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH"], ["NODE"]]],
-      "output": 5
-    },
-    {
-      "name": "Explicit-value LENGTH: ASCII",
-      "input": null,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH", "hello"], ["NODE"]]],
-      "output": 5
-    },
-    {
-      "name": "Current-node LENGTH: NUL and escaped characters",
-      "input": "a\u0000\n\t\"\\",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH"], ["NODE"]]],
-      "output": 6
-    },
-    {
-      "name": "Explicit-value LENGTH: NUL and escaped characters",
-      "input": null,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH", "a\u0000\n\t\"\\"], ["NODE"]]],
-      "output": 6
-    },
-    {
-      "name": "Current-node LENGTH: BMP and combining characters",
-      "input": "é́中",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH"], ["NODE"]]],
-      "output": 3
-    },
-    {
-      "name": "Explicit-value LENGTH: BMP and combining characters",
-      "input": null,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH", "é́中"], ["NODE"]]],
-      "output": 3
-    },
-    {
-      "name": "Current-node LENGTH: one supplementary character",
-      "input": "😀",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH"], ["NODE"]]],
-      "output": 1
-    },
-    {
-      "name": "Explicit-value LENGTH: one supplementary character",
-      "input": null,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH", "😀"], ["NODE"]]],
-      "output": 1
-    },
-    {
-      "name": "Current-node LENGTH: supplementary characters among BMP characters",
-      "input": "a😀b",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH"], ["NODE"]]],
-      "output": 3
-    },
-    {
-      "name": "Explicit-value LENGTH: supplementary characters among BMP characters",
-      "input": null,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH", "a😀b"], ["NODE"]]],
-      "output": 3
-    },
-    {
-      "name": "Current-node LENGTH: minimum and maximum supplementary codepoints",
-      "input": "𐀀􏿿",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH"], ["NODE"]]],
-      "output": 2
-    },
-    {
-      "name": "Explicit-value LENGTH: minimum and maximum supplementary codepoints",
-      "input": null,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH", "𐀀􏿿"], ["NODE"]]],
-      "output": 2
-    },
-    {
-      "name": "Current-node LENGTH: supplementary musical symbol",
-      "input": "𝄞",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH"], ["NODE"]]],
-      "output": 1
-    },
-    {
-      "name": "Explicit-value LENGTH: supplementary musical symbol",
-      "input": null,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH", "𝄞"], ["NODE"]]],
-      "output": 1
-    },
-    {
-      "name": "Current-node LENGTH: lone high surrogate",
-      "input": "\ud800",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH"], ["NODE"]]],
-      "output": 1,
-      "needLoneSurrogate": true
-    },
-    {
-      "name": "Explicit-value LENGTH: lone high surrogate",
-      "input": null,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH", "\ud800"], ["NODE"]]],
-      "output": 1,
-      "needLoneSurrogate": true
-    },
-    {
-      "name": "Current-node LENGTH: lone low surrogate",
-      "input": "\udc00",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH"], ["NODE"]]],
-      "output": 1,
-      "needLoneSurrogate": true
-    },
-    {
-      "name": "Explicit-value LENGTH: lone low surrogate",
-      "input": null,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH", "\udc00"], ["NODE"]]],
-      "output": 1,
-      "needLoneSurrogate": true
-    },
-    {
-      "name": "Current-node LENGTH: reversed surrogates",
-      "input": "\udc00\ud800",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH"], ["NODE"]]],
-      "output": 2,
-      "needLoneSurrogate": true
-    },
-    {
-      "name": "Explicit-value LENGTH: reversed surrogates",
-      "input": null,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH", "\udc00\ud800"], ["NODE"]]],
-      "output": 2,
-      "needLoneSurrogate": true
-    },
-    {
-      "name": "Current-node LENGTH: surrogates separated by BMP text",
-      "input": "\ud800x\udc00",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH"], ["NODE"]]],
-      "output": 3,
-      "needLoneSurrogate": true
-    },
-    {
-      "name": "Explicit-value LENGTH: surrogates separated by BMP text",
-      "input": null,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH", "\ud800x\udc00"], ["NODE"]]],
-      "output": 3,
-      "needLoneSurrogate": true
-    },
-    {
-      "name": "Current-node LENGTH: lone and paired surrogates",
-      "input": "\ud800😀\udc00",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH"], ["NODE"]]],
-      "output": 3,
-      "needLoneSurrogate": true
-    },
-    {
-      "name": "Explicit-value LENGTH: lone and paired surrogates",
-      "input": null,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH", "\ud800😀\udc00"], ["NODE"]]],
-      "output": 3,
-      "needLoneSurrogate": true
-    },
-    {
-      "name": "Current-node LENGTH: empty array",
-      "input": [],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH"], ["NODE"]]],
-      "output": 0
-    },
-    {
-      "name": "Explicit-value LENGTH: empty array",
-      "input": null,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH", [[]]], ["NODE"]]],
-      "output": 0
-    },
-    {
-      "name": "Current-node LENGTH: one-element array",
-      "input": [null],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH"], ["NODE"]]],
-      "output": 1
-    },
-    {
-      "name": "Explicit-value LENGTH: one-element array",
-      "input": null,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH", [[null]]], ["NODE"]]],
-      "output": 1
-    },
-    {
-      "name": "Current-node LENGTH: heterogeneous array",
-      "input": [null, false, true, 0, "", {}, []],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH"], ["NODE"]]],
-      "output": 7
-    },
-    {
-      "name": "Explicit-value LENGTH: heterogeneous array",
-      "input": null,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH", [[null, false, true, 0, "", {}, [[]]]]], ["NODE"]]],
-      "output": 7
-    },
-    {
-      "name": "Current-node LENGTH: nested array",
-      "input": [[1, 2, 3], {"a": [1, 2]}, []],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH"], ["NODE"]]],
-      "output": 3
-    },
-    {
-      "name": "Explicit-value LENGTH: nested array",
-      "input": null,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH", [[[[1, 2, 3]], {"a": [[1, 2]]}, [[]]]]], ["NODE"]]],
-      "output": 3
-    },
-    {
-      "name": "Reject current target null",
-      "input": null,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH"], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "Reject literal value null",
-      "input": null,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH", null], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "Reject current target false",
-      "input": false,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH"], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "Reject literal value false",
-      "input": null,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH", false], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "Reject current target true",
-      "input": true,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH"], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "Reject literal value true",
-      "input": null,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH", true], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "Reject current target 0",
-      "input": 0,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH"], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "Reject literal value 0",
-      "input": null,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH", 0], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "Reject current target -1.5",
-      "input": -1.5,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH"], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "Reject literal value -1.5",
-      "input": null,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH", -1.5], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "Reject current target {}",
-      "input": {},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH"], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "Reject literal value {}",
-      "input": null,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH", {}], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "Reject current target {\"length\":3}",
-      "input": {"length": 3},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH"], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "Reject literal value {\"length\":3}",
-      "input": null,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH", {"length": 3}], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true, "INVALID_GRAFT": true}
-    },
-    {
-      "name": "Numeric LENGTH expression ID",
-      "input": [1, 2, 3],
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", [55], ["NODE"]]],
-      "output": 3
-    },
-    {
-      "name": "Read the selected property",
-      "input": {"text": "a😀b"},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH", ["NODE", "text"]], ["NODE"]]],
-      "output": 3
-    },
-    {
-      "name": "Missing source reference",
-      "input": {},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH", ["NODE", "missing"]], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "Explicit FAIL remains a target error",
-      "input": {},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH", ["FAIL"]], ["NODE"]]],
-      "errors": {"INVALID_TARGET": true}
-    },
-    {
-      "name": "An intentional failure as a match is false",
-      "input": {},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["IS", ["LENGTH", ["FAIL"]], 0], ["NODE"]]],
-      "output": false
-    },
-    {
-      "name": "Missing source inside a match is false",
-      "input": {},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["IS", ["LENGTH", ["NODE", "missing"]], 0], ["NODE"]]],
-      "output": false
-    },
-    {
-      "name": "Invalid current target inside a match is false",
-      "input": {},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["IS", ["LENGTH"], 0], ["NODE"]]],
-      "output": false
-    },
-    {
-      "name": "LENGTH has at most one operand",
-      "input": "abc",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH", ["NODE"], 0], ["NODE"]]],
-      "errors": {"INVALID_GRAFT": true}
-    },
-    {
-      "name": "A literal numeric target remains a failed match",
-      "input": {},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["IS", ["LENGTH", 0], 0], ["NODE"]]],
-      "output": false
-    },
-    {
-      "name": "Reference a constant",
-      "input": {},
-      "jgraft": ["JGRAFT", {"v": 1, "const": ["text", "😀x"]}, ["COPY", ["LENGTH", ["CONST", "text"]], ["NODE"]]],
-      "output": 2
-    },
-    {
-      "name": "Expand a common expression",
-      "input": [1, 2],
-      "jgraft": ["JGRAFT", {"v": 1, "expr": ["size", ["LENGTH"]]}, ["COPY", ["EXPR", "size"], ["NODE"]]],
-      "output": 2
-    },
-    {
-      "name": "Construct the array operand",
-      "input": {"a": 1},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH", [[["NODE", "a"], null, [[1, 2]]]]], ["NODE"]]],
-      "output": 3
-    },
-    {
-      "name": "Read a __proto__ source property",
-      "needProto": true,
-      "input": {"__proto__": [1, 2]},
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH", ["NODE", "__proto__"]], ["NODE"]]],
-      "output": 2
-    },
-    {
-      "name": "LENGTH follows the AT current node",
-      "input": {"text": "😀x"},
-      "jgraft": ["JGRAFT", {"v": 1}, ["AT", "text", ["COPY", ["LENGTH"], ["NODE"]]]],
-      "output": {"text": 2}
-    },
-    {
-      "name": "Read a temporary within one COPY",
-      "input": null,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", "abc", ["TEMP", "text"], ["LENGTH", ["TEMP", "text"]], ["NODE"]]],
-      "output": 3
-    },
-    {
-      "name": "Read shared stash data",
-      "input": null,
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", [[1, 2]], ["STASH", "data"]], ["COPY", ["LENGTH", ["STASH", "data"]], ["NODE"]]],
-      "output": 2
-    },
-    {
-      "name": "Pending deletions preserve the array length",
-      "input": [1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", 0, null, null, ["NODE", ["LENGTH", ["NODE"]]]]],
-      "output": [2, null]
-    },
-    {
-      "name": "Queued insertions do not change the observed length",
-      "input": [1, 2],
-      "jgraft": ["JGRAFT", {"v": 1}, ["MOVE", 0, 0.5, null, ["NODE", ["LENGTH", ["NODE"]]]]],
-      "output": [1, 2, null]
-    },
-    {
-      "name": "Concatenating lone surrogates can form one character",
-      "input": "\ud800",
-      "jgraft": ["JGRAFT", {"v": 1}, ["COPY", ["LENGTH"], ["STASH", "before"]], ["COPY", ["CONCAT", ["NODE"], "\udc00"], ["NODE"]], ["COPY", {"before": ["STASH", "before"], "after": ["LENGTH"]}, ["NODE"]]],
-      "output": {"before": 1, "after": 1},
-      "needLoneSurrogate": true
+      "name": "String codepoint length",
+      "desc": "Current-node and explicit operands count codepoints, combining valid surrogate pairs and retaining lone surrogates on capable hosts.",
+      "tests": [
+        {
+          "name": "Current node",
+          "tests": [
+            {
+              "name": "Empty string",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH"],["NODE"]]],
+              "output": 0
+            },
+            {
+              "name": "ASCII",
+              "input": "hello",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH"],["NODE"]]],
+              "output": 5
+            },
+            {
+              "name": "NUL and escaped characters",
+              "input": "a\u0000\n\t\"\\",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH"],["NODE"]]],
+              "output": 6
+            },
+            {
+              "name": "BMP and combining characters",
+              "input": "é́中",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH"],["NODE"]]],
+              "output": 3
+            },
+            {
+              "name": "One supplementary character",
+              "input": "😀",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH"],["NODE"]]],
+              "output": 1
+            },
+            {
+              "name": "Supplementary characters among BMP characters",
+              "input": "a😀b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH"],["NODE"]]],
+              "output": 3
+            },
+            {
+              "name": "Minimum and maximum supplementary codepoints",
+              "input": "𐀀􏿿",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH"],["NODE"]]],
+              "output": 2
+            },
+            {
+              "name": "Supplementary musical symbol",
+              "input": "𝄞",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH"],["NODE"]]],
+              "output": 1
+            },
+            {
+              "name": "Lone high surrogate",
+              "input": "\ud800",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH"],["NODE"]]],
+              "output": 1,
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "Lone low surrogate",
+              "input": "\udc00",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH"],["NODE"]]],
+              "output": 1,
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "Reversed surrogates",
+              "input": "\udc00\ud800",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH"],["NODE"]]],
+              "output": 2,
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "Surrogates separated by BMP text",
+              "input": "\ud800x\udc00",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH"],["NODE"]]],
+              "output": 3,
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "Lone and paired surrogates",
+              "input": "\ud800😀\udc00",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH"],["NODE"]]],
+              "output": 3,
+              "needLoneSurrogate": true
+            }
+          ]
+        },
+        {
+          "name": "Explicit value",
+          "tests": [
+            {
+              "name": "Empty string",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH",""],["NODE"]]],
+              "output": 0
+            },
+            {
+              "name": "ASCII",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH","hello"],["NODE"]]],
+              "output": 5
+            },
+            {
+              "name": "NUL and escaped characters",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH","a\u0000\n\t\"\\"],["NODE"]]],
+              "output": 6
+            },
+            {
+              "name": "BMP and combining characters",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH","é́中"],["NODE"]]],
+              "output": 3
+            },
+            {
+              "name": "One supplementary character",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH","😀"],["NODE"]]],
+              "output": 1
+            },
+            {
+              "name": "Supplementary characters among BMP characters",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH","a😀b"],["NODE"]]],
+              "output": 3
+            },
+            {
+              "name": "Minimum and maximum supplementary codepoints",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH","𐀀􏿿"],["NODE"]]],
+              "output": 2
+            },
+            {
+              "name": "Supplementary musical symbol",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH","𝄞"],["NODE"]]],
+              "output": 1
+            },
+            {
+              "name": "Lone high surrogate",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH","\ud800"],["NODE"]]],
+              "output": 1,
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "Lone low surrogate",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH","\udc00"],["NODE"]]],
+              "output": 1,
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "Reversed surrogates",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH","\udc00\ud800"],["NODE"]]],
+              "output": 2,
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "Surrogates separated by BMP text",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH","\ud800x\udc00"],["NODE"]]],
+              "output": 3,
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "Lone and paired surrogates",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH","\ud800😀\udc00"],["NODE"]]],
+              "output": 3,
+              "needLoneSurrogate": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Array length",
+      "desc": "Count top-level elements without recursively counting their contents.",
+      "tests": [
+        {
+          "name": "Current node",
+          "tests": [
+            {
+              "name": "Empty array",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH"],["NODE"]]],
+              "output": 0
+            },
+            {
+              "name": "One-element array",
+              "input": [null],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH"],["NODE"]]],
+              "output": 1
+            },
+            {
+              "name": "Heterogeneous array",
+              "input": [null,false,true,0,"",{},[]],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH"],["NODE"]]],
+              "output": 7
+            },
+            {
+              "name": "Nested array",
+              "input": [[1,2,3],{"a":[1,2]},[]],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH"],["NODE"]]],
+              "output": 3
+            }
+          ]
+        },
+        {
+          "name": "Explicit value",
+          "tests": [
+            {
+              "name": "Empty array",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH",[[]]],["NODE"]]],
+              "output": 0
+            },
+            {
+              "name": "One-element array",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH",[[null]]],["NODE"]]],
+              "output": 1
+            },
+            {
+              "name": "Heterogeneous array",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH",[[null,false,true,0,"",{},[[]]]]],["NODE"]]],
+              "output": 7
+            },
+            {
+              "name": "Nested array",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH",[[[[1,2,3]],{"a":[[1,2]]},[[]]]]],["NODE"]]],
+              "output": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Invalid operand types",
+      "desc": "Non-string, non-array operands do not supply a length.",
+      "tests": [
+        {
+          "name": "Current node",
+          "tests": [
+            {
+              "name": "Null",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "False",
+              "input": false,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "True",
+              "input": true,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "0",
+              "input": 0,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "-1.5",
+              "input": -1.5,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "{}",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "{\"length\":3}",
+              "input": {"length":3},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "Explicit value",
+          "tests": [
+            {
+              "name": "Null",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH",null],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "False",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH",false],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "True",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH",true],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "0",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH",0],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "-1.5",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH",-1.5],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "{}",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH",{}],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "{\"length\":3}",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH",{"length":3}],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "References, errors, and arity",
+      "desc": "Numeric identifiers and references work normally; recoverable match probes return false and invalid arity remains fatal.",
+      "tests": [
+        {
+          "name": "Numeric LENGTH expression ID",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[55],["NODE"]]],
+          "output": 3
+        },
+        {
+          "name": "Read the selected property",
+          "input": {"text":"a😀b"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH",["NODE","text"]],["NODE"]]],
+          "output": 3
+        },
+        {
+          "name": "Missing source reference",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH",["NODE","missing"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Explicit FAIL remains a target error",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH",["FAIL"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Intentional failure as a match is false",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["LENGTH",["FAIL"]],0],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Missing source inside a match is false",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["LENGTH",["NODE","missing"]],0],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Invalid current target inside a match is false",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["LENGTH"],0],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LENGTH has at most one operand",
+          "input": "abc",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH",["NODE"],0],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Literal numeric target remains a failed match",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["LENGTH",0],0],["NODE"]]],
+          "output": false
+        }
+      ]
+    },
+    {
+      "name": "Value construction and namespaces",
+      "desc": "Constants, common expressions, constructed arrays, arbitrary properties, AT, TEMP, and STASH can supply operands.",
+      "tests": [
+        {
+          "name": "Reference a constant",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["text","😀x"]},["COPY",["LENGTH",["CONST","text"]],["NODE"]]],
+          "output": 2
+        },
+        {
+          "name": "Expand a common expression",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1,"expr":["size",["LENGTH"]]},["COPY",["EXPR","size"],["NODE"]]],
+          "output": 2
+        },
+        {
+          "name": "Construct the array operand",
+          "input": {"a":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH",[[["NODE","a"],null,[[1,2]]]]],["NODE"]]],
+          "output": 3
+        },
+        {
+          "name": "Read a __proto__ source property",
+          "needProto": true,
+          "input": {"__proto__":[1,2]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH",["NODE","__proto__"]],["NODE"]]],
+          "output": 2
+        },
+        {
+          "name": "LENGTH follows the AT current node",
+          "input": {"text":"😀x"},
+          "jgraft": ["JGRAFT",{"v":1},["AT","text",["COPY",["LENGTH"],["NODE"]]]],
+          "output": {"text":2}
+        },
+        {
+          "name": "Read a temporary within one COPY",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY","abc",["TEMP","text"],["LENGTH",["TEMP","text"]],["NODE"]]],
+          "output": 3
+        },
+        {
+          "name": "Read shared stash data",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[[1,2]],["STASH","data"]],["COPY",["LENGTH",["STASH","data"]],["NODE"]]],
+          "output": 2
+        }
+      ]
+    },
+    {
+      "name": "Pending edits and constructed Unicode",
+      "desc": "Pending array edits retain the visible length, and concatenated surrogates are decoded after construction.",
+      "tests": [
+        {
+          "name": "Pending deletions preserve the array length",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",0,null,null,["NODE",["LENGTH",["NODE"]]]]],
+          "output": [2,null]
+        },
+        {
+          "name": "Queued insertions do not change the observed length",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",0,0.5,null,["NODE",["LENGTH",["NODE"]]]]],
+          "output": [1,2,null]
+        },
+        {
+          "name": "Concatenating lone surrogates can form one character",
+          "input": "\ud800",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LENGTH"],["STASH","before"]],["COPY",["CONCAT",["NODE"],"\udc00"],["NODE"]],["COPY",{"before":["STASH","before"],"after":["LENGTH"]},["NODE"]]],
+          "output": {"before":1,"after":1},
+          "needLoneSurrogate": true
+        }
+      ]
     }
   ]
 }
