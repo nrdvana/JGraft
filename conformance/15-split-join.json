@@ -1,0 +1,4764 @@
+{
+  "version": 1,
+  "name": "SPLIT and JOIN",
+  "desc": "SPLIT expression, JOIN expression, and SPLIT action: literal and longest-match regex separators, zero-width progress, retained separators, element constraints, Unicode boundaries, trimming order, scoped operands, nested edits, and separator/trimming metadata across reassembly. Supporting actions expose intermediate arrays and metadata without prescribing an implementation, traversal order, or resource-counter totals. Static diagnoses are allowed where the specification permits them.",
+  "tests": [
+    {
+      "name": "Literal separators",
+      "desc": "Strings are verbatim separators rather than host regex syntax. Empty fields at nonempty separators are retained, including a final empty field after a trailing separator.",
+      "tests": [
+        {
+          "name": "Empty input",
+          "desc": "The same separator rules apply to current-node and explicit operands; an unedited action round-trips the string.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",","],["NODE"]]],
+              "output": [""]
+            },
+            {
+              "name": "Explicit operand",
+              "input": {"text":""},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",",",["NODE","text"]],["NODE"]]],
+              "output": [""]
+            },
+            {
+              "name": "Object specification",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":","}],["NODE"]]],
+              "output": [""]
+            },
+            {
+              "name": "Unedited action",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",","]],
+              "output": ""
+            }
+          ]
+        },
+        {
+          "name": "No occurrence",
+          "desc": "The same separator rules apply to current-node and explicit operands; an unedited action round-trips the string.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "abc",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",","],["NODE"]]],
+              "output": ["abc"]
+            },
+            {
+              "name": "Explicit operand",
+              "input": {"text":"abc"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",",",["NODE","text"]],["NODE"]]],
+              "output": ["abc"]
+            },
+            {
+              "name": "Object specification",
+              "input": "abc",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":","}],["NODE"]]],
+              "output": ["abc"]
+            },
+            {
+              "name": "Unedited action",
+              "input": "abc",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",","]],
+              "output": "abc"
+            }
+          ]
+        },
+        {
+          "name": "One occurrence",
+          "desc": "The same separator rules apply to current-node and explicit operands; an unedited action round-trips the string.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",","],["NODE"]]],
+              "output": ["a","b"]
+            },
+            {
+              "name": "Explicit operand",
+              "input": {"text":"a,b"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",",",["NODE","text"]],["NODE"]]],
+              "output": ["a","b"]
+            },
+            {
+              "name": "Object specification",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":","}],["NODE"]]],
+              "output": ["a","b"]
+            },
+            {
+              "name": "Unedited action",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",","]],
+              "output": "a,b"
+            }
+          ]
+        },
+        {
+          "name": "Leading separator",
+          "desc": "The same separator rules apply to current-node and explicit operands; an unedited action round-trips the string.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": ",a",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",","],["NODE"]]],
+              "output": ["","a"]
+            },
+            {
+              "name": "Explicit operand",
+              "input": {"text":",a"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",",",["NODE","text"]],["NODE"]]],
+              "output": ["","a"]
+            },
+            {
+              "name": "Object specification",
+              "input": ",a",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":","}],["NODE"]]],
+              "output": ["","a"]
+            },
+            {
+              "name": "Unedited action",
+              "input": ",a",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",","]],
+              "output": ",a"
+            }
+          ]
+        },
+        {
+          "name": "Trailing separator",
+          "desc": "The same separator rules apply to current-node and explicit operands; an unedited action round-trips the string.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "a,",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",","],["NODE"]]],
+              "output": ["a",""]
+            },
+            {
+              "name": "Explicit operand",
+              "input": {"text":"a,"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",",",["NODE","text"]],["NODE"]]],
+              "output": ["a",""]
+            },
+            {
+              "name": "Object specification",
+              "input": "a,",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":","}],["NODE"]]],
+              "output": ["a",""]
+            },
+            {
+              "name": "Unedited action",
+              "input": "a,",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",","]],
+              "output": "a,"
+            }
+          ]
+        },
+        {
+          "name": "Only separator",
+          "desc": "The same separator rules apply to current-node and explicit operands; an unedited action round-trips the string.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": ",",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",","],["NODE"]]],
+              "output": ["",""]
+            },
+            {
+              "name": "Explicit operand",
+              "input": {"text":","},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",",",["NODE","text"]],["NODE"]]],
+              "output": ["",""]
+            },
+            {
+              "name": "Object specification",
+              "input": ",",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":","}],["NODE"]]],
+              "output": ["",""]
+            },
+            {
+              "name": "Unedited action",
+              "input": ",",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",","]],
+              "output": ","
+            }
+          ]
+        },
+        {
+          "name": "Consecutive separators",
+          "desc": "The same separator rules apply to current-node and explicit operands; an unedited action round-trips the string.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": ",,",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",","],["NODE"]]],
+              "output": ["","",""]
+            },
+            {
+              "name": "Explicit operand",
+              "input": {"text":",,"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",",",["NODE","text"]],["NODE"]]],
+              "output": ["","",""]
+            },
+            {
+              "name": "Object specification",
+              "input": ",,",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":","}],["NODE"]]],
+              "output": ["","",""]
+            },
+            {
+              "name": "Unedited action",
+              "input": ",,",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",","]],
+              "output": ",,"
+            }
+          ]
+        },
+        {
+          "name": "Interior empty field",
+          "desc": "The same separator rules apply to current-node and explicit operands; an unedited action round-trips the string.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "a,,b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",","],["NODE"]]],
+              "output": ["a","","b"]
+            },
+            {
+              "name": "Explicit operand",
+              "input": {"text":"a,,b"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",",",["NODE","text"]],["NODE"]]],
+              "output": ["a","","b"]
+            },
+            {
+              "name": "Object specification",
+              "input": "a,,b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":","}],["NODE"]]],
+              "output": ["a","","b"]
+            },
+            {
+              "name": "Unedited action",
+              "input": "a,,b",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",","]],
+              "output": "a,,b"
+            }
+          ]
+        },
+        {
+          "name": "Both boundaries",
+          "desc": "The same separator rules apply to current-node and explicit operands; an unedited action round-trips the string.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": ",a,b,",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",","],["NODE"]]],
+              "output": ["","a","b",""]
+            },
+            {
+              "name": "Explicit operand",
+              "input": {"text":",a,b,"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",",",["NODE","text"]],["NODE"]]],
+              "output": ["","a","b",""]
+            },
+            {
+              "name": "Object specification",
+              "input": ",a,b,",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":","}],["NODE"]]],
+              "output": ["","a","b",""]
+            },
+            {
+              "name": "Unedited action",
+              "input": ",a,b,",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",","]],
+              "output": ",a,b,"
+            }
+          ]
+        },
+        {
+          "name": "Several trailing separators",
+          "desc": "The same separator rules apply to current-node and explicit operands; an unedited action round-trips the string.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "a,b,,",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",","],["NODE"]]],
+              "output": ["a","b","",""]
+            },
+            {
+              "name": "Explicit operand",
+              "input": {"text":"a,b,,"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",",",["NODE","text"]],["NODE"]]],
+              "output": ["a","b","",""]
+            },
+            {
+              "name": "Object specification",
+              "input": "a,b,,",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":","}],["NODE"]]],
+              "output": ["a","b","",""]
+            },
+            {
+              "name": "Unedited action",
+              "input": "a,b,,",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",","]],
+              "output": "a,b,,"
+            }
+          ]
+        },
+        {
+          "name": "Repeated multi-character separator",
+          "desc": "The same separator rules apply to current-node and explicit operands; an unedited action round-trips the string.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "aaaaa",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT","aa"],["NODE"]]],
+              "output": ["","","a"]
+            },
+            {
+              "name": "Explicit operand",
+              "input": {"text":"aaaaa"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT","aa",["NODE","text"]],["NODE"]]],
+              "output": ["","","a"]
+            },
+            {
+              "name": "Object specification",
+              "input": "aaaaa",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":"aa"}],["NODE"]]],
+              "output": ["","","a"]
+            },
+            {
+              "name": "Unedited action",
+              "input": "aaaaa",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT","aa"]],
+              "output": "aaaaa"
+            }
+          ]
+        },
+        {
+          "name": "Overlapping occurrences are not reused",
+          "desc": "The same separator rules apply to current-node and explicit operands; an unedited action round-trips the string.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "ababa",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT","aba"],["NODE"]]],
+              "output": ["","ba"]
+            },
+            {
+              "name": "Explicit operand",
+              "input": {"text":"ababa"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT","aba",["NODE","text"]],["NODE"]]],
+              "output": ["","ba"]
+            },
+            {
+              "name": "Object specification",
+              "input": "ababa",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":"aba"}],["NODE"]]],
+              "output": ["","ba"]
+            },
+            {
+              "name": "Unedited action",
+              "input": "ababa",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT","aba"]],
+              "output": "ababa"
+            }
+          ]
+        },
+        {
+          "name": "Regex punctuation is literal",
+          "desc": "The same separator rules apply to current-node and explicit operands; an unedited action round-trips the string.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "a.*b.*",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",".*"],["NODE"]]],
+              "output": ["a","b",""]
+            },
+            {
+              "name": "Explicit operand",
+              "input": {"text":"a.*b.*"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",".*",["NODE","text"]],["NODE"]]],
+              "output": ["a","b",""]
+            },
+            {
+              "name": "Object specification",
+              "input": "a.*b.*",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":".*"}],["NODE"]]],
+              "output": ["a","b",""]
+            },
+            {
+              "name": "Unedited action",
+              "input": "a.*b.*",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",".*"]],
+              "output": "a.*b.*"
+            }
+          ]
+        },
+        {
+          "name": "Backslash",
+          "desc": "The same separator rules apply to current-node and explicit operands; an unedited action round-trips the string.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "a\\b\\",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT","\\"],["NODE"]]],
+              "output": ["a","b",""]
+            },
+            {
+              "name": "Explicit operand",
+              "input": {"text":"a\\b\\"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT","\\",["NODE","text"]],["NODE"]]],
+              "output": ["a","b",""]
+            },
+            {
+              "name": "Object specification",
+              "input": "a\\b\\",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":"\\"}],["NODE"]]],
+              "output": ["a","b",""]
+            },
+            {
+              "name": "Unedited action",
+              "input": "a\\b\\",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT","\\"]],
+              "output": "a\\b\\"
+            }
+          ]
+        },
+        {
+          "name": "NUL",
+          "desc": "The same separator rules apply to current-node and explicit operands; an unedited action round-trips the string.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "a\u0000b\u0000",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT","\u0000"],["NODE"]]],
+              "output": ["a","b",""]
+            },
+            {
+              "name": "Explicit operand",
+              "input": {"text":"a\u0000b\u0000"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT","\u0000",["NODE","text"]],["NODE"]]],
+              "output": ["a","b",""]
+            },
+            {
+              "name": "Object specification",
+              "input": "a\u0000b\u0000",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":"\u0000"}],["NODE"]]],
+              "output": ["a","b",""]
+            },
+            {
+              "name": "Unedited action",
+              "input": "a\u0000b\u0000",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT","\u0000"]],
+              "output": "a\u0000b\u0000"
+            }
+          ]
+        },
+        {
+          "name": "Case sensitive",
+          "desc": "The same separator rules apply to current-node and explicit operands; an unedited action round-trips the string.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "AaA",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT","A"],["NODE"]]],
+              "output": ["","a",""]
+            },
+            {
+              "name": "Explicit operand",
+              "input": {"text":"AaA"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT","A",["NODE","text"]],["NODE"]]],
+              "output": ["","a",""]
+            },
+            {
+              "name": "Object specification",
+              "input": "AaA",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":"A"}],["NODE"]]],
+              "output": ["","a",""]
+            },
+            {
+              "name": "Unedited action",
+              "input": "AaA",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT","A"]],
+              "output": "AaA"
+            }
+          ]
+        },
+        {
+          "name": "CRLF",
+          "desc": "The same separator rules apply to current-node and explicit operands; an unedited action round-trips the string.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "a\r\nb\r\n",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT","\r\n"],["NODE"]]],
+              "output": ["a","b",""]
+            },
+            {
+              "name": "Explicit operand",
+              "input": {"text":"a\r\nb\r\n"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT","\r\n",["NODE","text"]],["NODE"]]],
+              "output": ["a","b",""]
+            },
+            {
+              "name": "Object specification",
+              "input": "a\r\nb\r\n",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":"\r\n"}],["NODE"]]],
+              "output": ["a","b",""]
+            },
+            {
+              "name": "Unedited action",
+              "input": "a\r\nb\r\n",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT","\r\n"]],
+              "output": "a\r\nb\r\n"
+            }
+          ]
+        },
+        {
+          "name": "Supplementary character",
+          "desc": "The same separator rules apply to current-node and explicit operands; an unedited action round-trips the string.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "a😀b😀",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT","😀"],["NODE"]]],
+              "output": ["a","b",""]
+            },
+            {
+              "name": "Explicit operand",
+              "input": {"text":"a😀b😀"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT","😀",["NODE","text"]],["NODE"]]],
+              "output": ["a","b",""]
+            },
+            {
+              "name": "Object specification",
+              "input": "a😀b😀",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":"😀"}],["NODE"]]],
+              "output": ["a","b",""]
+            },
+            {
+              "name": "Unedited action",
+              "input": "a😀b😀",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT","😀"]],
+              "output": "a😀b😀"
+            }
+          ]
+        },
+        {
+          "name": "Combining mark",
+          "desc": "The same separator rules apply to current-node and explicit operands; an unedited action round-trips the string.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "éx́",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT","́"],["NODE"]]],
+              "output": ["e","x",""]
+            },
+            {
+              "name": "Explicit operand",
+              "input": {"text":"éx́"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT","́",["NODE","text"]],["NODE"]]],
+              "output": ["e","x",""]
+            },
+            {
+              "name": "Object specification",
+              "input": "éx́",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":"́"}],["NODE"]]],
+              "output": ["e","x",""]
+            },
+            {
+              "name": "Unedited action",
+              "input": "éx́",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT","́"]],
+              "output": "éx́"
+            }
+          ]
+        },
+        {
+          "name": "No normalization",
+          "desc": "The same separator rules apply to current-node and explicit operands; an unedited action round-trips the string.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "é,é",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT","é"],["NODE"]]],
+              "output": ["",",é"]
+            },
+            {
+              "name": "Explicit operand",
+              "input": {"text":"é,é"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT","é",["NODE","text"]],["NODE"]]],
+              "output": ["",",é"]
+            },
+            {
+              "name": "Object specification",
+              "input": "é,é",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":"é"}],["NODE"]]],
+              "output": ["",",é"]
+            },
+            {
+              "name": "Unedited action",
+              "input": "é,é",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT","é"]],
+              "output": "é,é"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Empty and zero-width separators",
+      "desc": "An empty separator is skipped at the current start of the next element, so splitting makes progress. It separates characters without adding synthetic boundary empties; a consumed nonempty separator still preserves a trailing empty field.",
+      "tests": [
+        {
+          "name": "Empty",
+          "desc": "Character boundaries follow the host codepoint interpretation; malformed-codepoint cases explicitly require lone-surrogate preservation.",
+          "tests": [
+            {
+              "name": "Literal separator",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",""],["NODE"]]],
+              "output": []
+            },
+            {
+              "name": "Round trip",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",""]],
+              "output": ""
+            },
+            {
+              "name": "Empty sequence separator",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["SEQ"],"default":""}],["NODE"]]],
+              "output": []
+            }
+          ]
+        },
+        {
+          "name": "ASCII",
+          "desc": "Character boundaries follow the host codepoint interpretation; malformed-codepoint cases explicitly require lone-surrogate preservation.",
+          "tests": [
+            {
+              "name": "Literal separator",
+              "input": "abc",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",""],["NODE"]]],
+              "output": ["a","b","c"]
+            },
+            {
+              "name": "Round trip",
+              "input": "abc",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",""]],
+              "output": "abc"
+            },
+            {
+              "name": "Empty sequence separator",
+              "input": "abc",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["SEQ"],"default":""}],["NODE"]]],
+              "output": ["a","b","c"]
+            }
+          ]
+        },
+        {
+          "name": "Supplementary",
+          "desc": "Character boundaries follow the host codepoint interpretation; malformed-codepoint cases explicitly require lone-surrogate preservation.",
+          "tests": [
+            {
+              "name": "Literal separator",
+              "input": "a😀b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",""],["NODE"]]],
+              "output": ["a","😀","b"]
+            },
+            {
+              "name": "Round trip",
+              "input": "a😀b",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",""]],
+              "output": "a😀b"
+            },
+            {
+              "name": "Empty sequence separator",
+              "input": "a😀b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["SEQ"],"default":""}],["NODE"]]],
+              "output": ["a","😀","b"]
+            }
+          ]
+        },
+        {
+          "name": "Boundary codepoints",
+          "desc": "Character boundaries follow the host codepoint interpretation; malformed-codepoint cases explicitly require lone-surrogate preservation.",
+          "tests": [
+            {
+              "name": "Literal separator",
+              "input": "𐀀􏿿",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",""],["NODE"]]],
+              "output": ["𐀀","􏿿"]
+            },
+            {
+              "name": "Round trip",
+              "input": "𐀀􏿿",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",""]],
+              "output": "𐀀􏿿"
+            },
+            {
+              "name": "Empty sequence separator",
+              "input": "𐀀􏿿",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["SEQ"],"default":""}],["NODE"]]],
+              "output": ["𐀀","􏿿"]
+            }
+          ]
+        },
+        {
+          "name": "Combining marks",
+          "desc": "Character boundaries follow the host codepoint interpretation; malformed-codepoint cases explicitly require lone-surrogate preservation.",
+          "tests": [
+            {
+              "name": "Literal separator",
+              "input": "é",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",""],["NODE"]]],
+              "output": ["e","́"]
+            },
+            {
+              "name": "Round trip",
+              "input": "é",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",""]],
+              "output": "é"
+            },
+            {
+              "name": "Empty sequence separator",
+              "input": "é",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["SEQ"],"default":""}],["NODE"]]],
+              "output": ["e","́"]
+            }
+          ]
+        },
+        {
+          "name": "NUL",
+          "desc": "Character boundaries follow the host codepoint interpretation; malformed-codepoint cases explicitly require lone-surrogate preservation.",
+          "tests": [
+            {
+              "name": "Literal separator",
+              "input": "a\u0000b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",""],["NODE"]]],
+              "output": ["a","\u0000","b"]
+            },
+            {
+              "name": "Round trip",
+              "input": "a\u0000b",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",""]],
+              "output": "a\u0000b"
+            },
+            {
+              "name": "Empty sequence separator",
+              "input": "a\u0000b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["SEQ"],"default":""}],["NODE"]]],
+              "output": ["a","\u0000","b"]
+            }
+          ]
+        },
+        {
+          "name": "Lone high surrogate",
+          "desc": "Character boundaries follow the host codepoint interpretation; malformed-codepoint cases explicitly require lone-surrogate preservation.",
+          "tests": [
+            {
+              "name": "Literal separator",
+              "input": "\ud800",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",""],["NODE"]]],
+              "output": ["\ud800"],
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "Round trip",
+              "input": "\ud800",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",""]],
+              "output": "\ud800",
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "Empty sequence separator",
+              "input": "\ud800",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["SEQ"],"default":""}],["NODE"]]],
+              "output": ["\ud800"],
+              "needLoneSurrogate": true
+            }
+          ]
+        },
+        {
+          "name": "Lone low surrogate",
+          "desc": "Character boundaries follow the host codepoint interpretation; malformed-codepoint cases explicitly require lone-surrogate preservation.",
+          "tests": [
+            {
+              "name": "Literal separator",
+              "input": "\udc00",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",""],["NODE"]]],
+              "output": ["\udc00"],
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "Round trip",
+              "input": "\udc00",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",""]],
+              "output": "\udc00",
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "Empty sequence separator",
+              "input": "\udc00",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["SEQ"],"default":""}],["NODE"]]],
+              "output": ["\udc00"],
+              "needLoneSurrogate": true
+            }
+          ]
+        },
+        {
+          "name": "Mixed surrogates",
+          "desc": "Character boundaries follow the host codepoint interpretation; malformed-codepoint cases explicitly require lone-surrogate preservation.",
+          "tests": [
+            {
+              "name": "Literal separator",
+              "input": "\ud800😀\udc00",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",""],["NODE"]]],
+              "output": ["\ud800","😀","\udc00"],
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "Round trip",
+              "input": "\ud800😀\udc00",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",""]],
+              "output": "\ud800😀\udc00",
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "Empty sequence separator",
+              "input": "\ud800😀\udc00",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["SEQ"],"default":""}],["NODE"]]],
+              "output": ["\ud800","😀","\udc00"],
+              "needLoneSurrogate": true
+            }
+          ]
+        },
+        {
+          "name": "Reversed surrogates",
+          "desc": "Character boundaries follow the host codepoint interpretation; malformed-codepoint cases explicitly require lone-surrogate preservation.",
+          "tests": [
+            {
+              "name": "Literal separator",
+              "input": "\udc00\ud800",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",""],["NODE"]]],
+              "output": ["\udc00","\ud800"],
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "Round trip",
+              "input": "\udc00\ud800",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",""]],
+              "output": "\udc00\ud800",
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "Empty sequence separator",
+              "input": "\udc00\ud800",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["SEQ"],"default":""}],["NODE"]]],
+              "output": ["\udc00","\ud800"],
+              "needLoneSurrogate": true
+            }
+          ]
+        },
+        {
+          "name": "Specification a-star example",
+          "input": "baabca",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["REP",0,-1,"a"],"default":"a"}],["NODE"]]],
+          "output": ["b","b","c",""]
+        },
+        {
+          "name": "Empty regex matches retain actual separators",
+          "input": "baabca",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":["REP",0,-1,"a"],"default":"!"}]],
+          "output": "baabca"
+        },
+        {
+          "name": "Empty choice loses to longer separator",
+          "input": "a,,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["ANY","",","],"default":","}],["NODE"]]],
+          "output": ["a","","b"]
+        },
+        {
+          "name": "Empty choice after a consumed separator",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["ANY",",",""],"default":","}],["NODE"]]],
+          "output": ["a","b"]
+        },
+        {
+          "name": "Negative end assertion",
+          "input": "abc",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["NONE",["EXISTS"]],"default":""}],["NODE"]]],
+          "output": ["abc"]
+        },
+        {
+          "name": "Zero-width before a selected character",
+          "input": "abc",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["IS",["NODE"],98],"default":""}],["NODE"]]],
+          "output": ["a","bc"]
+        },
+        {
+          "name": "Zero-width body with large exact count",
+          "input": "ab",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["REP",1000000000,0,["SEQ"]],"default":""}],["NODE"]]],
+          "output": ["a","b"]
+        }
+      ]
+    },
+    {
+      "name": "Longest-match regex separators",
+      "desc": "At each candidate position SPLIT chooses the longest successful separator before scanning further. Alternative order and greedy preferences do not hide valid longer endpoints. A regex without keep requires a string default.",
+      "tests": [
+        {
+          "name": "Short alternative first",
+          "desc": "Observe the intermediate fields independently of the round-trip that must preserve each actual separator.",
+          "tests": [
+            {
+              "name": "Fields",
+              "input": "a:b::c",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["ANY",":","::"],"default":"/"}],["NODE"]]],
+              "output": ["a","b","c"]
+            },
+            {
+              "name": "Round trip",
+              "input": "a:b::c",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":["ANY",":","::"],"default":"/"}]],
+              "output": "a:b::c"
+            }
+          ]
+        },
+        {
+          "name": "Long alternative first",
+          "desc": "Observe the intermediate fields independently of the round-trip that must preserve each actual separator.",
+          "tests": [
+            {
+              "name": "Fields",
+              "input": "a:b::c",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["ANY","::",":"],"default":"/"}],["NODE"]]],
+              "output": ["a","b","c"]
+            },
+            {
+              "name": "Round trip",
+              "input": "a:b::c",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":["ANY","::",":"],"default":"/"}]],
+              "output": "a:b::c"
+            }
+          ]
+        },
+        {
+          "name": "Earliest position precedes later length",
+          "desc": "Observe the intermediate fields independently of the round-trip that must preserve each actual separator.",
+          "tests": [
+            {
+              "name": "Fields",
+              "input": "abcd",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["ANY","ab","bcd"],"default":"/"}],["NODE"]]],
+              "output": ["","cd"]
+            },
+            {
+              "name": "Round trip",
+              "input": "abcd",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":["ANY","ab","bcd"],"default":"/"}]],
+              "output": "abcd"
+            }
+          ]
+        },
+        {
+          "name": "Numeric codepoint",
+          "desc": "Observe the intermediate fields independently of the round-trip that must preserve each actual separator.",
+          "tests": [
+            {
+              "name": "Fields",
+              "input": "a,b,",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["IS",44],"default":"/"}],["NODE"]]],
+              "output": ["a","b",""]
+            },
+            {
+              "name": "Round trip",
+              "input": "a,b,",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":["IS",44],"default":"/"}]],
+              "output": "a,b,"
+            }
+          ]
+        },
+        {
+          "name": "Numeric literal inside sequence",
+          "desc": "Observe the intermediate fields independently of the round-trip that must preserve each actual separator.",
+          "tests": [
+            {
+              "name": "Fields",
+              "input": "a,b,",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["SEQ",44],"default":"/"}],["NODE"]]],
+              "output": ["a","b",""]
+            },
+            {
+              "name": "Round trip",
+              "input": "a,b,",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":["SEQ",44],"default":"/"}]],
+              "output": "a,b,"
+            }
+          ]
+        },
+        {
+          "name": "Variable repeated separator",
+          "desc": "Observe the intermediate fields independently of the round-trip that must preserve each actual separator.",
+          "tests": [
+            {
+              "name": "Fields",
+              "input": "a   b c",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["REP",1,-1," "],"default":"/"}],["NODE"]]],
+              "output": ["a","b","c"]
+            },
+            {
+              "name": "Round trip",
+              "input": "a   b c",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":["REP",1,-1," "],"default":"/"}]],
+              "output": "a   b c"
+            }
+          ]
+        },
+        {
+          "name": "Composite separator",
+          "desc": "Observe the intermediate fields independently of the round-trip that must preserve each actual separator.",
+          "tests": [
+            {
+              "name": "Fields",
+              "input": "a-->b-->>c",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["SEQ","--",["REP",1,2,">"]],"default":"/"}],["NODE"]]],
+              "output": ["a","b","c"]
+            },
+            {
+              "name": "Round trip",
+              "input": "a-->b-->>c",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":["SEQ","--",["REP",1,2,">"]],"default":"/"}]],
+              "output": "a-->b-->>c"
+            }
+          ]
+        },
+        {
+          "name": "Nested alternatives",
+          "desc": "Observe the intermediate fields independently of the round-trip that must preserve each actual separator.",
+          "tests": [
+            {
+              "name": "Fields",
+              "input": "a:b::c",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["ANY",["ANY",":"],"::"],"default":"/"}],["NODE"]]],
+              "output": ["a","b","c"]
+            },
+            {
+              "name": "Round trip",
+              "input": "a:b::c",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":["ANY",["ANY",":"],"::"],"default":"/"}]],
+              "output": "a:b::c"
+            }
+          ]
+        },
+        {
+          "name": "ALL coverage selects the longest endpoint",
+          "desc": "Observe the intermediate fields independently of the round-trip that must preserve each actual separator.",
+          "tests": [
+            {
+              "name": "Fields",
+              "input": "xaaaay",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["ALL",["ANY","a","aaa"],["ANY","aa","aaaa"]],"default":"/"}],["NODE"]]],
+              "output": ["x","y"]
+            },
+            {
+              "name": "Round trip",
+              "input": "xaaaay",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":["ALL",["ANY","a","aaa"],["ANY","aa","aaaa"]],"default":"/"}]],
+              "output": "xaaaay"
+            }
+          ]
+        },
+        {
+          "name": "Negative assertion in a consuming separator",
+          "desc": "Observe the intermediate fields independently of the round-trip that must preserve each actual separator.",
+          "tests": [
+            {
+              "name": "Fields",
+              "input": "aba",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["SEQ",["NONE","a"],["EXISTS"]],"default":"/"}],["NODE"]]],
+              "output": ["a","a"]
+            },
+            {
+              "name": "Round trip",
+              "input": "aba",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":["SEQ",["NONE","a"],["EXISTS"]],"default":"/"}]],
+              "output": "aba"
+            }
+          ]
+        },
+        {
+          "name": "Start anchor",
+          "desc": "Observe the intermediate fields independently of the round-trip that must preserve each actual separator.",
+          "tests": [
+            {
+              "name": "Fields",
+              "input": "aab",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["SEQ",["START"],"a"],"default":"/"}],["NODE"]]],
+              "output": ["","ab"]
+            },
+            {
+              "name": "Round trip",
+              "input": "aab",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":["SEQ",["START"],"a"],"default":"/"}]],
+              "output": "aab"
+            }
+          ]
+        },
+        {
+          "name": "End anchor",
+          "desc": "Observe the intermediate fields independently of the round-trip that must preserve each actual separator.",
+          "tests": [
+            {
+              "name": "Fields",
+              "input": "abxb",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["SEQ","b",["END"]],"default":"/"}],["NODE"]]],
+              "output": ["abx",""]
+            },
+            {
+              "name": "Round trip",
+              "input": "abxb",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":["SEQ","b",["END"]],"default":"/"}]],
+              "output": "abxb"
+            }
+          ]
+        },
+        {
+          "name": "Repeated codepoints",
+          "desc": "Observe the intermediate fields independently of the round-trip that must preserve each actual separator.",
+          "tests": [
+            {
+              "name": "Fields",
+              "input": "a😀😀b😀",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["REP",1,-1,128512],"default":"/"}],["NODE"]]],
+              "output": ["a","b",""]
+            },
+            {
+              "name": "Round trip",
+              "input": "a😀😀b😀",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":["REP",1,-1,128512],"default":"/"}]],
+              "output": "a😀😀b😀"
+            }
+          ]
+        },
+        {
+          "name": "Combining marks are separate",
+          "desc": "Observe the intermediate fields independently of the round-trip that must preserve each actual separator.",
+          "tests": [
+            {
+              "name": "Fields",
+              "input": "á́b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["REP",1,-1,769],"default":"/"}],["NODE"]]],
+              "output": ["a","b"]
+            },
+            {
+              "name": "Round trip",
+              "input": "á́b",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":["REP",1,-1,769],"default":"/"}]],
+              "output": "á́b"
+            }
+          ]
+        },
+        {
+          "name": "Failed branch does not hide literal",
+          "desc": "Observe the intermediate fields independently of the round-trip that must preserve each actual separator.",
+          "tests": [
+            {
+              "name": "Fields",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["ANY",["FAIL"],","],"default":"/"}],["NODE"]]],
+              "output": ["a","b"]
+            },
+            {
+              "name": "Round trip",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":["ANY",["FAIL"],","],"default":"/"}]],
+              "output": "a,b"
+            }
+          ]
+        },
+        {
+          "name": "Literal prefix followed by assertion",
+          "desc": "Observe the intermediate fields independently of the round-trip that must preserve each actual separator.",
+          "tests": [
+            {
+              "name": "Fields",
+              "input": "abac",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["SEQ","a",["NONE","c"]],"default":"/"}],["NODE"]]],
+              "output": ["","bac"]
+            },
+            {
+              "name": "Round trip",
+              "input": "abac",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":["SEQ","a",["NONE","c"]],"default":"/"}]],
+              "output": "abac"
+            }
+          ]
+        },
+        {
+          "name": "Unequal widths followed by a suffix",
+          "input": "xaabz",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["SEQ",["ANY","a","aa"],"b"],"default":"!"}],["NODE"]]],
+          "output": ["x","z"]
+        },
+        {
+          "name": "Function-produced pattern is literal data",
+          "input": "a.*b",
+          "jgraft": ["JGRAFT",{"v":1,"const":["sep",".*"]},["COPY",["SPLIT",{"sep":["CONST","sep"]}],["NODE"]]],
+          "output": ["a","b"]
+        },
+        {
+          "name": "Common match definition retains regex context",
+          "input": "a::b",
+          "jgraft": ["JGRAFT",{"v":1,"expr":["separator",["ANY",":","::"]]},["COPY",["SPLIT",{"sep":["EXPR","separator"],"default":":"}],["NODE"]]],
+          "output": ["a","b"]
+        }
+      ]
+    },
+    {
+      "name": "Retained separators",
+      "desc": "keep=\"<\" attaches each separator to the preceding field, keep=\">\" attaches it to the following field, and keep=\"@\" emits a separate element. Reassembly concatenates these arrays without injecting default or captured separators.",
+      "tests": [
+        {
+          "name": "No separator",
+          "desc": "Leading/trailing empty fields remain distinct from retained separator elements.",
+          "tests": [
+            {
+              "name": "< fields",
+              "input": "ab",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","keep":"<"}],["NODE"]]],
+              "output": ["ab"]
+            },
+            {
+              "name": "< round trip",
+              "input": "ab",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","keep":"<"}]],
+              "output": "ab"
+            },
+            {
+              "name": "> fields",
+              "input": "ab",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","keep":">"}],["NODE"]]],
+              "output": ["ab"]
+            },
+            {
+              "name": "> round trip",
+              "input": "ab",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","keep":">"}]],
+              "output": "ab"
+            },
+            {
+              "name": "@ fields",
+              "input": "ab",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","keep":"@"}],["NODE"]]],
+              "output": ["ab"]
+            },
+            {
+              "name": "@ round trip",
+              "input": "ab",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","keep":"@"}]],
+              "output": "ab"
+            }
+          ]
+        },
+        {
+          "name": "Leading",
+          "desc": "Leading/trailing empty fields remain distinct from retained separator elements.",
+          "tests": [
+            {
+              "name": "< fields",
+              "input": ",a",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","keep":"<"}],["NODE"]]],
+              "output": [",","a"]
+            },
+            {
+              "name": "< round trip",
+              "input": ",a",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","keep":"<"}]],
+              "output": ",a"
+            },
+            {
+              "name": "> fields",
+              "input": ",a",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","keep":">"}],["NODE"]]],
+              "output": ["",",a"]
+            },
+            {
+              "name": "> round trip",
+              "input": ",a",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","keep":">"}]],
+              "output": ",a"
+            },
+            {
+              "name": "@ fields",
+              "input": ",a",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","keep":"@"}],["NODE"]]],
+              "output": ["",",","a"]
+            },
+            {
+              "name": "@ round trip",
+              "input": ",a",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","keep":"@"}]],
+              "output": ",a"
+            }
+          ]
+        },
+        {
+          "name": "Trailing",
+          "desc": "Leading/trailing empty fields remain distinct from retained separator elements.",
+          "tests": [
+            {
+              "name": "< fields",
+              "input": "a,",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","keep":"<"}],["NODE"]]],
+              "output": ["a,",""]
+            },
+            {
+              "name": "< round trip",
+              "input": "a,",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","keep":"<"}]],
+              "output": "a,"
+            },
+            {
+              "name": "> fields",
+              "input": "a,",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","keep":">"}],["NODE"]]],
+              "output": ["a",","]
+            },
+            {
+              "name": "> round trip",
+              "input": "a,",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","keep":">"}]],
+              "output": "a,"
+            },
+            {
+              "name": "@ fields",
+              "input": "a,",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","keep":"@"}],["NODE"]]],
+              "output": ["a",",",""]
+            },
+            {
+              "name": "@ round trip",
+              "input": "a,",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","keep":"@"}]],
+              "output": "a,"
+            }
+          ]
+        },
+        {
+          "name": "Only separator",
+          "desc": "Leading/trailing empty fields remain distinct from retained separator elements.",
+          "tests": [
+            {
+              "name": "< fields",
+              "input": ",",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","keep":"<"}],["NODE"]]],
+              "output": [",",""]
+            },
+            {
+              "name": "< round trip",
+              "input": ",",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","keep":"<"}]],
+              "output": ","
+            },
+            {
+              "name": "> fields",
+              "input": ",",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","keep":">"}],["NODE"]]],
+              "output": ["",","]
+            },
+            {
+              "name": "> round trip",
+              "input": ",",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","keep":">"}]],
+              "output": ","
+            },
+            {
+              "name": "@ fields",
+              "input": ",",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","keep":"@"}],["NODE"]]],
+              "output": ["",",",""]
+            },
+            {
+              "name": "@ round trip",
+              "input": ",",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","keep":"@"}]],
+              "output": ","
+            }
+          ]
+        },
+        {
+          "name": "Interior",
+          "desc": "Leading/trailing empty fields remain distinct from retained separator elements.",
+          "tests": [
+            {
+              "name": "< fields",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","keep":"<"}],["NODE"]]],
+              "output": ["a,","b"]
+            },
+            {
+              "name": "< round trip",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","keep":"<"}]],
+              "output": "a,b"
+            },
+            {
+              "name": "> fields",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","keep":">"}],["NODE"]]],
+              "output": ["a",",b"]
+            },
+            {
+              "name": "> round trip",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","keep":">"}]],
+              "output": "a,b"
+            },
+            {
+              "name": "@ fields",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","keep":"@"}],["NODE"]]],
+              "output": ["a",",","b"]
+            },
+            {
+              "name": "@ round trip",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","keep":"@"}]],
+              "output": "a,b"
+            }
+          ]
+        },
+        {
+          "name": "Consecutive",
+          "desc": "Leading/trailing empty fields remain distinct from retained separator elements.",
+          "tests": [
+            {
+              "name": "< fields",
+              "input": "a,,b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","keep":"<"}],["NODE"]]],
+              "output": ["a,",",","b"]
+            },
+            {
+              "name": "< round trip",
+              "input": "a,,b",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","keep":"<"}]],
+              "output": "a,,b"
+            },
+            {
+              "name": "> fields",
+              "input": "a,,b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","keep":">"}],["NODE"]]],
+              "output": ["a",",",",b"]
+            },
+            {
+              "name": "> round trip",
+              "input": "a,,b",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","keep":">"}]],
+              "output": "a,,b"
+            },
+            {
+              "name": "@ fields",
+              "input": "a,,b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","keep":"@"}],["NODE"]]],
+              "output": ["a",",","",",","b"]
+            },
+            {
+              "name": "@ round trip",
+              "input": "a,,b",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","keep":"@"}]],
+              "output": "a,,b"
+            }
+          ]
+        },
+        {
+          "name": "Empty input",
+          "desc": "Leading/trailing empty fields remain distinct from retained separator elements.",
+          "tests": [
+            {
+              "name": "< fields",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","keep":"<"}],["NODE"]]],
+              "output": [""]
+            },
+            {
+              "name": "< round trip",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","keep":"<"}]],
+              "output": ""
+            },
+            {
+              "name": "> fields",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","keep":">"}],["NODE"]]],
+              "output": [""]
+            },
+            {
+              "name": "> round trip",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","keep":">"}]],
+              "output": ""
+            },
+            {
+              "name": "@ fields",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","keep":"@"}],["NODE"]]],
+              "output": [""]
+            },
+            {
+              "name": "@ round trip",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","keep":"@"}]],
+              "output": ""
+            }
+          ]
+        },
+        {
+          "name": "Variable separators <",
+          "desc": "Regex separators do not require default when their text is retained in the elements.",
+          "tests": [
+            {
+              "name": "Fields",
+              "input": "a:b::c",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["ANY",":","::"],"keep":"<"}],["NODE"]]],
+              "output": ["a:","b::","c"]
+            },
+            {
+              "name": "Round trip",
+              "input": "a:b::c",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":["ANY",":","::"],"keep":"<"}]],
+              "output": "a:b::c"
+            }
+          ]
+        },
+        {
+          "name": "Variable separators >",
+          "desc": "Regex separators do not require default when their text is retained in the elements.",
+          "tests": [
+            {
+              "name": "Fields",
+              "input": "a:b::c",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["ANY",":","::"],"keep":">"}],["NODE"]]],
+              "output": ["a",":b","::c"]
+            },
+            {
+              "name": "Round trip",
+              "input": "a:b::c",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":["ANY",":","::"],"keep":">"}]],
+              "output": "a:b::c"
+            }
+          ]
+        },
+        {
+          "name": "Variable separators @",
+          "desc": "Regex separators do not require default when their text is retained in the elements.",
+          "tests": [
+            {
+              "name": "Fields",
+              "input": "a:b::c",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["ANY",":","::"],"keep":"@"}],["NODE"]]],
+              "output": ["a",":","b","::","c"]
+            },
+            {
+              "name": "Round trip",
+              "input": "a:b::c",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":["ANY",":","::"],"keep":"@"}]],
+              "output": "a:b::c"
+            }
+          ]
+        },
+        {
+          "name": "Delete an explicit separator element",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","keep":"@"},["MOVE",["NODE",1],null]]],
+          "output": "ab"
+        },
+        {
+          "name": "Replace an explicit separator element",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","keep":"@"},["COPY","|",1]]],
+          "output": "a|b"
+        },
+        {
+          "name": "Append with no injected separator",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","keep":"<"},["COPY","c",2]]],
+          "output": "a,bc"
+        },
+        {
+          "name": "Default is not injected when keep is used",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","keep":">","default":"!"},["COPY","c",2]]],
+          "output": "a,bc"
+        }
+      ]
+    },
+    {
+      "name": "Element constraints",
+      "desc": "element is a regex implicitly anchored to both ends of the characters since the previous separator. A separator candidate is rejected when the accumulated element does not match; scanning can then reach a later eligible separator.",
+      "tests": [
+        {
+          "name": "Escaped comma",
+          "desc": "An escaped character belongs to the field rather than becoming a separator.",
+          "tests": [
+            {
+              "name": "Fields",
+              "input": "a\\,b,c",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","element":["REP",0,-1,["ANY",["SEQ","\\",["EXISTS"]],["SEQ",["NONE","\\"],["EXISTS"]]]]}],["NODE"]]],
+              "output": ["a\\,b","c"]
+            },
+            {
+              "name": "Round trip",
+              "input": "a\\,b,c",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","element":["REP",0,-1,["ANY",["SEQ","\\",["EXISTS"]],["SEQ",["NONE","\\"],["EXISTS"]]]]}]],
+              "output": "a\\,b,c"
+            }
+          ]
+        },
+        {
+          "name": "Even backslashes",
+          "desc": "An escaped character belongs to the field rather than becoming a separator.",
+          "tests": [
+            {
+              "name": "Fields",
+              "input": "a\\\\,b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","element":["REP",0,-1,["ANY",["SEQ","\\",["EXISTS"]],["SEQ",["NONE","\\"],["EXISTS"]]]]}],["NODE"]]],
+              "output": ["a\\\\","b"]
+            },
+            {
+              "name": "Round trip",
+              "input": "a\\\\,b",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","element":["REP",0,-1,["ANY",["SEQ","\\",["EXISTS"]],["SEQ",["NONE","\\"],["EXISTS"]]]]}]],
+              "output": "a\\\\,b"
+            }
+          ]
+        },
+        {
+          "name": "Several escapes",
+          "desc": "An escaped character belongs to the field rather than becoming a separator.",
+          "tests": [
+            {
+              "name": "Fields",
+              "input": "a\\,b\\,c,d",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","element":["REP",0,-1,["ANY",["SEQ","\\",["EXISTS"]],["SEQ",["NONE","\\"],["EXISTS"]]]]}],["NODE"]]],
+              "output": ["a\\,b\\,c","d"]
+            },
+            {
+              "name": "Round trip",
+              "input": "a\\,b\\,c,d",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","element":["REP",0,-1,["ANY",["SEQ","\\",["EXISTS"]],["SEQ",["NONE","\\"],["EXISTS"]]]]}]],
+              "output": "a\\,b\\,c,d"
+            }
+          ]
+        },
+        {
+          "name": "Dangling escape prevents split",
+          "desc": "An escaped character belongs to the field rather than becoming a separator.",
+          "tests": [
+            {
+              "name": "Fields",
+              "input": "a\\,b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","element":["REP",0,-1,["ANY",["SEQ","\\",["EXISTS"]],["SEQ",["NONE","\\"],["EXISTS"]]]]}],["NODE"]]],
+              "output": ["a\\,b"]
+            },
+            {
+              "name": "Round trip",
+              "input": "a\\,b",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","element":["REP",0,-1,["ANY",["SEQ","\\",["EXISTS"]],["SEQ",["NONE","\\"],["EXISTS"]]]]}]],
+              "output": "a\\,b"
+            }
+          ]
+        },
+        {
+          "name": "Leading empty field",
+          "desc": "An escaped character belongs to the field rather than becoming a separator.",
+          "tests": [
+            {
+              "name": "Fields",
+              "input": ",a",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","element":["REP",0,-1,["ANY",["SEQ","\\",["EXISTS"]],["SEQ",["NONE","\\"],["EXISTS"]]]]}],["NODE"]]],
+              "output": ["","a"]
+            },
+            {
+              "name": "Round trip",
+              "input": ",a",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","element":["REP",0,-1,["ANY",["SEQ","\\",["EXISTS"]],["SEQ",["NONE","\\"],["EXISTS"]]]]}]],
+              "output": ",a"
+            }
+          ]
+        },
+        {
+          "name": "Trailing empty field",
+          "desc": "An escaped character belongs to the field rather than becoming a separator.",
+          "tests": [
+            {
+              "name": "Fields",
+              "input": "a,",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","element":["REP",0,-1,["ANY",["SEQ","\\",["EXISTS"]],["SEQ",["NONE","\\"],["EXISTS"]]]]}],["NODE"]]],
+              "output": ["a",""]
+            },
+            {
+              "name": "Round trip",
+              "input": "a,",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","element":["REP",0,-1,["ANY",["SEQ","\\",["EXISTS"]],["SEQ",["NONE","\\"],["EXISTS"]]]]}]],
+              "output": "a,"
+            }
+          ]
+        },
+        {
+          "name": "Exact element width",
+          "input": "a,b,c",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","element":["REP",1,0,["EXISTS"]]}],["NODE"]]],
+          "output": ["a","b","c"]
+        },
+        {
+          "name": "An ineligible prefix remains in the next field",
+          "input": "ab,c,d",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","element":["REP",4,0,["EXISTS"]]}],["NODE"]]],
+          "output": ["ab,c","d"]
+        },
+        {
+          "name": "Prefix-only match is insufficient",
+          "input": "ab,c",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","element":["SEQ","a"]}],["NODE"]]],
+          "output": ["ab,c"]
+        },
+        {
+          "name": "Suffix-only match is insufficient",
+          "input": "ab,c",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","element":["SEQ","b"]}],["NODE"]]],
+          "output": ["ab,c"]
+        },
+        {
+          "name": "Empty element constraint",
+          "input": "a,,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","element":["SEQ"]}],["NODE"]]],
+          "output": ["a,,b"]
+        },
+        {
+          "name": "Element condition resets after each separator",
+          "input": "a,b,cc,d",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","element":["REP",1,0,["EXISTS"]]}],["NODE"]]],
+          "output": ["a","b","cc,d"]
+        },
+        {
+          "name": "Rejected longest candidate can be skipped",
+          "input": "aa::b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["ANY",":","::"],"default":":","element":["REP",1,0,["EXISTS"]]}],["NODE"]]],
+          "output": ["aa::b"]
+        },
+        {
+          "name": "Unicode element width counts codepoints",
+          "input": "😀,x",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","element":["REP",1,0,["EXISTS"]]}],["NODE"]]],
+          "output": ["😀","x"]
+        },
+        {
+          "name": "Quoted commas belong to their field",
+          "input": "\"a,b\",c,\"d,e\"",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","element":["ANY",["SEQ","\"",["REP",0,-1,["SEQ",["NONE","\""],["EXISTS"]]],"\""],["REP",0,-1,["SEQ",["NONE","\""],["EXISTS"]]]]}],["NODE"]]],
+          "output": ["\"a,b\"","c","\"d,e\""]
+        },
+        {
+          "name": "Quotes may be trimmed after field recognition",
+          "input": "\"a,b\",c,\"d,e\"",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","element":["ANY",["SEQ","\"",["REP",0,-1,["SEQ",["NONE","\""],["EXISTS"]]],"\""],["REP",0,-1,["SEQ",["NONE","\""],["EXISTS"]]]],"trim":"\""}],["NODE"]]],
+          "output": ["a,b","c","d,e"]
+        },
+        {
+          "name": "Hidden quotes are restored",
+          "input": "\"a,b\",c",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","element":["ANY",["SEQ","\"",["REP",0,-1,["SEQ",["NONE","\""],["EXISTS"]]],"\""],["REP",0,-1,["SEQ",["NONE","\""],["EXISTS"]]]],"trim":"\""},["COPY","X",0]]],
+          "output": "\"X\",c"
+        },
+        {
+          "name": "Retained separator after a quoted field",
+          "input": "\"a,b\",c",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","element":["ANY",["SEQ","\"",["REP",0,-1,["SEQ",["NONE","\""],["EXISTS"]]],"\""],["REP",0,-1,["SEQ",["NONE","\""],["EXISTS"]]]],"keep":"@"}],["NODE"]]],
+          "output": ["\"a,b\"",",","c"]
+        },
+        {
+          "name": "An element alternative may need its longer endpoint",
+          "input": "ab,c",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","element":["ANY","a","ab"]}],["NODE"]]],
+          "output": ["ab","c"]
+        }
+      ]
+    },
+    {
+      "name": "Trimming",
+      "desc": "Trim patterns are anchored to field boundaries. The longest ltrim is removed first, then the longest rtrim from the remainder; trim is exclusive with either directional option. Hidden trimming is restored unless discard is true.",
+      "tests": [
+        {
+          "name": "One literal on each side",
+          "desc": "Inspect trimmed fields, then distinguish restored from permanently discarded text during reassembly.",
+          "tests": [
+            {
+              "name": "Fields",
+              "input": "  a  , b ",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","trim":" "}],["NODE"]]],
+              "output": [" a ","b"]
+            },
+            {
+              "name": "Restore metadata",
+              "input": "  a  , b ",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","trim":" "}]],
+              "output": "  a  , b "
+            },
+            {
+              "name": "Discard trimming",
+              "input": "  a  , b ",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","trim":" ","discard":true}]],
+              "output": " a ,b"
+            }
+          ]
+        },
+        {
+          "name": "Left only",
+          "desc": "Inspect trimmed fields, then distinguish restored from permanently discarded text during reassembly.",
+          "tests": [
+            {
+              "name": "Fields",
+              "input": " a ,  b ",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","ltrim":" "}],["NODE"]]],
+              "output": ["a "," b "]
+            },
+            {
+              "name": "Restore metadata",
+              "input": " a ,  b ",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","ltrim":" "}]],
+              "output": " a ,  b "
+            },
+            {
+              "name": "Discard trimming",
+              "input": " a ,  b ",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","ltrim":" ","discard":true}]],
+              "output": "a , b "
+            }
+          ]
+        },
+        {
+          "name": "Right only",
+          "desc": "Inspect trimmed fields, then distinguish restored from permanently discarded text during reassembly.",
+          "tests": [
+            {
+              "name": "Fields",
+              "input": " a , b  ",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","rtrim":" "}],["NODE"]]],
+              "output": [" a"," b "]
+            },
+            {
+              "name": "Restore metadata",
+              "input": " a , b  ",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","rtrim":" "}]],
+              "output": " a , b  "
+            },
+            {
+              "name": "Discard trimming",
+              "input": " a , b  ",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","rtrim":" ","discard":true}]],
+              "output": " a, b "
+            }
+          ]
+        },
+        {
+          "name": "Different sides",
+          "desc": "Inspect trimmed fields, then distinguish restored from permanently discarded text during reassembly.",
+          "tests": [
+            {
+              "name": "Fields",
+              "input": "<<a>>,<b>",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","ltrim":"<","rtrim":">"}],["NODE"]]],
+              "output": ["<a>","b"]
+            },
+            {
+              "name": "Restore metadata",
+              "input": "<<a>>,<b>",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","ltrim":"<","rtrim":">"}]],
+              "output": "<<a>>,<b>"
+            },
+            {
+              "name": "Discard trimming",
+              "input": "<<a>>,<b>",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","ltrim":"<","rtrim":">","discard":true}]],
+              "output": "<a>,b"
+            }
+          ]
+        },
+        {
+          "name": "No matching boundary",
+          "desc": "Inspect trimmed fields, then distinguish restored from permanently discarded text during reassembly.",
+          "tests": [
+            {
+              "name": "Fields",
+              "input": "x a y",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","trim":" "}],["NODE"]]],
+              "output": ["x a y"]
+            },
+            {
+              "name": "Restore metadata",
+              "input": "x a y",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","trim":" "}]],
+              "output": "x a y"
+            },
+            {
+              "name": "Discard trimming",
+              "input": "x a y",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","trim":" ","discard":true}]],
+              "output": "x a y"
+            }
+          ]
+        },
+        {
+          "name": "Longest left alternative",
+          "desc": "Inspect trimmed fields, then distinguish restored from permanently discarded text during reassembly.",
+          "tests": [
+            {
+              "name": "Fields",
+              "input": "aaax",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","ltrim":["ANY","a","aaa"]}],["NODE"]]],
+              "output": ["x"]
+            },
+            {
+              "name": "Restore metadata",
+              "input": "aaax",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","ltrim":["ANY","a","aaa"]}]],
+              "output": "aaax"
+            },
+            {
+              "name": "Discard trimming",
+              "input": "aaax",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","ltrim":["ANY","a","aaa"],"discard":true}]],
+              "output": "x"
+            }
+          ]
+        },
+        {
+          "name": "Longest right alternative",
+          "desc": "Inspect trimmed fields, then distinguish restored from permanently discarded text during reassembly.",
+          "tests": [
+            {
+              "name": "Fields",
+              "input": "xaaa",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","rtrim":["ANY","a","aaa"]}],["NODE"]]],
+              "output": ["x"]
+            },
+            {
+              "name": "Restore metadata",
+              "input": "xaaa",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","rtrim":["ANY","a","aaa"]}]],
+              "output": "xaaa"
+            },
+            {
+              "name": "Discard trimming",
+              "input": "xaaa",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","rtrim":["ANY","a","aaa"],"discard":true}]],
+              "output": "x"
+            }
+          ]
+        },
+        {
+          "name": "Repeated whitespace",
+          "desc": "Inspect trimmed fields, then distinguish restored from permanently discarded text during reassembly.",
+          "tests": [
+            {
+              "name": "Fields",
+              "input": "   a  , b   ",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","trim":["REP",0,-1," "]}],["NODE"]]],
+              "output": ["a","b"]
+            },
+            {
+              "name": "Restore metadata",
+              "input": "   a  , b   ",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","trim":["REP",0,-1," "]}]],
+              "output": "   a  , b   "
+            },
+            {
+              "name": "Discard trimming",
+              "input": "   a  , b   ",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","trim":["REP",0,-1," "],"discard":true}]],
+              "output": "a,b"
+            }
+          ]
+        },
+        {
+          "name": "Overlapping literals",
+          "desc": "Inspect trimmed fields, then distinguish restored from permanently discarded text during reassembly.",
+          "tests": [
+            {
+              "name": "Fields",
+              "input": "abc",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","ltrim":"ab","rtrim":"bc"}],["NODE"]]],
+              "output": ["c"]
+            },
+            {
+              "name": "Restore metadata",
+              "input": "abc",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","ltrim":"ab","rtrim":"bc"}]],
+              "output": "abc"
+            },
+            {
+              "name": "Discard trimming",
+              "input": "abc",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","ltrim":"ab","rtrim":"bc","discard":true}]],
+              "output": "c"
+            }
+          ]
+        },
+        {
+          "name": "Whole field removed on left",
+          "desc": "Inspect trimmed fields, then distinguish restored from permanently discarded text during reassembly.",
+          "tests": [
+            {
+              "name": "Fields",
+              "input": "aaa",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","trim":["REP",1,-1,"a"]}],["NODE"]]],
+              "output": [""]
+            },
+            {
+              "name": "Restore metadata",
+              "input": "aaa",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","trim":["REP",1,-1,"a"]}]],
+              "output": "aaa"
+            },
+            {
+              "name": "Discard trimming",
+              "input": "aaa",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","trim":["REP",1,-1,"a"],"discard":true}]],
+              "output": ""
+            }
+          ]
+        },
+        {
+          "name": "Empty trim",
+          "desc": "Inspect trimmed fields, then distinguish restored from permanently discarded text during reassembly.",
+          "tests": [
+            {
+              "name": "Fields",
+              "input": " a ",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","trim":""}],["NODE"]]],
+              "output": [" a "]
+            },
+            {
+              "name": "Restore metadata",
+              "input": " a ",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","trim":""}]],
+              "output": " a "
+            },
+            {
+              "name": "Discard trimming",
+              "input": " a ",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","trim":"","discard":true}]],
+              "output": " a "
+            }
+          ]
+        },
+        {
+          "name": "Empty fields",
+          "desc": "Inspect trimmed fields, then distinguish restored from permanently discarded text during reassembly.",
+          "tests": [
+            {
+              "name": "Fields",
+              "input": " , , ",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","trim":" "}],["NODE"]]],
+              "output": ["","",""]
+            },
+            {
+              "name": "Restore metadata",
+              "input": " , , ",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","trim":" "}]],
+              "output": " , , "
+            },
+            {
+              "name": "Discard trimming",
+              "input": " , , ",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","trim":" ","discard":true}]],
+              "output": ",,"
+            }
+          ]
+        },
+        {
+          "name": "Supplementary trim",
+          "desc": "Inspect trimmed fields, then distinguish restored from permanently discarded text during reassembly.",
+          "tests": [
+            {
+              "name": "Fields",
+              "input": "😀a😀,😀b😀",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","trim":"😀"}],["NODE"]]],
+              "output": ["a","b"]
+            },
+            {
+              "name": "Restore metadata",
+              "input": "😀a😀,😀b😀",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","trim":"😀"}]],
+              "output": "😀a😀,😀b😀"
+            },
+            {
+              "name": "Discard trimming",
+              "input": "😀a😀,😀b😀",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","trim":"😀","discard":true}]],
+              "output": "a,b"
+            }
+          ]
+        },
+        {
+          "name": "NUL trim",
+          "desc": "Inspect trimmed fields, then distinguish restored from permanently discarded text during reassembly.",
+          "tests": [
+            {
+              "name": "Fields",
+              "input": "\u0000a\u0000",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","trim":"\u0000"}],["NODE"]]],
+              "output": ["a"]
+            },
+            {
+              "name": "Restore metadata",
+              "input": "\u0000a\u0000",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","trim":"\u0000"}]],
+              "output": "\u0000a\u0000"
+            },
+            {
+              "name": "Discard trimming",
+              "input": "\u0000a\u0000",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","trim":"\u0000","discard":true}]],
+              "output": "a"
+            }
+          ]
+        },
+        {
+          "name": "No repeated literal removal",
+          "desc": "Inspect trimmed fields, then distinguish restored from permanently discarded text during reassembly.",
+          "tests": [
+            {
+              "name": "Fields",
+              "input": "   ",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","trim":" "}],["NODE"]]],
+              "output": [" "]
+            },
+            {
+              "name": "Restore metadata",
+              "input": "   ",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","trim":" "}]],
+              "output": "   "
+            },
+            {
+              "name": "Discard trimming",
+              "input": "   ",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","trim":" ","discard":true}]],
+              "output": " "
+            }
+          ]
+        },
+        {
+          "name": "Edited field retains original trimming",
+          "input": " a ,  b ",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","trim":" "},["COPY","X",1]]],
+          "output": " a , X "
+        },
+        {
+          "name": "Discard only affects trimming, not variable separators",
+          "input": " a : b | c ",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":["ANY",":","|"],"default":"/","trim":" ","discard":true}]],
+          "output": "a:b|c"
+        },
+        {
+          "name": "Trim does not cross a separator",
+          "input": "a , b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","trim":" ,"}],["NODE"]]],
+          "output": ["a "," b"]
+        },
+        {
+          "name": "Left anchoring excludes interior text",
+          "input": "x a",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","ltrim":" "}],["NODE"]]],
+          "output": ["x a"]
+        },
+        {
+          "name": "Right anchoring excludes interior text",
+          "input": "a x",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","rtrim":" "}],["NODE"]]],
+          "output": ["a x"]
+        },
+        {
+          "name": "Keep-left and leading trim",
+          "input": " a , b ",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","keep":"<","ltrim":" "}],["NODE"]]],
+          "output": ["a ,","b "]
+        },
+        {
+          "name": "Keep-right and trailing trim",
+          "input": " a , b ",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","keep":">","rtrim":" "}],["NODE"]]],
+          "output": [" a",", b"]
+        }
+      ]
+    },
+    {
+      "name": "JOIN without metadata",
+      "desc": "Current-node and explicit array operands must contain only strings. Constant separators join verbatim, empty fields preserve boundaries, and no coercion or flattening is performed.",
+      "tests": [
+        {
+          "name": "Empty",
+          "desc": "A separator is emitted only between elements, never after the last element.",
+          "tests": [
+            {
+              "name": "Empty array",
+              "tests": [
+                {
+                  "name": "Current node",
+                  "input": [],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",""],["NODE"]]],
+                  "output": ""
+                },
+                {
+                  "name": "Explicit operand",
+                  "input": {"source":[]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","",["NODE","source"]],["NODE"]]],
+                  "output": ""
+                }
+              ]
+            },
+            {
+              "name": "One empty field",
+              "tests": [
+                {
+                  "name": "Current node",
+                  "input": [""],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",""],["NODE"]]],
+                  "output": ""
+                },
+                {
+                  "name": "Explicit operand",
+                  "input": {"source":[""]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","",["NODE","source"]],["NODE"]]],
+                  "output": ""
+                }
+              ]
+            },
+            {
+              "name": "Singleton",
+              "tests": [
+                {
+                  "name": "Current node",
+                  "input": ["a"],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",""],["NODE"]]],
+                  "output": "a"
+                },
+                {
+                  "name": "Explicit operand",
+                  "input": {"source":["a"]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","",["NODE","source"]],["NODE"]]],
+                  "output": "a"
+                }
+              ]
+            },
+            {
+              "name": "Two fields",
+              "tests": [
+                {
+                  "name": "Current node",
+                  "input": ["a","b"],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",""],["NODE"]]],
+                  "output": "ab"
+                },
+                {
+                  "name": "Explicit operand",
+                  "input": {"source":["a","b"]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","",["NODE","source"]],["NODE"]]],
+                  "output": "ab"
+                }
+              ]
+            },
+            {
+              "name": "Two empty fields",
+              "tests": [
+                {
+                  "name": "Current node",
+                  "input": ["",""],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",""],["NODE"]]],
+                  "output": ""
+                },
+                {
+                  "name": "Explicit operand",
+                  "input": {"source":["",""]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","",["NODE","source"]],["NODE"]]],
+                  "output": ""
+                }
+              ]
+            },
+            {
+              "name": "Boundary empty fields",
+              "tests": [
+                {
+                  "name": "Current node",
+                  "input": ["","a",""],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",""],["NODE"]]],
+                  "output": "a"
+                },
+                {
+                  "name": "Explicit operand",
+                  "input": {"source":["","a",""]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","",["NODE","source"]],["NODE"]]],
+                  "output": "a"
+                }
+              ]
+            },
+            {
+              "name": "Interior empty field",
+              "tests": [
+                {
+                  "name": "Current node",
+                  "input": ["a","","b"],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",""],["NODE"]]],
+                  "output": "ab"
+                },
+                {
+                  "name": "Explicit operand",
+                  "input": {"source":["a","","b"]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","",["NODE","source"]],["NODE"]]],
+                  "output": "ab"
+                }
+              ]
+            },
+            {
+              "name": "Unicode and NUL",
+              "tests": [
+                {
+                  "name": "Current node",
+                  "input": ["\u0000","😀","é"],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",""],["NODE"]]],
+                  "output": "\u0000😀é"
+                },
+                {
+                  "name": "Explicit operand",
+                  "input": {"source":["\u0000","😀","é"]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","",["NODE","source"]],["NODE"]]],
+                  "output": "\u0000😀é"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Comma",
+          "desc": "A separator is emitted only between elements, never after the last element.",
+          "tests": [
+            {
+              "name": "Empty array",
+              "tests": [
+                {
+                  "name": "Current node",
+                  "input": [],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",","],["NODE"]]],
+                  "output": ""
+                },
+                {
+                  "name": "Explicit operand",
+                  "input": {"source":[]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",",",["NODE","source"]],["NODE"]]],
+                  "output": ""
+                }
+              ]
+            },
+            {
+              "name": "One empty field",
+              "tests": [
+                {
+                  "name": "Current node",
+                  "input": [""],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",","],["NODE"]]],
+                  "output": ""
+                },
+                {
+                  "name": "Explicit operand",
+                  "input": {"source":[""]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",",",["NODE","source"]],["NODE"]]],
+                  "output": ""
+                }
+              ]
+            },
+            {
+              "name": "Singleton",
+              "tests": [
+                {
+                  "name": "Current node",
+                  "input": ["a"],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",","],["NODE"]]],
+                  "output": "a"
+                },
+                {
+                  "name": "Explicit operand",
+                  "input": {"source":["a"]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",",",["NODE","source"]],["NODE"]]],
+                  "output": "a"
+                }
+              ]
+            },
+            {
+              "name": "Two fields",
+              "tests": [
+                {
+                  "name": "Current node",
+                  "input": ["a","b"],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",","],["NODE"]]],
+                  "output": "a,b"
+                },
+                {
+                  "name": "Explicit operand",
+                  "input": {"source":["a","b"]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",",",["NODE","source"]],["NODE"]]],
+                  "output": "a,b"
+                }
+              ]
+            },
+            {
+              "name": "Two empty fields",
+              "tests": [
+                {
+                  "name": "Current node",
+                  "input": ["",""],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",","],["NODE"]]],
+                  "output": ","
+                },
+                {
+                  "name": "Explicit operand",
+                  "input": {"source":["",""]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",",",["NODE","source"]],["NODE"]]],
+                  "output": ","
+                }
+              ]
+            },
+            {
+              "name": "Boundary empty fields",
+              "tests": [
+                {
+                  "name": "Current node",
+                  "input": ["","a",""],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",","],["NODE"]]],
+                  "output": ",a,"
+                },
+                {
+                  "name": "Explicit operand",
+                  "input": {"source":["","a",""]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",",",["NODE","source"]],["NODE"]]],
+                  "output": ",a,"
+                }
+              ]
+            },
+            {
+              "name": "Interior empty field",
+              "tests": [
+                {
+                  "name": "Current node",
+                  "input": ["a","","b"],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",","],["NODE"]]],
+                  "output": "a,,b"
+                },
+                {
+                  "name": "Explicit operand",
+                  "input": {"source":["a","","b"]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",",",["NODE","source"]],["NODE"]]],
+                  "output": "a,,b"
+                }
+              ]
+            },
+            {
+              "name": "Unicode and NUL",
+              "tests": [
+                {
+                  "name": "Current node",
+                  "input": ["\u0000","😀","é"],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",","],["NODE"]]],
+                  "output": "\u0000,😀,é"
+                },
+                {
+                  "name": "Explicit operand",
+                  "input": {"source":["\u0000","😀","é"]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",",",["NODE","source"]],["NODE"]]],
+                  "output": "\u0000,😀,é"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Double colon",
+          "desc": "A separator is emitted only between elements, never after the last element.",
+          "tests": [
+            {
+              "name": "Empty array",
+              "tests": [
+                {
+                  "name": "Current node",
+                  "input": [],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","::"],["NODE"]]],
+                  "output": ""
+                },
+                {
+                  "name": "Explicit operand",
+                  "input": {"source":[]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","::",["NODE","source"]],["NODE"]]],
+                  "output": ""
+                }
+              ]
+            },
+            {
+              "name": "One empty field",
+              "tests": [
+                {
+                  "name": "Current node",
+                  "input": [""],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","::"],["NODE"]]],
+                  "output": ""
+                },
+                {
+                  "name": "Explicit operand",
+                  "input": {"source":[""]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","::",["NODE","source"]],["NODE"]]],
+                  "output": ""
+                }
+              ]
+            },
+            {
+              "name": "Singleton",
+              "tests": [
+                {
+                  "name": "Current node",
+                  "input": ["a"],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","::"],["NODE"]]],
+                  "output": "a"
+                },
+                {
+                  "name": "Explicit operand",
+                  "input": {"source":["a"]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","::",["NODE","source"]],["NODE"]]],
+                  "output": "a"
+                }
+              ]
+            },
+            {
+              "name": "Two fields",
+              "tests": [
+                {
+                  "name": "Current node",
+                  "input": ["a","b"],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","::"],["NODE"]]],
+                  "output": "a::b"
+                },
+                {
+                  "name": "Explicit operand",
+                  "input": {"source":["a","b"]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","::",["NODE","source"]],["NODE"]]],
+                  "output": "a::b"
+                }
+              ]
+            },
+            {
+              "name": "Two empty fields",
+              "tests": [
+                {
+                  "name": "Current node",
+                  "input": ["",""],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","::"],["NODE"]]],
+                  "output": "::"
+                },
+                {
+                  "name": "Explicit operand",
+                  "input": {"source":["",""]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","::",["NODE","source"]],["NODE"]]],
+                  "output": "::"
+                }
+              ]
+            },
+            {
+              "name": "Boundary empty fields",
+              "tests": [
+                {
+                  "name": "Current node",
+                  "input": ["","a",""],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","::"],["NODE"]]],
+                  "output": "::a::"
+                },
+                {
+                  "name": "Explicit operand",
+                  "input": {"source":["","a",""]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","::",["NODE","source"]],["NODE"]]],
+                  "output": "::a::"
+                }
+              ]
+            },
+            {
+              "name": "Interior empty field",
+              "tests": [
+                {
+                  "name": "Current node",
+                  "input": ["a","","b"],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","::"],["NODE"]]],
+                  "output": "a::::b"
+                },
+                {
+                  "name": "Explicit operand",
+                  "input": {"source":["a","","b"]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","::",["NODE","source"]],["NODE"]]],
+                  "output": "a::::b"
+                }
+              ]
+            },
+            {
+              "name": "Unicode and NUL",
+              "tests": [
+                {
+                  "name": "Current node",
+                  "input": ["\u0000","😀","é"],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","::"],["NODE"]]],
+                  "output": "\u0000::😀::é"
+                },
+                {
+                  "name": "Explicit operand",
+                  "input": {"source":["\u0000","😀","é"]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","::",["NODE","source"]],["NODE"]]],
+                  "output": "\u0000::😀::é"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Supplementary character",
+          "desc": "A separator is emitted only between elements, never after the last element.",
+          "tests": [
+            {
+              "name": "Empty array",
+              "tests": [
+                {
+                  "name": "Current node",
+                  "input": [],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","😀"],["NODE"]]],
+                  "output": ""
+                },
+                {
+                  "name": "Explicit operand",
+                  "input": {"source":[]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","😀",["NODE","source"]],["NODE"]]],
+                  "output": ""
+                }
+              ]
+            },
+            {
+              "name": "One empty field",
+              "tests": [
+                {
+                  "name": "Current node",
+                  "input": [""],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","😀"],["NODE"]]],
+                  "output": ""
+                },
+                {
+                  "name": "Explicit operand",
+                  "input": {"source":[""]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","😀",["NODE","source"]],["NODE"]]],
+                  "output": ""
+                }
+              ]
+            },
+            {
+              "name": "Singleton",
+              "tests": [
+                {
+                  "name": "Current node",
+                  "input": ["a"],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","😀"],["NODE"]]],
+                  "output": "a"
+                },
+                {
+                  "name": "Explicit operand",
+                  "input": {"source":["a"]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","😀",["NODE","source"]],["NODE"]]],
+                  "output": "a"
+                }
+              ]
+            },
+            {
+              "name": "Two fields",
+              "tests": [
+                {
+                  "name": "Current node",
+                  "input": ["a","b"],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","😀"],["NODE"]]],
+                  "output": "a😀b"
+                },
+                {
+                  "name": "Explicit operand",
+                  "input": {"source":["a","b"]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","😀",["NODE","source"]],["NODE"]]],
+                  "output": "a😀b"
+                }
+              ]
+            },
+            {
+              "name": "Two empty fields",
+              "tests": [
+                {
+                  "name": "Current node",
+                  "input": ["",""],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","😀"],["NODE"]]],
+                  "output": "😀"
+                },
+                {
+                  "name": "Explicit operand",
+                  "input": {"source":["",""]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","😀",["NODE","source"]],["NODE"]]],
+                  "output": "😀"
+                }
+              ]
+            },
+            {
+              "name": "Boundary empty fields",
+              "tests": [
+                {
+                  "name": "Current node",
+                  "input": ["","a",""],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","😀"],["NODE"]]],
+                  "output": "😀a😀"
+                },
+                {
+                  "name": "Explicit operand",
+                  "input": {"source":["","a",""]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","😀",["NODE","source"]],["NODE"]]],
+                  "output": "😀a😀"
+                }
+              ]
+            },
+            {
+              "name": "Interior empty field",
+              "tests": [
+                {
+                  "name": "Current node",
+                  "input": ["a","","b"],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","😀"],["NODE"]]],
+                  "output": "a😀😀b"
+                },
+                {
+                  "name": "Explicit operand",
+                  "input": {"source":["a","","b"]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","😀",["NODE","source"]],["NODE"]]],
+                  "output": "a😀😀b"
+                }
+              ]
+            },
+            {
+              "name": "Unicode and NUL",
+              "tests": [
+                {
+                  "name": "Current node",
+                  "input": ["\u0000","😀","é"],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","😀"],["NODE"]]],
+                  "output": "\u0000😀😀😀é"
+                },
+                {
+                  "name": "Explicit operand",
+                  "input": {"source":["\u0000","😀","é"]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","😀",["NODE","source"]],["NODE"]]],
+                  "output": "\u0000😀😀😀é"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "NUL",
+          "desc": "A separator is emitted only between elements, never after the last element.",
+          "tests": [
+            {
+              "name": "Empty array",
+              "tests": [
+                {
+                  "name": "Current node",
+                  "input": [],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","\u0000"],["NODE"]]],
+                  "output": ""
+                },
+                {
+                  "name": "Explicit operand",
+                  "input": {"source":[]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","\u0000",["NODE","source"]],["NODE"]]],
+                  "output": ""
+                }
+              ]
+            },
+            {
+              "name": "One empty field",
+              "tests": [
+                {
+                  "name": "Current node",
+                  "input": [""],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","\u0000"],["NODE"]]],
+                  "output": ""
+                },
+                {
+                  "name": "Explicit operand",
+                  "input": {"source":[""]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","\u0000",["NODE","source"]],["NODE"]]],
+                  "output": ""
+                }
+              ]
+            },
+            {
+              "name": "Singleton",
+              "tests": [
+                {
+                  "name": "Current node",
+                  "input": ["a"],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","\u0000"],["NODE"]]],
+                  "output": "a"
+                },
+                {
+                  "name": "Explicit operand",
+                  "input": {"source":["a"]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","\u0000",["NODE","source"]],["NODE"]]],
+                  "output": "a"
+                }
+              ]
+            },
+            {
+              "name": "Two fields",
+              "tests": [
+                {
+                  "name": "Current node",
+                  "input": ["a","b"],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","\u0000"],["NODE"]]],
+                  "output": "a\u0000b"
+                },
+                {
+                  "name": "Explicit operand",
+                  "input": {"source":["a","b"]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","\u0000",["NODE","source"]],["NODE"]]],
+                  "output": "a\u0000b"
+                }
+              ]
+            },
+            {
+              "name": "Two empty fields",
+              "tests": [
+                {
+                  "name": "Current node",
+                  "input": ["",""],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","\u0000"],["NODE"]]],
+                  "output": "\u0000"
+                },
+                {
+                  "name": "Explicit operand",
+                  "input": {"source":["",""]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","\u0000",["NODE","source"]],["NODE"]]],
+                  "output": "\u0000"
+                }
+              ]
+            },
+            {
+              "name": "Boundary empty fields",
+              "tests": [
+                {
+                  "name": "Current node",
+                  "input": ["","a",""],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","\u0000"],["NODE"]]],
+                  "output": "\u0000a\u0000"
+                },
+                {
+                  "name": "Explicit operand",
+                  "input": {"source":["","a",""]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","\u0000",["NODE","source"]],["NODE"]]],
+                  "output": "\u0000a\u0000"
+                }
+              ]
+            },
+            {
+              "name": "Interior empty field",
+              "tests": [
+                {
+                  "name": "Current node",
+                  "input": ["a","","b"],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","\u0000"],["NODE"]]],
+                  "output": "a\u0000\u0000b"
+                },
+                {
+                  "name": "Explicit operand",
+                  "input": {"source":["a","","b"]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","\u0000",["NODE","source"]],["NODE"]]],
+                  "output": "a\u0000\u0000b"
+                }
+              ]
+            },
+            {
+              "name": "Unicode and NUL",
+              "tests": [
+                {
+                  "name": "Current node",
+                  "input": ["\u0000","😀","é"],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","\u0000"],["NODE"]]],
+                  "output": "\u0000\u0000😀\u0000é"
+                },
+                {
+                  "name": "Explicit operand",
+                  "input": {"source":["\u0000","😀","é"]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","\u0000",["NODE","source"]],["NODE"]]],
+                  "output": "\u0000\u0000😀\u0000é"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Keep < concatenates",
+          "input": ["a",",","b"],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":",","keep":"<"}],["NODE"]]],
+          "output": "a,b"
+        },
+        {
+          "name": "Keep > concatenates",
+          "input": ["a",",","b"],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":",","keep":">"}],["NODE"]]],
+          "output": "a,b"
+        },
+        {
+          "name": "Keep @ concatenates",
+          "input": ["a",",","b"],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":",","keep":"@"}],["NODE"]]],
+          "output": "a,b"
+        },
+        {
+          "name": "Constant separator overrides default",
+          "input": ["a","b"],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":",","default":"!"}],["NODE"]]],
+          "output": "a,b"
+        },
+        {
+          "name": "Variable separator falls back to default",
+          "input": ["a","b",""],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":["ANY",":","|"],"default":"/"}],["NODE"]]],
+          "output": "a/b/"
+        },
+        {
+          "name": "Trimming patterns do not trim new values",
+          "input": [" a "," b "],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":",","trim":" ","discard":true}],["NODE"]]],
+          "output": " a , b "
+        },
+        {
+          "name": "Element pattern is not a JOIN filter",
+          "input": ["a","b"],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":",","element":["NONE",["EXISTS"]]}],["NODE"]]],
+          "output": "a,b"
+        },
+        {
+          "name": "Constructed array",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",",",[["a",["CONCAT","b","c"]]]],["NODE"]]],
+          "output": "a,bc"
+        }
+      ]
+    },
+    {
+      "name": "Metadata reassembly",
+      "desc": "SPLIT expression results carry hidden separators and trimming. JOIN uses stored separators for nonconstant sep, a constant sep overrides them, and discard suppresses trimming without suppressing stored separators.",
+      "tests": [
+        {
+          "name": "Same specification",
+          "input": " a : b | c ",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":["ANY",":","|"],"default":"/","trim":" "},["SPLIT",{"sep":["ANY",":","|"],"default":"/","trim":" "}]],["NODE"]]],
+          "output": " a : b | c "
+        },
+        {
+          "name": "Different regex default",
+          "input": " a : b | c ",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":["ANY",";",":"],"default":"!"},["SPLIT",{"sep":["ANY",":","|"],"default":"/","trim":" "}]],["NODE"]]],
+          "output": " a : b | c "
+        },
+        {
+          "name": "Constant separator",
+          "input": " a : b | c ",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":";"},["SPLIT",{"sep":["ANY",":","|"],"default":"/","trim":" "}]],["NODE"]]],
+          "output": " a ; b ; c "
+        },
+        {
+          "name": "Discard trimming",
+          "input": " a : b | c ",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":["ANY",":","|"],"default":"/","discard":true},["SPLIT",{"sep":["ANY",":","|"],"default":"/","trim":" "}]],["NODE"]]],
+          "output": "a:b|c"
+        },
+        {
+          "name": "Constant plus discard",
+          "input": " a : b | c ",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":";","discard":true},["SPLIT",{"sep":["ANY",":","|"],"default":"/","trim":" "}]],["NODE"]]],
+          "output": "a;b;c"
+        },
+        {
+          "name": "Keep ignores separator metadata",
+          "input": " a : b | c ",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":",","keep":"@"},["SPLIT",{"sep":["ANY",":","|"],"default":"/","trim":" "}]],["NODE"]]],
+          "output": " a  b  c "
+        },
+        {
+          "name": "No trimming metadata means no inferred trim",
+          "input": " a : b ",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":["ANY",":","|"],"default":"/","trim":" "},["SPLIT",{"sep":["ANY",":","|"],"default":"/"}]],["NODE"]]],
+          "output": " a : b "
+        },
+        {
+          "name": "Constant split records no variable separators",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":["ANY",":","|"],"default":"/"},["SPLIT",","]],["NODE"]]],
+          "output": "a/b"
+        },
+        {
+          "name": "Explicit default does not replace constant split separator",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",",",["SPLIT",{"sep":",","default":"!"}]],["NODE"]]],
+          "output": "a,b"
+        },
+        {
+          "name": "Discard at split cannot later restore text",
+          "input": " a : b ",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":["ANY",":","|"],"default":"/"},["SPLIT",{"sep":["ANY",":","|"],"default":"/","trim":" ","discard":true}]],["NODE"]]],
+          "output": "a:b"
+        },
+        {
+          "name": "Empty array has no stale metadata",
+          "input": "a:b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":["ANY",":","|"],"default":"/"},["SLICE",["SPLIT",{"sep":["ANY",":","|"],"default":"/"}],0,0]],["NODE"]]],
+          "output": ""
+        },
+        {
+          "name": "Slice retains chosen element metadata",
+          "input": " a : b | c ",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":["ANY",":","|"],"default":"/"},["SLICE",["SPLIT",{"sep":["ANY",":","|"],"default":"/","trim":" "}],1,2]],["NODE"]]],
+          "output": " b | c "
+        },
+        {
+          "name": "Singleton slice has no trailing separator",
+          "input": " a : b | c ",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":["ANY",":","|"],"default":"/"},["SLICE",["SPLIT",{"sep":["ANY",":","|"],"default":"/","trim":" "}],1,1]],["NODE"]]],
+          "output": " b "
+        },
+        {
+          "name": "Concatenation preserves first split origin",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":["ANY",":","|"],"default":"/"},["CONCAT",["SPLIT",{"sep":["ANY",":","|"],"default":"/","trim":" "}," a : b "],[["c"]]]],["NODE"]]],
+          "output": " a : b : c"
+        }
+      ]
+    },
+    {
+      "name": "SPLIT action scope and editing",
+      "desc": "Subactions execute in order against the temporary array at the original current-node path. Reassembly uses the final array and the action configuration; side effects in namespaces remain visible according to ordinary action scope rules.",
+      "tests": [
+        {
+          "name": "Overwrite one field",
+          "input": "a,b,c",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",",",["COPY","B",1]]],
+          "output": "a,B,c"
+        },
+        {
+          "name": "Later edit sees earlier assignment",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",",",["COPY","X",0],["COPY",["CONCAT",["NODE",0],"!"],1]]],
+          "output": "X,X!"
+        },
+        {
+          "name": "Append a field",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",",",["COPY","c",2]]],
+          "output": "a,b,c"
+        },
+        {
+          "name": "Delete the final empty field",
+          "input": "a,b,",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",",",["MOVE",["NODE",2],null]]],
+          "output": "a,b"
+        },
+        {
+          "name": "Append a final empty field",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",",",["COPY","",2]]],
+          "output": "a,b,"
+        },
+        {
+          "name": "Delete all fields",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",",",["SPLICE",0,null]]],
+          "output": ""
+        },
+        {
+          "name": "Replace the temporary array",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",",",["COPY",[["x","y"]],["NODE"]]]],
+          "output": "x,y"
+        },
+        {
+          "name": "Replace with an empty array",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",",",["COPY",[[]],["NODE"]]]],
+          "output": ""
+        },
+        {
+          "name": "Default does not override a constant action separator",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","default":"!"},["COPY","c",2]]],
+          "output": "a,b,c"
+        },
+        {
+          "name": "New plain array uses the regex default",
+          "input": "a:b|c",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":["ANY",":","|"],"default":"/"},["COPY",[["x","y"]],["NODE"]]]],
+          "output": "x/y"
+        },
+        {
+          "name": "Transferred metadata does not override a constant",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",",",["COPY",["SPLIT",{"sep":["ANY",";",":"],"default":";","trim":" "}," x ; y "],["NODE"]]]],
+          "output": " x , y "
+        },
+        {
+          "name": "Transferred variable separators are used",
+          "input": "a:b",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":["ANY",":","|"],"default":"/"},["COPY",["SPLIT",{"sep":["ANY",";",":"],"default":";"},"x;y:z"],["NODE"]]]],
+          "output": "x;y:z"
+        },
+        {
+          "name": "Action discard overrides transferred trimming",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","discard":true},["COPY",["SPLIT",{"sep":";","trim":" "}," x ; y "],["NODE"]]]],
+          "output": "x,y"
+        },
+        {
+          "name": "Action keep ignores transferred separators",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","keep":"<"},["COPY",["SPLIT",{"sep":["ANY",";",":"],"default":";","trim":" "}," x ; y "],["NODE"]]]],
+          "output": " x  y "
+        },
+        {
+          "name": "Nested split edits one field",
+          "input": "a:b,c:d",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",",",["AT",["NODE",1],["SPLIT",":",["COPY","D",1]]]]],
+          "output": "a:b,c:D"
+        },
+        {
+          "name": "Nested path leaves siblings untouched",
+          "input": {"text":"a,b","keep":[1]},
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE","text"],["SPLIT",",",["COPY","B",1]]]],
+          "output": {"text":"a,B","keep":[1]}
+        },
+        {
+          "name": "AT relative references see the temporary array",
+          "input": {"text":"a,b"},
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE","text"],["SPLIT",",",["MATCH",["IS",[["a","b"]]]],["COPY","B",1]]]],
+          "output": {"text":"a,B"}
+        },
+        {
+          "name": "COPY of a direct element carries trimming",
+          "input": " A | B ",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":["ANY","|",":"],"default":"|","trim":" "},["COPY",["NODE",0],2]]],
+          "output": " A | B | A "
+        },
+        {
+          "name": "Derived element gets adjacent trimming",
+          "input": " A | B ",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":["ANY","|",":"],"default":"|","trim":" "},["COPY",["CONCAT",["NODE",0],""],2]]],
+          "output": " A | B | A"
+        },
+        {
+          "name": "Inserted value gets preceding separator",
+          "input": "a:b|c",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":["ANY",":","|"],"default":"/"},["SPLICE",1,0,"x"]]],
+          "output": "a:x:b|c"
+        },
+        {
+          "name": "Inserted first value gets following separator",
+          "input": "a:b|c",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":["ANY",":","|"],"default":"/"},["SPLICE",0,0,"x"]]],
+          "output": "x:a:b|c"
+        },
+        {
+          "name": "Appended value inherits the final separator",
+          "input": "a:b|c",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":["ANY",":","|"],"default":"/"},["COPY","d",3]]],
+          "output": "a:b|c|d"
+        },
+        {
+          "name": "Overwrite retains destination metadata",
+          "input": " a : b | c ",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":["ANY",":","|"],"default":"/","trim":" "},["COPY",["NODE",2],0]]],
+          "output": " c : b | c "
+        },
+        {
+          "name": "Delete a middle field with its following separator",
+          "input": "a:b|c",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":["ANY",":","|"],"default":"/"},["MOVE",["NODE",1],null]]],
+          "output": "a:c"
+        },
+        {
+          "name": "Deleting before a trailing empty field preserves its predecessor separator",
+          "input": "a:b|",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":["ANY",":","|"],"default":"/"},["MOVE",["NODE",1],null]]],
+          "output": "a:"
+        },
+        {
+          "name": "Different split origins use adjacent metadata",
+          "input": " a : b ",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["ANY",":","|"],"default":"/","trim":" "}," X | Y "],["STASH","other"]],["SPLIT",{"sep":["ANY",":","|"],"default":"/","trim":" "},["COPY",["STASH","other",0],2]]],
+          "output": " a : b : X"
+        },
+        {
+          "name": "Stashed fields remain available after reassembly",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",",",["COPY",["NODE",1],["STASH","field"]]],["COPY",["STASH","field"],["NODE"]]],
+          "output": "b"
+        },
+        {
+          "name": "Numeric action and expression IDs",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},[6,",",[3,"B",1]]],
+          "output": "a,B"
+        }
+      ]
+    },
+    {
+      "name": "Expression scope and definitions",
+      "desc": "Value operands and value-producing configuration fields evaluate in the caller scope. Literal split_spec objects contain regex syntax and are not recursively constructed as ordinary value expressions.",
+      "tests": [
+        {
+          "name": "Separator reference",
+          "input": {"sep":",","text":"a,b"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["NODE","sep"]},["NODE","text"]],["NODE"]]],
+          "output": ["a","b"]
+        },
+        {
+          "name": "Default reference",
+          "input": {"fallback":"/","parts":["a","b"]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":["ANY",",",";"],"default":["NODE","fallback"]},["NODE","parts"]],["NODE"]]],
+          "output": "a/b"
+        },
+        {
+          "name": "Constructed separator",
+          "input": {"text":"a::b"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["CONCAT",":",":"]},["NODE","text"]],["NODE"]]],
+          "output": ["a","b"]
+        },
+        {
+          "name": "Constant trim pattern",
+          "input": " a , b ",
+          "jgraft": ["JGRAFT",{"v":1,"const":["trim"," "]},["COPY",["SPLIT",{"sep":",","trim":["CONST","trim"]}],["NODE"]]],
+          "output": ["a","b"]
+        },
+        {
+          "name": "Value common separator",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1,"expr":["sep",","]},["COPY",["SPLIT",{"sep":["EXPR","sep"]}],["NODE"]]],
+          "output": ["a","b"]
+        },
+        {
+          "name": "Numeric SPLIT expression",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[62,","],["NODE"]]],
+          "output": ["a","b"]
+        },
+        {
+          "name": "Numeric JOIN expression",
+          "input": ["a","b"],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[63,","],["NODE"]]],
+          "output": "a,b"
+        },
+        {
+          "name": "Literal expression-looking text",
+          "input": "EXISTS,JOIN",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",","],["NODE"]]],
+          "output": ["EXISTS","JOIN"]
+        },
+        {
+          "name": "Function result is literal match data",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["SPLIT",","],[["a","b"]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Boolean inner match does not turn into a separator",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["NOT",false]}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Literal spec is not a reference to a spec object",
+          "input": {"config":{"sep":","},"text":"a,b"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",["NODE","config"],["NODE","text"]],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Own prototype-like path",
+          "input": {"__proto__":"a,b"},
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE","__proto__"],["SPLIT",",",["COPY","B",1]]]],
+          "output": {"__proto__":"a,B"},
+          "needProto": true
+        },
+        {
+          "name": "Separator property named constructor",
+          "input": {"constructor":",","text":"a,b"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["NODE","constructor"]},["NODE","text"]],["NODE"]]],
+          "output": ["a","b"]
+        },
+        {
+          "name": "Directional trim references use the caller scope",
+          "input": {"left":"[","right":"]","text":"[a],[b]"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","ltrim":["NODE","left"],"rtrim":["NODE","right"]},["NODE","text"]],["NODE"]]],
+          "output": ["a","b"]
+        },
+        {
+          "name": "Explicit string is independent of target type",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",",","a,b"],["NODE"]]],
+          "output": ["a","b"]
+        },
+        {
+          "name": "Explicit array is independent of target type",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",",",[["a","b"]]],["NODE"]]],
+          "output": "a,b"
+        },
+        {
+          "name": "Common element definition",
+          "input": "a,b,cc,d",
+          "jgraft": ["JGRAFT",{"v":1,"expr":["element",["REP",1,0,["EXISTS"]]]},["COPY",["SPLIT",{"sep":",","element":["EXPR","element"]}],["NODE"]]],
+          "output": ["a","b","cc,d"]
+        },
+        {
+          "name": "TEMP specification within one COPY",
+          "input": {"sep":",","text":"a,b"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NODE","sep"],["TEMP","sep"],["SPLIT",{"sep":["TEMP","sep"]},["NODE","text"]],["NODE"]]],
+          "output": ["a","b"]
+        },
+        {
+          "name": "STASH specification across actions",
+          "input": {"sep":",","parts":["a","b"]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NODE","sep"],["STASH","sep"]],["COPY",["JOIN",{"sep":["STASH","sep"]},["NODE","parts"]],["NODE"]]],
+          "output": "a,b"
+        }
+      ]
+    },
+    {
+      "name": "Unicode boundary restrictions",
+      "desc": "Neither literal nor regex separators and trimmers may split a valid surrogate pair. Lone-surrogate cases are separately marked so hosts with another malformed-encoding policy can skip them.",
+      "tests": [
+        {
+          "name": "High surrogate cannot end inside a pair",
+          "input": "😀",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":"\ud83d"}],["NODE"]]],
+          "output": ["😀"],
+          "needLoneSurrogate": true
+        },
+        {
+          "name": "Low surrogate cannot start inside a pair",
+          "input": "😀",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":"\ude00"}],["NODE"]]],
+          "output": ["😀"],
+          "needLoneSurrogate": true
+        },
+        {
+          "name": "Multi-unit separator cannot cut the next pair",
+          "input": "\udc00😀",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":"\udc00\ud83d"}],["NODE"]]],
+          "output": ["\udc00😀"],
+          "needLoneSurrogate": true
+        },
+        {
+          "name": "High surrogate trim cannot split pair",
+          "input": "😀",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","ltrim":"\ud83d"}],["NODE"]]],
+          "output": ["😀"],
+          "needLoneSurrogate": true
+        },
+        {
+          "name": "Low surrogate trim cannot split pair",
+          "input": "😀",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","rtrim":"\ude00"}],["NODE"]]],
+          "output": ["😀"],
+          "needLoneSurrogate": true
+        },
+        {
+          "name": "Numeric high surrogate does not match paired character",
+          "input": "😀",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["SEQ",55357],"default":""}],["NODE"]]],
+          "output": ["😀"]
+        },
+        {
+          "name": "Numeric low surrogate does not match paired character",
+          "input": "😀",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["SEQ",56832],"default":""}],["NODE"]]],
+          "output": ["😀"]
+        },
+        {
+          "name": "Lone surrogate literal separator",
+          "input": "a\ud800b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":"\ud800"}],["NODE"]]],
+          "output": ["a","b"],
+          "needLoneSurrogate": true
+        },
+        {
+          "name": "Lone surrogate numeric separator",
+          "input": "a\ud800b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["SEQ",55296],"default":""}],["NODE"]]],
+          "output": ["a","b"],
+          "needLoneSurrogate": true
+        },
+        {
+          "name": "Lone surrogate trimming",
+          "input": "\ud800a\udc00",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","ltrim":"\ud800","rtrim":"\udc00"}],["NODE"]]],
+          "output": ["a"],
+          "needLoneSurrogate": true
+        },
+        {
+          "name": "JOIN preserves literal malformed codepoints",
+          "input": ["\ud800","x","\udc00"],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",""],["NODE"]]],
+          "output": "\ud800x\udc00",
+          "needLoneSurrogate": true
+        }
+      ]
+    },
+    {
+      "name": "Default evaluation and ignoring",
+      "desc": "When sep is a regex, default is evaluated as a value and must return a string, even when rooted in a match expression. A literal-string sep makes default irrelevant, so ignored values and intentional failures do not change splitting or joining.",
+      "tests": [
+        {
+          "name": "Ignored null",
+          "tests": [
+            {
+              "name": "SPLIT fields",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","default":null}],["NODE"]]],
+              "output": ["a","b"]
+            },
+            {
+              "name": "JOIN",
+              "input": ["a","b"],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":",","default":null}],["NODE"]]],
+              "output": "a,b"
+            },
+            {
+              "name": "Action",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","default":null}]],
+              "output": "a,b"
+            }
+          ]
+        },
+        {
+          "name": "Ignored false",
+          "tests": [
+            {
+              "name": "SPLIT fields",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","default":false}],["NODE"]]],
+              "output": ["a","b"]
+            },
+            {
+              "name": "JOIN",
+              "input": ["a","b"],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":",","default":false}],["NODE"]]],
+              "output": "a,b"
+            },
+            {
+              "name": "Action",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","default":false}]],
+              "output": "a,b"
+            }
+          ]
+        },
+        {
+          "name": "Ignored true",
+          "tests": [
+            {
+              "name": "SPLIT fields",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","default":true}],["NODE"]]],
+              "output": ["a","b"]
+            },
+            {
+              "name": "JOIN",
+              "input": ["a","b"],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":",","default":true}],["NODE"]]],
+              "output": "a,b"
+            },
+            {
+              "name": "Action",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","default":true}]],
+              "output": "a,b"
+            }
+          ]
+        },
+        {
+          "name": "Ignored 0",
+          "tests": [
+            {
+              "name": "SPLIT fields",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","default":0}],["NODE"]]],
+              "output": ["a","b"]
+            },
+            {
+              "name": "JOIN",
+              "input": ["a","b"],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":",","default":0}],["NODE"]]],
+              "output": "a,b"
+            },
+            {
+              "name": "Action",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","default":0}]],
+              "output": "a,b"
+            }
+          ]
+        },
+        {
+          "name": "Ignored {}",
+          "tests": [
+            {
+              "name": "SPLIT fields",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","default":{}}],["NODE"]]],
+              "output": ["a","b"]
+            },
+            {
+              "name": "JOIN",
+              "input": ["a","b"],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":",","default":{}}],["NODE"]]],
+              "output": "a,b"
+            },
+            {
+              "name": "Action",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","default":{}}]],
+              "output": "a,b"
+            }
+          ]
+        },
+        {
+          "name": "Ignored []",
+          "desc": "The ignored empty array is invalid value-expression syntax. A lazy runtime can ignore it, while static syntax validation may reject it.",
+          "tests": [
+            {
+              "name": "SPLIT fields",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","default":[]}],["NODE"]]],
+              "output": ["a","b"],
+              "errors": {"INVALID_GRAFT":true}
+            },
+            {
+              "name": "JOIN",
+              "input": ["a","b"],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":",","default":[]}],["NODE"]]],
+              "output": "a,b",
+              "errors": {"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Action",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","default":[]}]],
+              "output": "a,b",
+              "errors": {"INVALID_GRAFT":true}
+            }
+          ]
+        },
+        {
+          "name": "Ignored [\"FAIL\"]",
+          "tests": [
+            {
+              "name": "SPLIT fields",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","default":["FAIL"]}],["NODE"]]],
+              "output": ["a","b"]
+            },
+            {
+              "name": "JOIN",
+              "input": ["a","b"],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":",","default":["FAIL"]}],["NODE"]]],
+              "output": "a,b"
+            },
+            {
+              "name": "Action",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","default":["FAIL"]}]],
+              "output": "a,b"
+            }
+          ]
+        },
+        {
+          "name": "Ignored default after resolving a separator",
+          "input": {"sep":",","text":"a,b"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["NODE","sep"],"default":["FAIL"]},["NODE","text"]],["NODE"]]],
+          "output": ["a","b"]
+        },
+        {
+          "name": "A matching default is a boolean, not a regex",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["ANY",",",";"],"default":["HAS","a,b"]}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "A failing match default is still a boolean",
+          "input": ["a","b"],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":["ANY",",",";"],"default":["HAS","x"]}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "A function may construct the fallback",
+          "input": ["a","b"],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":["ANY",",",";"],"default":["CONCAT","/","/"]}],["NODE"]]],
+          "output": "a//b"
+        },
+        {
+          "name": "JOIN requires sep even with a default",
+          "input": ["a","b"],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"default":","}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        }
+      ]
+    },
+    {
+      "name": "Invalid targets and array elements",
+      "desc": "SPLIT requires a string, JOIN requires an array of strings, and the SPLIT action must finish with an array of strings. No target or element coercion is allowed.",
+      "tests": [
+        {
+          "name": "SPLIT target null",
+          "desc": "Both implicit and explicit expression operands, and the action target, enforce string type.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",","],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit operand",
+              "input": {"source":null},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",",",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Action target",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",","]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "SPLIT target false",
+          "desc": "Both implicit and explicit expression operands, and the action target, enforce string type.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": false,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",","],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit operand",
+              "input": {"source":false},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",",",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Action target",
+              "input": false,
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",","]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "SPLIT target true",
+          "desc": "Both implicit and explicit expression operands, and the action target, enforce string type.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": true,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",","],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit operand",
+              "input": {"source":true},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",",",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Action target",
+              "input": true,
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",","]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "SPLIT target 0",
+          "desc": "Both implicit and explicit expression operands, and the action target, enforce string type.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": 0,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",","],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit operand",
+              "input": {"source":0},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",",",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Action target",
+              "input": 0,
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",","]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "SPLIT target 1.5",
+          "desc": "Both implicit and explicit expression operands, and the action target, enforce string type.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": 1.5,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",","],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit operand",
+              "input": {"source":1.5},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",",",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Action target",
+              "input": 1.5,
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",","]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "SPLIT target {}",
+          "desc": "Both implicit and explicit expression operands, and the action target, enforce string type.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",","],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit operand",
+              "input": {"source":{}},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",",",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Action target",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",","]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "SPLIT target []",
+          "desc": "Both implicit and explicit expression operands, and the action target, enforce string type.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",","],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit operand",
+              "input": {"source":[]},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",",",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Action target",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",","]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "SPLIT target [\"a\"]",
+          "desc": "Both implicit and explicit expression operands, and the action target, enforce string type.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": ["a"],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",","],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit operand",
+              "input": {"source":["a"]},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",",",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Action target",
+              "input": ["a"],
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",","]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "JOIN target null",
+          "desc": "An explicit operand is checked independently of the caller current node.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",","],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit operand",
+              "input": {"source":null},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",",",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "JOIN target false",
+          "desc": "An explicit operand is checked independently of the caller current node.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": false,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",","],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit operand",
+              "input": {"source":false},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",",",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "JOIN target true",
+          "desc": "An explicit operand is checked independently of the caller current node.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": true,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",","],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit operand",
+              "input": {"source":true},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",",",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "JOIN target 0",
+          "desc": "An explicit operand is checked independently of the caller current node.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": 0,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",","],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit operand",
+              "input": {"source":0},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",",",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "JOIN target 1.5",
+          "desc": "An explicit operand is checked independently of the caller current node.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": 1.5,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",","],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit operand",
+              "input": {"source":1.5},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",",",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "JOIN target {}",
+          "desc": "An explicit operand is checked independently of the caller current node.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",","],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit operand",
+              "input": {"source":{}},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",",",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "JOIN target \"a,b\"",
+          "desc": "An explicit operand is checked independently of the caller current node.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",","],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit operand",
+              "input": {"source":"a,b"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",",",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "Non-string element null",
+          "desc": "Even one invalid element prevents reassembly; a nested array is not flattened.",
+          "tests": [
+            {
+              "name": "JOIN rejects element",
+              "input": ["a",null,"b"],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",","],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Action rejects edited element",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",",",["COPY",null,0]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            }
+          ]
+        },
+        {
+          "name": "Non-string element false",
+          "desc": "Even one invalid element prevents reassembly; a nested array is not flattened.",
+          "tests": [
+            {
+              "name": "JOIN rejects element",
+              "input": ["a",false,"b"],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",","],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Action rejects edited element",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",",",["COPY",false,0]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            }
+          ]
+        },
+        {
+          "name": "Non-string element true",
+          "desc": "Even one invalid element prevents reassembly; a nested array is not flattened.",
+          "tests": [
+            {
+              "name": "JOIN rejects element",
+              "input": ["a",true,"b"],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",","],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Action rejects edited element",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",",",["COPY",true,0]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            }
+          ]
+        },
+        {
+          "name": "Non-string element 0",
+          "desc": "Even one invalid element prevents reassembly; a nested array is not flattened.",
+          "tests": [
+            {
+              "name": "JOIN rejects element",
+              "input": ["a",0,"b"],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",","],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Action rejects edited element",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",",",["COPY",0,0]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            }
+          ]
+        },
+        {
+          "name": "Non-string element 1.5",
+          "desc": "Even one invalid element prevents reassembly; a nested array is not flattened.",
+          "tests": [
+            {
+              "name": "JOIN rejects element",
+              "input": ["a",1.5,"b"],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",","],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Action rejects edited element",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",",",["COPY",1.5,0]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            }
+          ]
+        },
+        {
+          "name": "Non-string element {}",
+          "desc": "Even one invalid element prevents reassembly; a nested array is not flattened.",
+          "tests": [
+            {
+              "name": "JOIN rejects element",
+              "input": ["a",{},"b"],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",","],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Action rejects edited element",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",",",["COPY",{},0]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            }
+          ]
+        },
+        {
+          "name": "Non-string element []",
+          "desc": "Even one invalid element prevents reassembly; a nested array is not flattened.",
+          "tests": [
+            {
+              "name": "JOIN rejects element",
+              "input": ["a",[],"b"],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",","],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Action rejects edited element",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",",",["COPY",[[]],0]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            }
+          ]
+        },
+        {
+          "name": "Non-string element [\"nested\"]",
+          "desc": "Even one invalid element prevents reassembly; a nested array is not flattened.",
+          "tests": [
+            {
+              "name": "JOIN rejects element",
+              "input": ["a",["nested"],"b"],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",","],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Action rejects edited element",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",",",["COPY",[["nested"]],0]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            }
+          ]
+        },
+        {
+          "name": "Action root null",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",",",["COPY",null,["NODE"]]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Action root false",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",",",["COPY",false,["NODE"]]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Action root 1",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",",",["COPY",1,["NODE"]]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Action root {}",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",",",["COPY",{},["NODE"]]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Action root \"replacement\"",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",",",["COPY","replacement",["NODE"]]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        }
+      ]
+    },
+    {
+      "name": "Specification validation",
+      "desc": "Unknown options and illegal literal property values are INVALID_OPERAND, with static INVALID_GRAFT allowed for intrinsically invalid configurations. trim cannot be combined with ltrim or rtrim. Regex separators without keep require default.",
+      "tests": [
+        {
+          "name": "Unknown option",
+          "desc": "The same split_spec grammar is used by the expressions and action.",
+          "tests": [
+            {
+              "name": "SPLIT",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","unknown":true}],["NODE"]]],
+              "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "JOIN",
+              "input": ["a","b"],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":",","unknown":true}],["NODE"]]],
+              "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Action",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","unknown":true}]],
+              "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+            }
+          ]
+        },
+        {
+          "name": "Own constructor option",
+          "desc": "The same split_spec grammar is used by the expressions and action.",
+          "tests": [
+            {
+              "name": "SPLIT",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","constructor":"x"}],["NODE"]]],
+              "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "JOIN",
+              "input": ["a","b"],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":",","constructor":"x"}],["NODE"]]],
+              "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Action",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","constructor":"x"}]],
+              "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+            }
+          ]
+        },
+        {
+          "name": "Conflicting left trim",
+          "desc": "The same split_spec grammar is used by the expressions and action.",
+          "tests": [
+            {
+              "name": "SPLIT",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","trim":" ","ltrim":" "}],["NODE"]]],
+              "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "JOIN",
+              "input": ["a","b"],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":",","trim":" ","ltrim":" "}],["NODE"]]],
+              "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Action",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","trim":" ","ltrim":" "}]],
+              "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+            }
+          ]
+        },
+        {
+          "name": "Conflicting right trim",
+          "desc": "The same split_spec grammar is used by the expressions and action.",
+          "tests": [
+            {
+              "name": "SPLIT",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","trim":" ","rtrim":" "}],["NODE"]]],
+              "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "JOIN",
+              "input": ["a","b"],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":",","trim":" ","rtrim":" "}],["NODE"]]],
+              "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Action",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":",","trim":" ","rtrim":" "}]],
+              "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+            }
+          ]
+        },
+        {
+          "name": "Missing separator",
+          "desc": "The same split_spec grammar is used by the expressions and action.",
+          "tests": [
+            {
+              "name": "SPLIT",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{}],["NODE"]]],
+              "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "JOIN",
+              "input": ["a","b"],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{}],["NODE"]]],
+              "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Action",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{}]],
+              "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+            }
+          ]
+        },
+        {
+          "name": "Regex without default",
+          "desc": "The same split_spec grammar is used by the expressions and action.",
+          "tests": [
+            {
+              "name": "SPLIT",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["ANY",",",";"]}],["NODE"]]],
+              "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "JOIN",
+              "input": ["a","b"],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":["ANY",",",";"]}],["NODE"]]],
+              "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Action",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":["ANY",",",";"]}]],
+              "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+            }
+          ]
+        },
+        {
+          "name": "Sequence without default",
+          "desc": "The same split_spec grammar is used by the expressions and action.",
+          "tests": [
+            {
+              "name": "SPLIT",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["SEQ",","]}],["NODE"]]],
+              "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "JOIN",
+              "input": ["a","b"],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":["SEQ",","]}],["NODE"]]],
+              "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Action",
+              "input": "a,b",
+              "jgraft": ["JGRAFT",{"v":1},["SPLIT",{"sep":["SEQ",","]}]],
+              "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+            }
+          ]
+        },
+        {
+          "name": "Invalid sep null",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":null,"default":","}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid default null",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["ANY",",",";"],"default":null}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid trim null",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","trim":null}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid ltrim null",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","ltrim":null}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid rtrim null",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","rtrim":null}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid sep false",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":false,"default":","}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid default false",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["ANY",",",";"],"default":false}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid trim false",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","trim":false}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid ltrim false",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","ltrim":false}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid rtrim false",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","rtrim":false}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid sep true",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":true,"default":","}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid default true",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["ANY",",",";"],"default":true}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid trim true",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","trim":true}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid ltrim true",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","ltrim":true}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid rtrim true",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","rtrim":true}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid sep 0",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":0,"default":","}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid default 0",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["ANY",",",";"],"default":0}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid trim 0",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","trim":0}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid ltrim 0",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","ltrim":0}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid rtrim 0",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","rtrim":0}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid sep 1.5",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":1.5,"default":","}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid default 1.5",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["ANY",",",";"],"default":1.5}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid trim 1.5",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","trim":1.5}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid ltrim 1.5",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","ltrim":1.5}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid rtrim 1.5",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","rtrim":1.5}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid sep {}",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":{},"default":","}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid default {}",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["ANY",",",";"],"default":{}}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid trim {}",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","trim":{}}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid ltrim {}",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","ltrim":{}}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid rtrim {}",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","rtrim":{}}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid keep null",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","keep":null}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid keep false",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","keep":false}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid keep true",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","keep":true}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid keep \"\"",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","keep":""}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid keep \"left\"",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","keep":"left"}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid keep \"right\"",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","keep":"right"}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid keep \"@>\"",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","keep":"@>"}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid keep 0",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","keep":0}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid keep []",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","keep":[]}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid keep {}",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","keep":{}}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid discard null",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","discard":null}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid discard 0",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","discard":0}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid discard 1",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","discard":1}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid discard \"true\"",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","discard":"true"}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid discard []",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","discard":[]}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid discard {}",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","discard":{}}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Keep is literal rather than value context",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1,"const":["keep","<"]},["COPY",["SPLIT",{"sep":",","keep":["CONST","keep"]}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Discard is literal rather than value context",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1,"const":["discard",true]},["COPY",["SPLIT",{"sep":",","discard":["CONST","discard"]}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Unknown prototype option",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","__proto__":"x"}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true},
+          "needProto": true
+        }
+      ]
+    },
+    {
+      "name": "Errors, laziness, and syntax",
+      "desc": "Recoverable target/operand failures inside match expressions become false probes. Invalid syntax and subaction errors remain fatal. Intentional FAIL remains a runtime target failure rather than being upgraded to a syntax error.",
+      "tests": [
+        {
+          "name": "Missing SPLIT operand",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",",",["NODE","missing"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Missing JOIN operand",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",",",["NODE","missing"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Missing separator reference",
+          "input": {"text":"a,b"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["NODE","missing"]},["NODE","text"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Missing default reference",
+          "input": {"parts":["a","b"]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":["ANY",",",";"],"default":["NODE","missing"]},["NODE","parts"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Explicit operand FAIL",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",",",["FAIL"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "JOIN operand FAIL",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",",",["FAIL"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Separator FAIL",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["FAIL"]}],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Default FAIL",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":["ANY",",",";"],"default":["FAIL"]}],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Wrong SPLIT target in a match",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["SPLIT",","]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Wrong JOIN target in a match",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["JOIN",","]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Wrong JOIN element in a match",
+          "input": ["a",1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["JOIN",","]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Computed separator wrong type is a failed probe",
+          "input": {"sep":1,"text":"a,b"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["SPLIT",{"sep":["NODE","sep"]},["NODE","text"]],true],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Computed default wrong type is a failed probe",
+          "input": {"fallback":1,"parts":["a","b"]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["JOIN",{"sep":["ANY",",",";"],"default":["NODE","fallback"]},["NODE","parts"]],true],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Subaction failure propagates",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",",",["COPY",["FAIL"],0]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Nested MATCH failure propagates",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",",",["MATCH",["IS",[["other"]]]]]],
+          "errors": {"NO_MATCH":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "An earlier edit is not applied to the input on failure",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",",",["COPY","X",0],["COPY",["FAIL"],1]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Subaction syntax is not a false probe",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT",",",["UNKNOWN"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "SPLIT arity 0",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT"],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "SPLIT arity 3",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",",",["NODE"],"extra"],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "JOIN arity 0",
+          "input": ["a","b"],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN"],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "JOIN arity 3",
+          "input": ["a","b"],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",",",["NODE"],"extra"],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Action needs a specification",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["SPLIT"]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Unknown separator expression",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["UNKNOWN"],"default":","}],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Unknown element expression",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","element":["UNKNOWN"]}],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Unknown trimming expression",
+          "input": "a,b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":",","trim":["UNKNOWN"]}],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Unused condition may skip a split fault",
+          "input": true,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ANY",true,["SPLIT",{"sep":["UNKNOWN"],"default":","}]],["NODE"]]],
+          "output": true,
+          "errors": {"INVALID_GRAFT":true}
+        }
+      ]
+    }
+  ]
+}
