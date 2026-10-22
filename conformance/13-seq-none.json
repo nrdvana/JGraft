@@ -324,7 +324,7 @@
     {
       "name": "NONE function-created match state retains its own captures",
       "input": [{"a":[7]}],
-      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["SEQ",["NONE",["NONE",{"a":["IS",["CAPTURE",[[["SEQMAX","fresh",7]]]],{"fresh":{"path":[],"ofs":0,"len":1,"lim":1}}]}]],["EXISTS"]]]]]],["COPY",["CAP"],["NODE"]]]],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["SEQ",["NONE",["NONE",{"a":["IS",["CAPTURE",[[["SEQMAX","fresh",7]]]],{"fresh":{"path":[[]],"ofs":0,"len":1,"lim":1}}]}]],["EXISTS"]]]]]],["COPY",["CAP"],["NODE"]]]],
       "output": {}
     },
     {

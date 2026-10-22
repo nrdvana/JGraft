@@ -440,7 +440,7 @@
     {
       "name": "ANY suppression stops at a function match boundary",
       "input": {"a":[7]},
-      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ANY",["IS",["CAPTURE",{"a":[[["SEQMAX","inner",7]]]}],{"inner":{"path":["a"],"ofs":0,"len":1,"lim":1}}]],["COPY",["CAP"],["NODE"]]]],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["ANY",["IS",["CAPTURE",{"a":[[["SEQMAX","inner",7]]]}],{"inner":{"path":[["a"]],"ofs":0,"len":1,"lim":1}}]],["COPY",["CAP"],["NODE"]]]],
       "output": {}
     },
     {

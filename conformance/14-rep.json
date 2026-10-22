@@ -1617,7 +1617,7 @@
     {
       "name": "REP suppression stops at a fresh function match state",
       "input": [{"a":[7]}],
-      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["REP",1,0,{"a":["IS",["CAPTURE",[[["SEQMAX","fresh",7]]]],{"fresh":{"path":[],"ofs":0,"len":1,"lim":1}}]}]]]]],["COPY",["CAP"],["NODE"]]]],
+      "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",[[["SEQ",["REP",1,0,{"a":["IS",["CAPTURE",[[["SEQMAX","fresh",7]]]],{"fresh":{"path":[[]],"ofs":0,"len":1,"lim":1}}]}]]]]],["COPY",["CAP"],["NODE"]]]],
       "output": {}
     },
     {
