@@ -1,0 +1,3902 @@
+{
+  "version": 1,
+  "name": "JGRAFT namespaces",
+  "desc": "Covers the JGRAFT action namespaces and the CONST, STASH, and EXPR expressions. CONST declarations and references, sequential evaluation, lexical inheritance and shadowing, STASH lifetime and mutation, and transferring parent stash values into constants before an inner JGRAFT resets its stash. Namespaces are logically independent trees: edits through copied or moved values must not mutate constants, saved snapshots, sibling values, or the original input. Supporting COPY, MOVE, SPLICE, AT, MATCH, IF, SPLIT, and EXISTS expose scope boundaries without prescribing storage or resource-counter totals. Expression coverage also includes literal reference patterns in ordinary, sequence, and regex matching; function operands; empty and mixed path expansion; scalar and array boundaries; selector syntax/runtime errors; destination restrictions; and preserved SPLIT metadata. Common expression declarations and EXPR cover delayed evaluation, invocation-time bindings, inheritance and shadowing, flat computed names, validation, independent results, and bounded recursive expansion. Detailed EXPR interactions with individual matching and function contexts remain in those contexts' suites.",
+  "tests": [
+    {
+      "name": "Constant values and construction",
+      "desc": "Declarations evaluate value-context trees once at scope entry. Arrays constructed in metadata require escaped-array syntax; values returned by references are already data and are never evaluated again.",
+      "tests": [
+        {
+          "name": "Null",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["value",null]},["COPY",["CONST","value"],["NODE"]]],
+          "output": null
+        },
+        {
+          "name": "False",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["value",false]},["COPY",["CONST","value"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "True",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["value",true]},["COPY",["CONST","value"],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Zero",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["value",0]},["COPY",["CONST","value"],["NODE"]]],
+          "output": 0
+        },
+        {
+          "name": "Negative integer",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["value",-7]},["COPY",["CONST","value"],["NODE"]]],
+          "output": -7
+        },
+        {
+          "name": "Fraction",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["value",1.25]},["COPY",["CONST","value"],["NODE"]]],
+          "output": 1.25
+        },
+        {
+          "name": "Empty string",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["value",""]},["COPY",["CONST","value"],["NODE"]]],
+          "output": ""
+        },
+        {
+          "name": "Unicode string",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["value","a😀é"]},["COPY",["CONST","value"],["NODE"]]],
+          "output": "a😀é"
+        },
+        {
+          "name": "Empty object",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["value",{}]},["COPY",["CONST","value"],["NODE"]]],
+          "output": {}
+        },
+        {
+          "name": "Nested object",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["value",{"a":[[1,{"b":2}]]}]},["COPY",["CONST","value"],["NODE"]]],
+          "output": {"a":[1,{"b":2}]}
+        },
+        {
+          "name": "Empty array",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["value",[[]]]},["COPY",["CONST","value"],["NODE"]]],
+          "output": []
+        },
+        {
+          "name": "Nested array",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["value",[[1,{"a":[[2]]},null]]]},["COPY",["CONST","value"],["NODE"]]],
+          "output": [1,{"a":[2]},null]
+        },
+        {
+          "name": "Expression-looking array",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["value",[["CONST","not-an-expression"]]]},["COPY",["CONST","value"],["NODE"]]],
+          "output": ["CONST","not-an-expression"]
+        },
+        {
+          "name": "Constructed tree embeds references",
+          "input": {"source":[4,5]},
+          "jgraft": ["JGRAFT",{"v":1,"const":["first",3,"tree",{"a":["CONST","first"],"b":["NODE","source"],"c":[[["CONST","first"],["NODE","source",-1]]]}]},["COPY",["CONST","tree"],["NODE"]]],
+          "output": {"a":3,"b":[4,5],"c":[3,5]}
+        },
+        {
+          "name": "Referenced input remains literal",
+          "input": {"source":["FAIL"]},
+          "jgraft": ["JGRAFT",{"v":1,"const":["value",["NODE","source"]]},["COPY",["CONST","value"],["NODE"]]],
+          "output": ["FAIL"]
+        },
+        {
+          "name": "Objects do not interpret operator-looking keys",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["value",{"CONST":"x","STASH":"y","JGRAFT":"z"}]},["COPY",["CONST","value"],["NODE"]]],
+          "output": {"CONST":"x","STASH":"y","JGRAFT":"z"}
+        },
+        {
+          "name": "Empty declarations",
+          "input": 8,
+          "jgraft": ["JGRAFT",{"v":1,"const":[]},["COPY",["CONST"],["NODE"]]],
+          "output": {}
+        },
+        {
+          "name": "Absent declarations",
+          "input": 8,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CONST"],["NODE"]]],
+          "output": {}
+        },
+        {
+          "name": "Root reference enumerates all bindings",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["a",1,"b",[[2,3]]]},["COPY",["CONST"],["NODE"]]],
+          "output": {"a":1,"b":[2,3]}
+        },
+        {
+          "name": "Constants evaluate even without actions",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["unused",["FAIL"]]}],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Unused missing input is not lazy",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["unused",["NODE","missing"]]}],
+          "errors": {"INVALID_TARGET":true}
+        }
+      ]
+    },
+    {
+      "name": "Sequential declarations",
+      "desc": "Each initializer sees the current namespace before its own assignment. Earlier bindings are visible, repeated names replace their previous values, and namespace-root snapshots do not gain later bindings.",
+      "tests": [
+        {
+          "name": "Earlier binding supplies later value",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["a",1,"b",["CONST","a"],"c",{"left":["CONST","a"],"right":["CONST","b"]}]},["COPY",["CONST"],["NODE"]]],
+          "output": {"a":1,"b":1,"c":{"left":1,"right":1}}
+        },
+        {
+          "name": "Repeated name reads its previous value",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",{"v":1},"x",{"old":["CONST","x"]},"x",{"old":["CONST","x"]}]},["COPY",["CONST","x"],["NODE"]]],
+          "output": {"old":{"old":{"v":1}}}
+        },
+        {
+          "name": "Last duplicate wins",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",1,"x",2,"x",3]},["COPY",["CONST"],["NODE"]]],
+          "output": {"x":3}
+        },
+        {
+          "name": "Root snapshots precede their assignment",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["empty",["CONST"],"one",1,"before",["CONST"],"one",2]},["COPY",["CONST"],["NODE"]]],
+          "output": {"empty":{},"one":2,"before":{"empty":{},"one":1}}
+        },
+        {
+          "name": "Snapshot of repeated root is acyclic",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",1,"x",["CONST"]]},["COPY",["CONST"],["NODE"]]],
+          "output": {"x":{"x":1}}
+        },
+        {
+          "name": "Inherited value supplies replacement",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",{"a":1}]},["JGRAFT",{"const":["x",{"previous":["CONST","x"]}]},["COPY",["CONST","x"],"inner"]],["COPY",["CONST","x"],"outer"]],
+          "output": {"inner":{"previous":{"a":1}},"outer":{"a":1}}
+        },
+        {
+          "name": "Initializer cannot see later declaration",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["first",["CONST","later"],"later",2]},["COPY",["CONST"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "First definition cannot read itself",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",["CONST","x"]]},["COPY",["CONST"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Failure in overwritten initializer still runs",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",["FAIL"],"x",1]},["COPY",["CONST"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        }
+      ]
+    },
+    {
+      "name": "Constant scope and current node",
+      "desc": "Inner JGRAFT scopes inherit constants and may shadow them, while their additions and replacements disappear on return. Declaration NODE expressions use the current node on entry, and later input edits do not reevaluate constants.",
+      "tests": [
+        {
+          "name": "Inheritance with no declarations",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["a",{"v":1}]},["JGRAFT",{},["COPY",["CONST"],"inner"]],["COPY",["CONST"],"outer"]],
+          "output": {"inner":{"a":{"v":1}},"outer":{"a":{"v":1}}}
+        },
+        {
+          "name": "Inheritance with empty declarations",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["a",{"v":1}]},["JGRAFT",{"const":[]},["COPY",["CONST"],"inner"]],["COPY",["CONST"],"outer"]],
+          "output": {"inner":{"a":{"v":1}},"outer":{"a":{"v":1}}}
+        },
+        {
+          "name": "Shadowing and additions stay local",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",1,"keep",2]},["JGRAFT",{"const":["x",3,"new",4]},["COPY",["CONST"],"inner"]],["COPY",["CONST"],"outer"],["JGRAFT",{},["COPY",["CONST"],"sibling"]]],
+          "output": {"inner":{"x":3,"keep":2,"new":4},"outer":{"x":1,"keep":2},"sibling":{"x":1,"keep":2}}
+        },
+        {
+          "name": "Three levels restore immediate parent",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x","outer"]},["JGRAFT",{"const":["x","middle"]},["JGRAFT",{"const":["x","inner"]},["COPY",["CONST","x"],"inner"]],["COPY",["CONST","x"],"middle"]],["COPY",["CONST","x"],"outer"]],
+          "output": {"inner":"inner","middle":"middle","outer":"outer"}
+        },
+        {
+          "name": "Definition snapshots input before edits",
+          "input": {"source":{"n":1}},
+          "jgraft": ["JGRAFT",{"v":1,"const":["saved",["NODE","source"]]},["COPY",2,["NODE","source","n"]],["COPY",["CONST","saved"],"saved"]],
+          "output": {"source":{"n":2},"saved":{"n":1}}
+        },
+        {
+          "name": "Declaration snapshots whole current node",
+          "input": {"n":1},
+          "jgraft": ["JGRAFT",{"v":1,"const":["saved",["NODE"]]},["COPY",2,"n"],["COPY",["CONST","saved"],"saved"]],
+          "output": {"n":2,"saved":{"n":1}}
+        },
+        {
+          "name": "Nested declarations observe earlier actions",
+          "input": {"n":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",2,"n"],["JGRAFT",{"const":["n",["NODE","n"]]},["COPY",["CONST","n"],"saved"]]],
+          "output": {"n":2,"saved":2}
+        },
+        {
+          "name": "AT supplies inner declaration node",
+          "input": {"child":{"n":4}},
+          "jgraft": ["JGRAFT",{"v":1},["AT","child",["JGRAFT",{"const":["n",["NODE","n"]]},["COPY",["CONST","n"],"saved"]]]],
+          "output": {"child":{"n":4,"saved":4}}
+        },
+        {
+          "name": "AT return restores current node",
+          "input": {"child":{"n":4}},
+          "jgraft": ["JGRAFT",{"v":1,"const":["outer",["NODE","child","n"]]},["AT","child",["JGRAFT",{"const":["inner",["NODE","n"]]},["COPY",["CONST","outer"],"a"],["COPY",["CONST","inner"],"b"]]],["COPY",["CONST","outer"],"rootValue"]],
+          "output": {"child":{"n":4,"a":4,"b":4},"rootValue":4}
+        },
+        {
+          "name": "Current node replacement preserves bindings",
+          "input": {"x":1},
+          "jgraft": ["JGRAFT",{"v":1,"const":["saved",["NODE"]]},["COPY",{"changed":true},["NODE"]],["COPY",["CONST","saved"],"old"]],
+          "output": {"changed":true,"old":{"x":1}}
+        },
+        {
+          "name": "Numeric nested JGRAFT creates a scope",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",1]},[-1,{"const":["x",2]},["COPY",["CONST","x"],"inner"]],["COPY",["CONST","x"],"outer"]],
+          "output": {"inner":2,"outer":1}
+        }
+      ]
+    },
+    {
+      "name": "Stash storage and paths",
+      "desc": "STASH starts as an empty object, permits property writes and auto-vivification, and survives separate actions in the same JGRAFT. Root references read the whole namespace but are snapshots rather than aliases.",
+      "tests": [
+        {
+          "name": "Fresh root is empty",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["STASH"],["NODE"]]],
+          "output": {}
+        },
+        {
+          "name": "Null",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",null,["STASH","value"]],["COPY",["STASH","value"],["NODE"]]],
+          "output": null
+        },
+        {
+          "name": "False",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",false,["STASH","value"]],["COPY",["STASH","value"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "True",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",true,["STASH","value"]],["COPY",["STASH","value"],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Zero",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",0,["STASH","value"]],["COPY",["STASH","value"],["NODE"]]],
+          "output": 0
+        },
+        {
+          "name": "Negative integer",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",-7,["STASH","value"]],["COPY",["STASH","value"],["NODE"]]],
+          "output": -7
+        },
+        {
+          "name": "Fraction",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",1.25,["STASH","value"]],["COPY",["STASH","value"],["NODE"]]],
+          "output": 1.25
+        },
+        {
+          "name": "Empty string",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY","",["STASH","value"]],["COPY",["STASH","value"],["NODE"]]],
+          "output": ""
+        },
+        {
+          "name": "Unicode string",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY","a😀é",["STASH","value"]],["COPY",["STASH","value"],["NODE"]]],
+          "output": "a😀é"
+        },
+        {
+          "name": "Empty object",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",{},["STASH","value"]],["COPY",["STASH","value"],["NODE"]]],
+          "output": {}
+        },
+        {
+          "name": "Nested object",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",{"a":[[1,{"b":2}]]},["STASH","value"]],["COPY",["STASH","value"],["NODE"]]],
+          "output": {"a":[1,{"b":2}]}
+        },
+        {
+          "name": "Empty array",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[[]],["STASH","value"]],["COPY",["STASH","value"],["NODE"]]],
+          "output": []
+        },
+        {
+          "name": "Nested array",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[[1,{"a":[[2]]},null]],["STASH","value"]],["COPY",["STASH","value"],["NODE"]]],
+          "output": [1,{"a":[2]},null]
+        },
+        {
+          "name": "Expression-looking array",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[["CONST","not-an-expression"]],["STASH","value"]],["COPY",["STASH","value"],["NODE"]]],
+          "output": ["CONST","not-an-expression"]
+        },
+        {
+          "name": "Separate COPY actions share data",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",1,["STASH","x"]],["COPY",2,["STASH","y"]],["COPY",["STASH"],["NODE"]]],
+          "output": {"x":1,"y":2}
+        },
+        {
+          "name": "Pairs within one COPY see previous writes",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",1,["STASH","x"],["STASH","x"],["STASH","y"],["STASH"],"result"]],
+          "output": {"result":{"x":1,"y":1}}
+        },
+        {
+          "name": "Object and array auto-vivification",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",7,["STASH","tree","list",0,"n"]],["COPY",8,["STASH","tree","list",false]],["COPY",["STASH"],["NODE"]]],
+          "output": {"tree":{"list":[{"n":7},8]}}
+        },
+        {
+          "name": "Negative selectors read array elements",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[[1,2,3]],["STASH","list"]],["COPY",["STASH","list",-1],"last"],["COPY",4,["STASH","list",-2]],["COPY",["STASH","list"],"list"]],
+          "output": {"last":3,"list":[1,4,3]}
+        },
+        {
+          "name": "Expanded selector arrays",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",{"a":[[3]]},["STASH","x"]],["COPY",["STASH",[["x","a",0]]],["NODE"]]],
+          "output": 3
+        },
+        {
+          "name": "Dynamic first selector is coerced",
+          "input": {"key":7},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",4,["STASH",["NODE","key"]]],["COPY",["STASH",7],["NODE"]]],
+          "output": 4
+        },
+        {
+          "name": "Root snapshot stays unchanged",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",1,["STASH","x"]],["COPY",["STASH"],"saved"],["COPY",2,["STASH","x"]],["COPY",3,["STASH","y"]],["COPY",["STASH"],"current"]],
+          "output": {"saved":{"x":1},"current":{"x":2,"y":3}}
+        },
+        {
+          "name": "Nested snapshot stays unchanged",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",{"a":[[1]]},["STASH","x"]],["COPY",["STASH","x"],"saved"],["COPY",2,["STASH","x","a",0]],["COPY",["STASH","x"],"current"]],
+          "output": {"saved":{"a":[1]},"current":{"a":[2]}}
+        },
+        {
+          "name": "Copy of root into itself is finite",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",1,["STASH","x"]],["COPY",["STASH"],["STASH","saved"]],["COPY",2,["STASH","x"]],["COPY",["STASH"],["NODE"]]],
+          "output": {"x":2,"saved":{"x":1}}
+        },
+        {
+          "name": "Numeric reference identifier",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",5,[-2,0]],["COPY",[-2,"0"],["NODE"]]],
+          "output": 5
+        }
+      ]
+    },
+    {
+      "name": "Stash scope boundaries",
+      "desc": "Ordinary containing actions share the enclosing JGRAFT stash; every nested JGRAFT starts a fresh stash, including one without metadata declarations. Leaving an inner scope restores the outer stash.",
+      "tests": [
+        {
+          "name": "Reset with {}",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY","outer",["STASH","x"]],["JGRAFT",{},["COPY",["STASH"],"initial"],["COPY","inner",["STASH","x"]],["COPY",["STASH"],"inner"]],["COPY",["STASH"],"outer"]],
+          "output": {"initial":{},"inner":{"x":"inner"},"outer":{"x":"outer"}}
+        },
+        {
+          "name": "Reset with {\"const\":[]}",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY","outer",["STASH","x"]],["JGRAFT",{"const":[]},["COPY",["STASH"],"initial"],["COPY","inner",["STASH","x"]],["COPY",["STASH"],"inner"]],["COPY",["STASH"],"outer"]],
+          "output": {"initial":{},"inner":{"x":"inner"},"outer":{"x":"outer"}}
+        },
+        {
+          "name": "Reset with {\"expr\":[]}",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY","outer",["STASH","x"]],["JGRAFT",{"expr":[]},["COPY",["STASH"],"initial"],["COPY","inner",["STASH","x"]],["COPY",["STASH"],"inner"]],["COPY",["STASH"],"outer"]],
+          "output": {"initial":{},"inner":{"x":"inner"},"outer":{"x":"outer"}}
+        },
+        {
+          "name": "Sibling scopes each start empty",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",1,["STASH","outer"]],["JGRAFT",{},["COPY",2,["STASH","first"]],["COPY",["STASH"],"first"]],["JGRAFT",{},["COPY",["STASH"],"second"]],["COPY",["STASH"],"outer"]],
+          "output": {"first":{"first":2},"second":{},"outer":{"outer":1}}
+        },
+        {
+          "name": "Three levels restore immediate stash",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY","outer",["STASH","x"]],["JGRAFT",{},["COPY","middle",["STASH","x"]],["JGRAFT",{},["COPY","inner",["STASH","x"]],["COPY",["STASH"],"inner"]],["COPY",["STASH"],"middle"]],["COPY",["STASH"],"outer"]],
+          "output": {"inner":{"x":"inner"},"middle":{"x":"middle"},"outer":{"x":"outer"}}
+        },
+        {
+          "name": "AT writes survive return",
+          "input": {"child":{}},
+          "jgraft": ["JGRAFT",{"v":1},["AT","child",["COPY",1,["STASH","x"]]],["COPY",["STASH","x"],"result"]],
+          "output": {"child":{},"result":1}
+        },
+        {
+          "name": "AT reads shared stash and writes node",
+          "input": {"child":{}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",4,["STASH","x"]],["AT","child",["COPY",["STASH","x"],"value"],["COPY",5,["STASH","x"]]],["COPY",["STASH","x"],"result"]],
+          "output": {"child":{"value":4},"result":5}
+        },
+        {
+          "name": "MATCH subactions share stash",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",{}],["COPY",1,["STASH","x"]],["COPY",["STASH","x"],"inside"]],["COPY",["STASH","x"],"outside"]],
+          "output": {"inside":1,"outside":1}
+        },
+        {
+          "name": "IF selected branch shares stash",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["IF",["IS",{}],["COPY",1,["STASH","x"]]],["COPY",["STASH","x"],"outside"]],
+          "output": {"outside":1}
+        },
+        {
+          "name": "IF else branch shares stash",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["IF",["IS",null],["COPY",9,["STASH","x"]],["COPY",2,["STASH","x"]]],["COPY",["STASH","x"],"outside"]],
+          "output": {"outside":2}
+        },
+        {
+          "name": "SPLIT subactions share stash",
+          "input": {"text":"a,b"},
+          "jgraft": ["JGRAFT",{"v":1},["AT","text",["SPLIT",",",["COPY",["NODE",0],["STASH","first"]],["COPY",["NODE",-1],["STASH","last"]]]],["COPY",["STASH"],"parts"]],
+          "output": {"text":"a,b","parts":{"first":"a","last":"b"}}
+        },
+        {
+          "name": "Stash survives current-node replacement",
+          "input": {"old":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",4,["STASH","saved"]],["COPY",{"new":2},["NODE"]],["COPY",["STASH","saved"],"saved"]],
+          "output": {"new":2,"saved":4}
+        },
+        {
+          "name": "No same-name alias to TEMP",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",1,["TEMP","x"],2,["STASH","x"],["TEMP","x"],"temporary"],["COPY",["STASH","x"],"stash"]],
+          "output": {"temporary":1,"stash":2}
+        }
+      ]
+    },
+    {
+      "name": "Parent stash to inner constants",
+      "desc": "The const phase reads the parent stash before installing the fresh child stash. This is the explicit handoff between JGRAFT scopes, for primitive values, subtrees, whole namespace snapshots, and successive generations.",
+      "tests": [
+        {
+          "name": "Null",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",null,["STASH","source"]],["JGRAFT",{"const":["value",["STASH","source"]]},["COPY",["CONST","value"],"value"],["COPY",["STASH"],"childStash"]],["COPY",["STASH","source"],"parentStash"]],
+          "output": {"value":null,"childStash":{},"parentStash":null}
+        },
+        {
+          "name": "False",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",false,["STASH","source"]],["JGRAFT",{"const":["value",["STASH","source"]]},["COPY",["CONST","value"],"value"],["COPY",["STASH"],"childStash"]],["COPY",["STASH","source"],"parentStash"]],
+          "output": {"value":false,"childStash":{},"parentStash":false}
+        },
+        {
+          "name": "True",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",true,["STASH","source"]],["JGRAFT",{"const":["value",["STASH","source"]]},["COPY",["CONST","value"],"value"],["COPY",["STASH"],"childStash"]],["COPY",["STASH","source"],"parentStash"]],
+          "output": {"value":true,"childStash":{},"parentStash":true}
+        },
+        {
+          "name": "Zero",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",0,["STASH","source"]],["JGRAFT",{"const":["value",["STASH","source"]]},["COPY",["CONST","value"],"value"],["COPY",["STASH"],"childStash"]],["COPY",["STASH","source"],"parentStash"]],
+          "output": {"value":0,"childStash":{},"parentStash":0}
+        },
+        {
+          "name": "Negative integer",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",-7,["STASH","source"]],["JGRAFT",{"const":["value",["STASH","source"]]},["COPY",["CONST","value"],"value"],["COPY",["STASH"],"childStash"]],["COPY",["STASH","source"],"parentStash"]],
+          "output": {"value":-7,"childStash":{},"parentStash":-7}
+        },
+        {
+          "name": "Fraction",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",1.25,["STASH","source"]],["JGRAFT",{"const":["value",["STASH","source"]]},["COPY",["CONST","value"],"value"],["COPY",["STASH"],"childStash"]],["COPY",["STASH","source"],"parentStash"]],
+          "output": {"value":1.25,"childStash":{},"parentStash":1.25}
+        },
+        {
+          "name": "Empty string",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY","",["STASH","source"]],["JGRAFT",{"const":["value",["STASH","source"]]},["COPY",["CONST","value"],"value"],["COPY",["STASH"],"childStash"]],["COPY",["STASH","source"],"parentStash"]],
+          "output": {"value":"","childStash":{},"parentStash":""}
+        },
+        {
+          "name": "Unicode string",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY","a😀é",["STASH","source"]],["JGRAFT",{"const":["value",["STASH","source"]]},["COPY",["CONST","value"],"value"],["COPY",["STASH"],"childStash"]],["COPY",["STASH","source"],"parentStash"]],
+          "output": {"value":"a😀é","childStash":{},"parentStash":"a😀é"}
+        },
+        {
+          "name": "Empty object",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",{},["STASH","source"]],["JGRAFT",{"const":["value",["STASH","source"]]},["COPY",["CONST","value"],"value"],["COPY",["STASH"],"childStash"]],["COPY",["STASH","source"],"parentStash"]],
+          "output": {"value":{},"childStash":{},"parentStash":{}}
+        },
+        {
+          "name": "Nested object",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",{"a":[[1,{"b":2}]]},["STASH","source"]],["JGRAFT",{"const":["value",["STASH","source"]]},["COPY",["CONST","value"],"value"],["COPY",["STASH"],"childStash"]],["COPY",["STASH","source"],"parentStash"]],
+          "output": {"value":{"a":[1,{"b":2}]},"childStash":{},"parentStash":{"a":[1,{"b":2}]}}
+        },
+        {
+          "name": "Empty array",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[[]],["STASH","source"]],["JGRAFT",{"const":["value",["STASH","source"]]},["COPY",["CONST","value"],"value"],["COPY",["STASH"],"childStash"]],["COPY",["STASH","source"],"parentStash"]],
+          "output": {"value":[],"childStash":{},"parentStash":[]}
+        },
+        {
+          "name": "Nested array",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[[1,{"a":[[2]]},null]],["STASH","source"]],["JGRAFT",{"const":["value",["STASH","source"]]},["COPY",["CONST","value"],"value"],["COPY",["STASH"],"childStash"]],["COPY",["STASH","source"],"parentStash"]],
+          "output": {"value":[1,{"a":[2]},null],"childStash":{},"parentStash":[1,{"a":[2]},null]}
+        },
+        {
+          "name": "Expression-looking array",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[["CONST","not-an-expression"]],["STASH","source"]],["JGRAFT",{"const":["value",["STASH","source"]]},["COPY",["CONST","value"],"value"],["COPY",["STASH"],"childStash"]],["COPY",["STASH","source"],"parentStash"]],
+          "output": {"value":["CONST","not-an-expression"],"childStash":{},"parentStash":["CONST","not-an-expression"]}
+        },
+        {
+          "name": "Whole parent namespace",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",{"n":1},["STASH","a"]],["COPY",[[2,3]],["STASH","b"]],["JGRAFT",{"const":["parent",["STASH"]]},["COPY",["CONST","parent"],"saved"],["COPY",["STASH"],"child"]],["COPY",["STASH"],"parent"]],
+          "output": {"saved":{"a":{"n":1},"b":[2,3]},"child":{},"parent":{"a":{"n":1},"b":[2,3]}}
+        },
+        {
+          "name": "Nested subtree",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",{"tree":{"list":[[7,8]]}},["STASH","data"]],["JGRAFT",{"const":["value",["STASH","data","tree","list",-1]]},["COPY",["CONST","value"],["NODE"]]]],
+          "output": 8
+        },
+        {
+          "name": "Several declarations see same parent stash",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",3,["STASH","x"]],["COPY",4,["STASH","y"]],["JGRAFT",{"const":["a",["STASH","x"],"b",["STASH","y"],"pair",[[["CONST","a"],["CONST","b"],["STASH","x"]]]]},["COPY",["CONST"],["NODE"]]],["COPY",["STASH"],"outer"]],
+          "output": {"a":3,"b":4,"pair":[3,4,3],"outer":{"x":3,"y":4}}
+        },
+        {
+          "name": "Inherited constant selects parent stash data",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["key","chosen"]},["COPY",9,["STASH","chosen"]],["JGRAFT",{"const":["value",["STASH",["CONST","key"]]]},["COPY",["CONST","value"],["NODE"]]]],
+          "output": 9
+        },
+        {
+          "name": "Earlier inner constant selects parent stash data",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",9,["STASH","chosen"]],["JGRAFT",{"const":["key","chosen","value",["STASH",["CONST","key"]]]},["COPY",["CONST","value"],["NODE"]]]],
+          "output": 9
+        },
+        {
+          "name": "Shadowed constant can combine old const and stash",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",1]},["COPY",2,["STASH","x"]],["JGRAFT",{"const":["x",{"old":["CONST","x"],"stash":["STASH","x"]}]},["COPY",["CONST","x"],"inner"]],["COPY",["CONST","x"],"outer"]],
+          "output": {"inner":{"old":1,"stash":2},"outer":1}
+        },
+        {
+          "name": "Inner actions see fresh stash after handoff",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY","parent",["STASH","x"]],["JGRAFT",{"const":["saved",["STASH","x"]]},["COPY","child",["STASH","x"]],["COPY",{"constant":["CONST","saved"],"stash":["STASH","x"]},"inner"]],["COPY",["STASH","x"],"outer"]],
+          "output": {"inner":{"constant":"parent","stash":"child"},"outer":"parent"}
+        },
+        {
+          "name": "Grandchild reads immediate parent stash",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY","outer",["STASH","x"]],["JGRAFT",{"const":["outer",["STASH","x"]]},["COPY","middle",["STASH","x"]],["JGRAFT",{"const":["middle",["STASH","x"]]},["COPY",{"outer":["CONST","outer"],"middle":["CONST","middle"],"stash":["STASH"]},"inner"]],["COPY",["STASH","x"],"middle"]],["COPY",["STASH","x"],"outer"]],
+          "output": {"inner":{"outer":"outer","middle":"middle","stash":{}},"middle":"middle","outer":"outer"}
+        },
+        {
+          "name": "Inherited constants bridge an empty intermediate stash",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",5,["STASH","x"]],["JGRAFT",{"const":["outer",["STASH","x"]]},["JGRAFT",{"const":["immediate",["STASH"]]},["COPY",["CONST"],["NODE"]]]]],
+          "output": {"outer":5,"immediate":{}}
+        },
+        {
+          "name": "AT affects NODE but not parent stash",
+          "input": {"child":{"n":7}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",3,["STASH","x"]],["AT","child",["JGRAFT",{"const":["value",{"node":["NODE","n"],"stash":["STASH","x"]}]},["COPY",["CONST","value"],"saved"]]]],
+          "output": {"child":{"n":7,"saved":{"node":7,"stash":3}}}
+        },
+        {
+          "name": "Siblings can consume same parent stash independently",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",1,["STASH","x"]],["JGRAFT",{"const":["x",["STASH","x"]]},["COPY",2,["STASH","x"]],["COPY",["CONST","x"],"first"]],["JGRAFT",{"const":["x",["STASH","x"]]},["COPY",["CONST","x"],"second"]],["COPY",["STASH","x"],"parent"]],
+          "output": {"first":1,"second":1,"parent":1}
+        },
+        {
+          "name": "Later scope observes later parent writes",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",1,["STASH","x"]],["JGRAFT",{"const":["x",["STASH","x"]]},["COPY",["CONST","x"],"first"]],["COPY",2,["STASH","x"]],["JGRAFT",{"const":["x",["STASH","x"]]},["COPY",["CONST","x"],"second"]]],
+          "output": {"first":1,"second":2}
+        },
+        {
+          "name": "Missing parent stash value fails declaration",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["JGRAFT",{"const":["x",["STASH","missing"]]},["COPY",1,["NODE"]]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Parent stash is not inherited by child actions",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",1,["STASH","x"]],["JGRAFT",{"const":["saved",["STASH","x"]]},["COPY",["STASH","x"],["NODE"]]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        }
+      ]
+    },
+    {
+      "name": "Independent namespace trees",
+      "desc": "Copying may share physical storage only while edits cannot observe that sharing. These cases edit below shared-looking objects and arrays, including values imported from the parent stash into constants.",
+      "tests": [
+        {
+          "name": "Two copies of a constant diverge independently",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",{"list":[[1,{"n":2}]]}]},["COPY",["CONST","x"],"a",["CONST","x"],"b"],["COPY",9,["NODE","a","list",1,"n"]],["COPY",["CONST","x"],"constant"]],
+          "output": {"a":{"list":[1,{"n":9}]},"b":{"list":[1,{"n":2}]},"constant":{"list":[1,{"n":2}]}}
+        },
+        {
+          "name": "Copy constant to stash then edit stash",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",{"n":1}]},["COPY",["CONST","x"],["STASH","x"]],["COPY",2,["STASH","x","n"]],["COPY",{"constant":["CONST","x"],"stash":["STASH","x"]},["NODE"]]],
+          "output": {"constant":{"n":1},"stash":{"n":2}}
+        },
+        {
+          "name": "Copy stash to two values then edit one",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",{"n":[[1]]},["STASH","x"]],["COPY",["STASH","x"],"a",["STASH","x"],"b"],["COPY",2,["NODE","a","n",0]],["COPY",["STASH","x"],"stash"]],
+          "output": {"a":{"n":[2]},"b":{"n":[1]},"stash":{"n":[1]}}
+        },
+        {
+          "name": "Stash copy of input survives source mutation",
+          "input": {"source":{"n":1}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NODE","source"],["STASH","x"]],["COPY",2,["NODE","source","n"]],["COPY",["STASH","x"],"saved"]],
+          "output": {"source":{"n":2},"saved":{"n":1}}
+        },
+        {
+          "name": "Input survives stash mutation",
+          "input": {"source":{"n":1}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NODE","source"],["STASH","x"]],["COPY",2,["STASH","x","n"]],["COPY",["STASH","x"],"saved"]],
+          "output": {"source":{"n":1},"saved":{"n":2}}
+        },
+        {
+          "name": "Handoff plus copies in child stay independent",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",{"a":[[1,{"n":2}]]},["STASH","source"]],["JGRAFT",{"const":["saved",["STASH","source"]]},["COPY",["CONST","saved"],"copy"],["COPY",9,["NODE","copy","a",1,"n"]],["COPY",["CONST","saved"],["STASH","local"]],["COPY",8,["STASH","local","a",0]],["COPY",["CONST","saved"],"constant"],["COPY",["STASH","local"],"local"]],["COPY",["STASH","source"],"parent"]],
+          "output": {"copy":{"a":[1,{"n":9}]},"constant":{"a":[1,{"n":2}]},"local":{"a":[8,{"n":2}]},"parent":{"a":[1,{"n":2}]}}
+        },
+        {
+          "name": "Whole namespace handoff excludes later parent edits",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",{"n":1},["STASH","x"]],["JGRAFT",{"const":["parent",["STASH"]]},["COPY",["CONST","parent"],"saved"]],["COPY",2,["STASH","x","n"]],["COPY",3,["STASH","later"]],["COPY",["STASH"],"parent"]],
+          "output": {"saved":{"x":{"n":1}},"parent":{"x":{"n":2},"later":3}}
+        },
+        {
+          "name": "Redeclaration does not mutate inherited subtree",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",{"n":1}]},["JGRAFT",{"const":["x",{"previous":["CONST","x"]}]},["COPY",["CONST","x"],"child"],["COPY",9,["NODE","child","previous","n"]]],["COPY",["CONST","x"],"parent"]],
+          "output": {"child":{"previous":{"n":9}},"parent":{"n":1}}
+        },
+        {
+          "name": "Moving a copy of a constant preserves constant",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",{"n":1}]},["COPY",["CONST","x"],["STASH","x"]],["MOVE",["STASH","x"],"moved"],["COPY",2,["NODE","moved","n"]],["COPY",["CONST","x"],"constant"],["COPY",["STASH"],"stash"]],
+          "output": {"moved":{"n":2},"constant":{"n":1},"stash":{}}
+        },
+        {
+          "name": "Inner constant does not retain removed parent storage",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",{"n":1},["STASH","x"]],["JGRAFT",{"const":["saved",["STASH","x"]]},["COPY",["CONST","saved"],"saved"]],["MOVE",["STASH","x"],null],["COPY",["STASH"],"stash"]],
+          "output": {"saved":{"n":1},"stash":{}}
+        },
+        {
+          "name": "Stash may store logical copy of itself",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",{"n":1},["STASH","x"]],["COPY",["STASH","x"],["STASH","x","child"]],["COPY",2,["STASH","x","n"]],["COPY",["STASH"],["NODE"]]],
+          "output": {"x":{"n":2,"child":{"n":1}}}
+        }
+      ]
+    },
+    {
+      "name": "Writable stash operations",
+      "desc": "STASH references may be sources or destinations of MOVE and targets of array edits. Namespace-root deletion or replacement is forbidden even though the root may be copied as a value.",
+      "tests": [
+        {
+          "name": "MOVE input into stash and back",
+          "input": {"source":{"n":1}},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","source",["STASH","x"]],["COPY",["STASH","x"],"saved"],["MOVE",["STASH","x"],"restored"],["COPY",["STASH"],"stash"]],
+          "output": {"saved":{"n":1},"restored":{"n":1},"stash":{}}
+        },
+        {
+          "name": "MOVE between stash properties",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",1,["STASH","x"]],["MOVE",["STASH","x"],["STASH","y"]],["COPY",["STASH"],["NODE"]]],
+          "output": {"y":1}
+        },
+        {
+          "name": "Delete stash property",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",{"x":1,"y":2},["STASH","value"]],["MOVE",["STASH","value","x"],null],["COPY",["STASH","value"],["NODE"]]],
+          "output": {"y":2}
+        },
+        {
+          "name": "MOVE auto-vivifies destination",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",3,["STASH","x"]],["MOVE",["STASH","x"],["STASH","tree","items",0]],["COPY",["STASH"],["NODE"]]],
+          "output": {"tree":{"items":[3]}}
+        },
+        {
+          "name": "SPLICE stash array",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[[1,2,3]],["STASH","list"]],["SPLICE",["STASH","list",1],1,8,9],["COPY",["STASH","list"],["NODE"]]],
+          "output": [1,8,9,3]
+        },
+        {
+          "name": "Pending array deletions follow move into stash",
+          "input": {"list":[1,2,3]},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",["NODE","list",0],null,["NODE","list"],["STASH","list"]],["COPY",["STASH","list"],["NODE"]]],
+          "output": [2,3]
+        },
+        {
+          "name": "Pending insertion into stash array",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[[1,3]],["STASH","list"]],["COPY",2,["STASH","two"]],["MOVE",["STASH","two"],["STASH","list",0.5]],["COPY",["STASH","list"],["NODE"]]],
+          "output": [1,2,3]
+        },
+        {
+          "name": "COPY root",
+          "input": {"x":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",2,["STASH","y"]],["COPY",{"x":1},["STASH"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "MOVE to root",
+          "input": {"x":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",2,["STASH","y"]],["MOVE",["NODE","x"],["STASH"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "MOVE from root",
+          "input": {"x":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",2,["STASH","y"]],["MOVE",["STASH"],"result"]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Delete root",
+          "input": {"x":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",2,["STASH","y"]],["MOVE",["STASH"],null]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        }
+      ]
+    },
+    {
+      "name": "Names and selectors",
+      "desc": "Namespace roots are objects. String names are literal single properties; leading integer selectors and integer declaration names coerce to strings, but deeper selectors retain the normal object/array distinction.",
+      "tests": [
+        {
+          "name": "Name \"\"",
+          "desc": "Declaration names and namespace selectors identify one binding, with no implicit path splitting or host-object behavior.",
+          "tests": [
+            {
+              "name": "Constant",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["",{"n":1}]},["COPY",["CONST",""],["NODE"]]],
+              "output": {"n":1}
+            },
+            {
+              "name": "Stash",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"n":1},["STASH",""]],["COPY",["STASH",""],["NODE"]]],
+              "output": {"n":1}
+            },
+            {
+              "name": "Handoff",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"n":1},["STASH",""]],["JGRAFT",{"const":["",["STASH",""]]},["COPY",["CONST",""],["NODE"]]]],
+              "output": {"n":1}
+            }
+          ]
+        },
+        {
+          "name": "Name \"a.b\"",
+          "desc": "Declaration names and namespace selectors identify one binding, with no implicit path splitting or host-object behavior.",
+          "tests": [
+            {
+              "name": "Constant",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["a.b",{"n":1}]},["COPY",["CONST","a.b"],["NODE"]]],
+              "output": {"n":1}
+            },
+            {
+              "name": "Stash",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"n":1},["STASH","a.b"]],["COPY",["STASH","a.b"],["NODE"]]],
+              "output": {"n":1}
+            },
+            {
+              "name": "Handoff",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"n":1},["STASH","a.b"]],["JGRAFT",{"const":["a.b",["STASH","a.b"]]},["COPY",["CONST","a.b"],["NODE"]]]],
+              "output": {"n":1}
+            }
+          ]
+        },
+        {
+          "name": "Name \"a/b\"",
+          "desc": "Declaration names and namespace selectors identify one binding, with no implicit path splitting or host-object behavior.",
+          "tests": [
+            {
+              "name": "Constant",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["a/b",{"n":1}]},["COPY",["CONST","a/b"],["NODE"]]],
+              "output": {"n":1}
+            },
+            {
+              "name": "Stash",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"n":1},["STASH","a/b"]],["COPY",["STASH","a/b"],["NODE"]]],
+              "output": {"n":1}
+            },
+            {
+              "name": "Handoff",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"n":1},["STASH","a/b"]],["JGRAFT",{"const":["a/b",["STASH","a/b"]]},["COPY",["CONST","a/b"],["NODE"]]]],
+              "output": {"n":1}
+            }
+          ]
+        },
+        {
+          "name": "Name \"__proto__\"",
+          "desc": "Declaration names and namespace selectors identify one binding, with no implicit path splitting or host-object behavior.",
+          "tests": [
+            {
+              "name": "Constant",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["__proto__",{"n":1}]},["COPY",["CONST","__proto__"],["NODE"]]],
+              "output": {"n":1},
+              "needProto": true
+            },
+            {
+              "name": "Stash",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"n":1},["STASH","__proto__"]],["COPY",["STASH","__proto__"],["NODE"]]],
+              "output": {"n":1},
+              "needProto": true
+            },
+            {
+              "name": "Handoff",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"n":1},["STASH","__proto__"]],["JGRAFT",{"const":["__proto__",["STASH","__proto__"]]},["COPY",["CONST","__proto__"],["NODE"]]]],
+              "output": {"n":1},
+              "needProto": true
+            }
+          ]
+        },
+        {
+          "name": "Name \"constructor\"",
+          "desc": "Declaration names and namespace selectors identify one binding, with no implicit path splitting or host-object behavior.",
+          "tests": [
+            {
+              "name": "Constant",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["constructor",{"n":1}]},["COPY",["CONST","constructor"],["NODE"]]],
+              "output": {"n":1}
+            },
+            {
+              "name": "Stash",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"n":1},["STASH","constructor"]],["COPY",["STASH","constructor"],["NODE"]]],
+              "output": {"n":1}
+            },
+            {
+              "name": "Handoff",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"n":1},["STASH","constructor"]],["JGRAFT",{"const":["constructor",["STASH","constructor"]]},["COPY",["CONST","constructor"],["NODE"]]]],
+              "output": {"n":1}
+            }
+          ]
+        },
+        {
+          "name": "Name \"hasOwnProperty\"",
+          "desc": "Declaration names and namespace selectors identify one binding, with no implicit path splitting or host-object behavior.",
+          "tests": [
+            {
+              "name": "Constant",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["hasOwnProperty",{"n":1}]},["COPY",["CONST","hasOwnProperty"],["NODE"]]],
+              "output": {"n":1}
+            },
+            {
+              "name": "Stash",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"n":1},["STASH","hasOwnProperty"]],["COPY",["STASH","hasOwnProperty"],["NODE"]]],
+              "output": {"n":1}
+            },
+            {
+              "name": "Handoff",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"n":1},["STASH","hasOwnProperty"]],["JGRAFT",{"const":["hasOwnProperty",["STASH","hasOwnProperty"]]},["COPY",["CONST","hasOwnProperty"],["NODE"]]]],
+              "output": {"n":1}
+            }
+          ]
+        },
+        {
+          "name": "Name \"toString\"",
+          "desc": "Declaration names and namespace selectors identify one binding, with no implicit path splitting or host-object behavior.",
+          "tests": [
+            {
+              "name": "Constant",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["toString",{"n":1}]},["COPY",["CONST","toString"],["NODE"]]],
+              "output": {"n":1}
+            },
+            {
+              "name": "Stash",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"n":1},["STASH","toString"]],["COPY",["STASH","toString"],["NODE"]]],
+              "output": {"n":1}
+            },
+            {
+              "name": "Handoff",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"n":1},["STASH","toString"]],["JGRAFT",{"const":["toString",["STASH","toString"]]},["COPY",["CONST","toString"],["NODE"]]]],
+              "output": {"n":1}
+            }
+          ]
+        },
+        {
+          "name": "Name \"valueOf\"",
+          "desc": "Declaration names and namespace selectors identify one binding, with no implicit path splitting or host-object behavior.",
+          "tests": [
+            {
+              "name": "Constant",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["valueOf",{"n":1}]},["COPY",["CONST","valueOf"],["NODE"]]],
+              "output": {"n":1}
+            },
+            {
+              "name": "Stash",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"n":1},["STASH","valueOf"]],["COPY",["STASH","valueOf"],["NODE"]]],
+              "output": {"n":1}
+            },
+            {
+              "name": "Handoff",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"n":1},["STASH","valueOf"]],["JGRAFT",{"const":["valueOf",["STASH","valueOf"]]},["COPY",["CONST","valueOf"],["NODE"]]]],
+              "output": {"n":1}
+            }
+          ]
+        },
+        {
+          "name": "Name \"prototype\"",
+          "desc": "Declaration names and namespace selectors identify one binding, with no implicit path splitting or host-object behavior.",
+          "tests": [
+            {
+              "name": "Constant",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["prototype",{"n":1}]},["COPY",["CONST","prototype"],["NODE"]]],
+              "output": {"n":1}
+            },
+            {
+              "name": "Stash",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"n":1},["STASH","prototype"]],["COPY",["STASH","prototype"],["NODE"]]],
+              "output": {"n":1}
+            },
+            {
+              "name": "Handoff",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"n":1},["STASH","prototype"]],["JGRAFT",{"const":["prototype",["STASH","prototype"]]},["COPY",["CONST","prototype"],["NODE"]]]],
+              "output": {"n":1}
+            }
+          ]
+        },
+        {
+          "name": "Name \"0\"",
+          "desc": "Declaration names and namespace selectors identify one binding, with no implicit path splitting or host-object behavior.",
+          "tests": [
+            {
+              "name": "Constant",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["0",{"n":1}]},["COPY",["CONST","0"],["NODE"]]],
+              "output": {"n":1}
+            },
+            {
+              "name": "Stash",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"n":1},["STASH","0"]],["COPY",["STASH","0"],["NODE"]]],
+              "output": {"n":1}
+            },
+            {
+              "name": "Handoff",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"n":1},["STASH","0"]],["JGRAFT",{"const":["0",["STASH","0"]]},["COPY",["CONST","0"],["NODE"]]]],
+              "output": {"n":1}
+            }
+          ]
+        },
+        {
+          "name": "Name \"-1\"",
+          "desc": "Declaration names and namespace selectors identify one binding, with no implicit path splitting or host-object behavior.",
+          "tests": [
+            {
+              "name": "Constant",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["-1",{"n":1}]},["COPY",["CONST","-1"],["NODE"]]],
+              "output": {"n":1}
+            },
+            {
+              "name": "Stash",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"n":1},["STASH","-1"]],["COPY",["STASH","-1"],["NODE"]]],
+              "output": {"n":1}
+            },
+            {
+              "name": "Handoff",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"n":1},["STASH","-1"]],["JGRAFT",{"const":["-1",["STASH","-1"]]},["COPY",["CONST","-1"],["NODE"]]]],
+              "output": {"n":1}
+            }
+          ]
+        },
+        {
+          "name": "Name \"1.5\"",
+          "desc": "Declaration names and namespace selectors identify one binding, with no implicit path splitting or host-object behavior.",
+          "tests": [
+            {
+              "name": "Constant",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["1.5",{"n":1}]},["COPY",["CONST","1.5"],["NODE"]]],
+              "output": {"n":1}
+            },
+            {
+              "name": "Stash",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"n":1},["STASH","1.5"]],["COPY",["STASH","1.5"],["NODE"]]],
+              "output": {"n":1}
+            },
+            {
+              "name": "Handoff",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"n":1},["STASH","1.5"]],["JGRAFT",{"const":["1.5",["STASH","1.5"]]},["COPY",["CONST","1.5"],["NODE"]]]],
+              "output": {"n":1}
+            }
+          ]
+        },
+        {
+          "name": "Name \"雪😀\"",
+          "desc": "Declaration names and namespace selectors identify one binding, with no implicit path splitting or host-object behavior.",
+          "tests": [
+            {
+              "name": "Constant",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["雪😀",{"n":1}]},["COPY",["CONST","雪😀"],["NODE"]]],
+              "output": {"n":1}
+            },
+            {
+              "name": "Stash",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"n":1},["STASH","雪😀"]],["COPY",["STASH","雪😀"],["NODE"]]],
+              "output": {"n":1}
+            },
+            {
+              "name": "Handoff",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"n":1},["STASH","雪😀"]],["JGRAFT",{"const":["雪😀",["STASH","雪😀"]]},["COPY",["CONST","雪😀"],["NODE"]]]],
+              "output": {"n":1}
+            }
+          ]
+        },
+        {
+          "name": "Name 0",
+          "desc": "Declaration names and namespace selectors identify one binding, with no implicit path splitting or host-object behavior.",
+          "tests": [
+            {
+              "name": "Constant",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":[0,{"n":1}]},["COPY",["CONST",0],["NODE"]]],
+              "output": {"n":1}
+            },
+            {
+              "name": "Stash",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"n":1},["STASH",0]],["COPY",["STASH",0],["NODE"]]],
+              "output": {"n":1}
+            },
+            {
+              "name": "Handoff",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"n":1},["STASH",0]],["JGRAFT",{"const":[0,["STASH",0]]},["COPY",["CONST",0],["NODE"]]]],
+              "output": {"n":1}
+            }
+          ]
+        },
+        {
+          "name": "Name -1",
+          "desc": "Declaration names and namespace selectors identify one binding, with no implicit path splitting or host-object behavior.",
+          "tests": [
+            {
+              "name": "Constant",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":[-1,{"n":1}]},["COPY",["CONST",-1],["NODE"]]],
+              "output": {"n":1}
+            },
+            {
+              "name": "Stash",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"n":1},["STASH",-1]],["COPY",["STASH",-1],["NODE"]]],
+              "output": {"n":1}
+            },
+            {
+              "name": "Handoff",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"n":1},["STASH",-1]],["JGRAFT",{"const":[-1,["STASH",-1]]},["COPY",["CONST",-1],["NODE"]]]],
+              "output": {"n":1}
+            }
+          ]
+        },
+        {
+          "name": "Name 17",
+          "desc": "Declaration names and namespace selectors identify one binding, with no implicit path splitting or host-object behavior.",
+          "tests": [
+            {
+              "name": "Constant",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":[17,{"n":1}]},["COPY",["CONST",17],["NODE"]]],
+              "output": {"n":1}
+            },
+            {
+              "name": "Stash",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"n":1},["STASH",17]],["COPY",["STASH",17],["NODE"]]],
+              "output": {"n":1}
+            },
+            {
+              "name": "Handoff",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"n":1},["STASH",17]],["JGRAFT",{"const":[17,["STASH",17]]},["COPY",["CONST",17],["NODE"]]]],
+              "output": {"n":1}
+            }
+          ]
+        },
+        {
+          "name": "Integer and string declaration names collide",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":[0,"first","0",{"previous":["CONST",0]}]},["COPY",["CONST"],["NODE"]]],
+          "output": {"0":{"previous":"first"}}
+        },
+        {
+          "name": "Leading negative number is a property",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",3,["STASH",-1]],["COPY",4,["STASH","0"]],["COPY",["STASH"],["NODE"]]],
+          "output": {"0":4,"-1":3}
+        },
+        {
+          "name": "Leading string zero does not create an array",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["0",1]},["COPY",["CONST"],["NODE"]]],
+          "output": {"0":1}
+        },
+        {
+          "name": "Deeper negative selector indexes arrays",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["list",[[1,2,3]]]},["COPY",["CONST","list",-1],["NODE"]]],
+          "output": 3
+        },
+        {
+          "name": "Computed selector and expanded path",
+          "input": {"key":"item","path":["item","list",0]},
+          "jgraft": ["JGRAFT",{"v":1,"const":["item",{"list":[[7]]}]},["COPY",["CONST",["NODE","key"],"list",0],"computed"],["COPY",["CONST",["NODE","path"]],"expanded"]],
+          "output": {"key":"item","path":["item","list",0],"computed":7,"expanded":7}
+        },
+        {
+          "name": "Numeric reference identifier",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":[0,7]},["COPY",[-1,0],["NODE"]]],
+          "output": 7
+        },
+        {
+          "name": "CONST Integer into object",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["item",{"x":1},"list",[[1,2]]]},["COPY",["CONST","item",0],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "CONST String into array",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["item",{"x":1},"list",[[1,2]]]},["COPY",["CONST","list","0"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "CONST Past array end",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["item",{"x":1},"list",[[1,2]]]},["COPY",["CONST","list",2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "CONST Read append alias",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["item",{"x":1},"list",[[1,2]]]},["COPY",["CONST","list",false],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "CONST Append alias into namespace root",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["item",{"x":1},"list",[[1,2]]]},["COPY",["CONST",false],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "CONST Missing binding",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["item",{"x":1},"list",[[1,2]]]},["COPY",["CONST","missing"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "CONST Missing nested property",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["item",{"x":1},"list",[[1,2]]]},["COPY",["CONST","item","absent"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "CONST invalid leading null",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["item",{"x":1},"list",[[1,2]]]},["COPY",["CONST",null],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "CONST invalid leading true",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["item",{"x":1},"list",[[1,2]]]},["COPY",["CONST",true],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "CONST invalid leading 1.5",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["item",{"x":1},"list",[[1,2]]]},["COPY",["CONST",1.5],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "CONST invalid computed selector null",
+          "input": {"key":null},
+          "jgraft": ["JGRAFT",{"v":1,"const":["item",{"x":1},"list",[[1,2]]]},["COPY",["CONST",["NODE","key"]],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "CONST invalid computed selector true",
+          "input": {"key":true},
+          "jgraft": ["JGRAFT",{"v":1,"const":["item",{"x":1},"list",[[1,2]]]},["COPY",["CONST",["NODE","key"]],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "CONST invalid computed selector 1.5",
+          "input": {"key":1.5},
+          "jgraft": ["JGRAFT",{"v":1,"const":["item",{"x":1},"list",[[1,2]]]},["COPY",["CONST",["NODE","key"]],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "CONST absent host property constructor",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CONST","constructor"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "CONST absent host property toString",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CONST","toString"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "CONST absent host property hasOwnProperty",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CONST","hasOwnProperty"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "STASH Integer into object",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["item",{"x":1},"list",[[1,2]]]},["COPY",{"x":1},["STASH","item"]],["COPY",[[1,2]],["STASH","list"]],["COPY",["STASH","item",0],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "STASH String into array",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["item",{"x":1},"list",[[1,2]]]},["COPY",{"x":1},["STASH","item"]],["COPY",[[1,2]],["STASH","list"]],["COPY",["STASH","list","0"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "STASH Past array end",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["item",{"x":1},"list",[[1,2]]]},["COPY",{"x":1},["STASH","item"]],["COPY",[[1,2]],["STASH","list"]],["COPY",["STASH","list",2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "STASH Read append alias",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["item",{"x":1},"list",[[1,2]]]},["COPY",{"x":1},["STASH","item"]],["COPY",[[1,2]],["STASH","list"]],["COPY",["STASH","list",false],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "STASH Append alias into namespace root",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["item",{"x":1},"list",[[1,2]]]},["COPY",{"x":1},["STASH","item"]],["COPY",[[1,2]],["STASH","list"]],["COPY",["STASH",false],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "STASH Missing binding",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["item",{"x":1},"list",[[1,2]]]},["COPY",{"x":1},["STASH","item"]],["COPY",[[1,2]],["STASH","list"]],["COPY",["STASH","missing"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "STASH Missing nested property",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["item",{"x":1},"list",[[1,2]]]},["COPY",{"x":1},["STASH","item"]],["COPY",[[1,2]],["STASH","list"]],["COPY",["STASH","item","absent"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "STASH invalid leading null",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["item",{"x":1},"list",[[1,2]]]},["COPY",{"x":1},["STASH","item"]],["COPY",[[1,2]],["STASH","list"]],["COPY",["STASH",null],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "STASH invalid leading true",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["item",{"x":1},"list",[[1,2]]]},["COPY",{"x":1},["STASH","item"]],["COPY",[[1,2]],["STASH","list"]],["COPY",["STASH",true],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "STASH invalid leading 1.5",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["item",{"x":1},"list",[[1,2]]]},["COPY",{"x":1},["STASH","item"]],["COPY",[[1,2]],["STASH","list"]],["COPY",["STASH",1.5],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "STASH invalid computed selector null",
+          "input": {"key":null},
+          "jgraft": ["JGRAFT",{"v":1,"const":["item",{"x":1},"list",[[1,2]]]},["COPY",{"x":1},["STASH","item"]],["COPY",[[1,2]],["STASH","list"]],["COPY",["STASH",["NODE","key"]],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "STASH invalid computed selector true",
+          "input": {"key":true},
+          "jgraft": ["JGRAFT",{"v":1,"const":["item",{"x":1},"list",[[1,2]]]},["COPY",{"x":1},["STASH","item"]],["COPY",[[1,2]],["STASH","list"]],["COPY",["STASH",["NODE","key"]],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "STASH invalid computed selector 1.5",
+          "input": {"key":1.5},
+          "jgraft": ["JGRAFT",{"v":1,"const":["item",{"x":1},"list",[[1,2]]]},["COPY",{"x":1},["STASH","item"]],["COPY",[[1,2]],["STASH","list"]],["COPY",["STASH",["NODE","key"]],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "STASH absent host property constructor",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["STASH","constructor"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "STASH absent host property toString",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["STASH","toString"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "STASH absent host property hasOwnProperty",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["STASH","hasOwnProperty"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        }
+      ]
+    },
+    {
+      "name": "Constant write protection and reference probes",
+      "desc": "CONST is read-only at every depth, including deletion via MOVE. Missing namespace paths are ordinary failed probes inside match expressions; the same paths outside matching are errors.",
+      "tests": [
+        {
+          "name": "COPY [\"CONST\"]",
+          "input": {"source":3},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",{"n":1}]},["COPY",2,["CONST"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "MOVE destination [\"CONST\"]",
+          "input": {"source":3},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",{"n":1}]},["MOVE","source",["CONST"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "MOVE source [\"CONST\"]",
+          "input": {"source":3},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",{"n":1}]},["MOVE",["CONST"],"result"]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "MOVE deletion [\"CONST\"]",
+          "input": {"source":3},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",{"n":1}]},["MOVE",["CONST"],null]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "COPY [\"CONST\",\"x\"]",
+          "input": {"source":3},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",{"n":1}]},["COPY",2,["CONST","x"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "MOVE destination [\"CONST\",\"x\"]",
+          "input": {"source":3},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",{"n":1}]},["MOVE","source",["CONST","x"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "MOVE source [\"CONST\",\"x\"]",
+          "input": {"source":3},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",{"n":1}]},["MOVE",["CONST","x"],"result"]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "MOVE deletion [\"CONST\",\"x\"]",
+          "input": {"source":3},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",{"n":1}]},["MOVE",["CONST","x"],null]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "COPY [\"CONST\",\"x\",\"n\"]",
+          "input": {"source":3},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",{"n":1}]},["COPY",2,["CONST","x","n"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "MOVE destination [\"CONST\",\"x\",\"n\"]",
+          "input": {"source":3},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",{"n":1}]},["MOVE","source",["CONST","x","n"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "MOVE source [\"CONST\",\"x\",\"n\"]",
+          "input": {"source":3},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",{"n":1}]},["MOVE",["CONST","x","n"],"result"]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "MOVE deletion [\"CONST\",\"x\",\"n\"]",
+          "input": {"source":3},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",{"n":1}]},["MOVE",["CONST","x","n"],null]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "COPY [\"CONST\",\"missing\"]",
+          "input": {"source":3},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",{"n":1}]},["COPY",2,["CONST","missing"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "MOVE destination [\"CONST\",\"missing\"]",
+          "input": {"source":3},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",{"n":1}]},["MOVE","source",["CONST","missing"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "MOVE source [\"CONST\",\"missing\"]",
+          "input": {"source":3},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",{"n":1}]},["MOVE",["CONST","missing"],"result"]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "MOVE deletion [\"CONST\",\"missing\"]",
+          "input": {"source":3},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",{"n":1}]},["MOVE",["CONST","missing"],null]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "SPLICE constant array",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["list",[[1,2]]]},["SPLICE",["CONST","list",0],1,3]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "CONST missing binding EXISTS",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["CONST","missing"],["EXISTS"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "CONST root EXISTS",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["CONST"],["EXISTS"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "CONST missing binding match",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["CONST","missing"],null],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "CONST root literal exact match",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["CONST"],{}],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "STASH missing binding EXISTS",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["STASH","missing"],["EXISTS"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "STASH root EXISTS",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["STASH"],["EXISTS"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "STASH missing binding match",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STASH","missing"],null],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "STASH root literal exact match",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STASH"],{}],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "False and null bindings still exist",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["a",false,"b",null]},["COPY",{"a":["HAS",["CONST","a"],["EXISTS"]],"b":["HAS",["CONST","b"],["EXISTS"]],"missing":["HAS",["CONST","missing"],["EXISTS"]]},["NODE"]]],
+          "output": {"a":true,"b":true,"missing":false}
+        },
+        {
+          "name": "Child empty stash supports guarded missing lookup",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",1,["STASH","x"]],["JGRAFT",{"const":["x",["STASH","x"]]},["COPY",{"saved":["CONST","x"],"exists":["HAS",["STASH","x"],["EXISTS"]]},["NODE"]]]],
+          "output": {"saved":1,"exists":false}
+        },
+        {
+          "name": "COPY root through empty expansion",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",{},["CONST",[[]]]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Computed descendant remains read-only",
+          "input": {"path":["x","n"]},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",{"n":1}]},["COPY",2,["CONST",["NODE","path"]]]],
+          "errors": {"INVALID_GRAFT":true}
+        }
+      ]
+    },
+    {
+      "name": "Declaration phases and invalid metadata",
+      "desc": "Constants are evaluated before this scope installs its expression definitions; inherited common expressions evaluate in the initializing scope and can read the parent stash. Declaration lists must consist of literal string/integer names paired with value expressions.",
+      "tests": [
+        {
+          "name": "Inherited expression reads parent stash during const phase",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["saved",["STASH","x"]]},["COPY",4,["STASH","x"]],["JGRAFT",{"const":["value",["EXPR","saved"]]},["COPY",["CONST","value"],["NODE"]]]],
+          "output": 4
+        },
+        {
+          "name": "Inherited expression sees earlier inner constant",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",1],"expr":["read",["CONST","x"]]},["JGRAFT",{"const":["x",2,"value",["EXPR","read"]]},["COPY",["CONST"],["NODE"]]],["COPY",["CONST","x"],"outer"]],
+          "output": {"x":2,"value":2,"outer":1}
+        },
+        {
+          "name": "Own expression replacement follows constant phase",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["value",1]},["JGRAFT",{"const":["before",["EXPR","value"]],"expr":["value",2]},["COPY",{"before":["CONST","before"],"after":["EXPR","value"]},["NODE"]]]],
+          "output": {"before":1,"after":2}
+        },
+        {
+          "name": "New expression cannot supply earlier constant",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",["EXPR","value"]],"expr":["value",1]},["COPY",["CONST","x"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid declaration list null",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":null}],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid declaration list false",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":false}],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid declaration list 0",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":0}],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid declaration list \"\"",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":""}],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid declaration list {}",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":{}}],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid declaration list [\"x\"]",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x"]}],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid declaration list [\"x\",1,\"y\"]",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",1,"y"]}],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid declaration name null",
+          "input": {"name":"x"},
+          "jgraft": ["JGRAFT",{"v":1,"const":[null,1]}],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid declaration name false",
+          "input": {"name":"x"},
+          "jgraft": ["JGRAFT",{"v":1,"const":[false,1]}],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid declaration name true",
+          "input": {"name":"x"},
+          "jgraft": ["JGRAFT",{"v":1,"const":[true,1]}],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid declaration name 1.5",
+          "input": {"name":"x"},
+          "jgraft": ["JGRAFT",{"v":1,"const":[1.5,1]}],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid declaration name []",
+          "input": {"name":"x"},
+          "jgraft": ["JGRAFT",{"v":1,"const":[[],1]}],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid declaration name {}",
+          "input": {"name":"x"},
+          "jgraft": ["JGRAFT",{"v":1,"const":[{},1]}],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid declaration name [\"NODE\",\"name\"]",
+          "input": {"name":"x"},
+          "jgraft": ["JGRAFT",{"v":1,"const":[["NODE","name"],1]}],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Unknown initializer operator",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",["UNKNOWN"]]}],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Unescaped array evaluates a match",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",["IS",1]]},["COPY",["CONST","x"],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Match result is saved before current-node edits",
+          "input": 2,
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",["IS",1]]},["COPY",1,["NODE"]],["COPY",["CONST","x"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Declaration failure propagates through nested scope",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",{"n":1},["STASH","x"]],["JGRAFT",{"const":["saved",["STASH","x"],"bad",["FAIL"]]},["COPY",["CONST","saved"],["NODE"]]]],
+          "errors": {"INVALID_TARGET":true}
+        }
+      ]
+    },
+    {
+      "name": "Reference patterns and expression operands",
+      "desc": "CONST and STASH are value references rather than expression substitution. In match context their returned data is literal structure, subject to the inherited exact/partial mode. Returned operator-looking arrays and objects must never be evaluated. Regex context interprets referenced strings and codepoints according to its own rules.",
+      "tests": [
+        {
+          "name": "CONST",
+          "desc": "Both namespaces follow the same reference-expression evaluation rules independently of current-node position.",
+          "tests": [
+            {
+              "name": "Object subset",
+              "desc": "HAS allows unspecified properties or trailing elements; IS requires exact structure and equal scalar types.",
+              "tests": [
+                {
+                  "name": "Partial",
+                  "input": {"a":1,"b":2},
+                  "jgraft": ["JGRAFT",{"v":1,"const":["pattern",{"a":1}]},["COPY",["HAS",["CONST","pattern"]],["NODE"]]],
+                  "output": true
+                },
+                {
+                  "name": "Exact",
+                  "input": {"a":1,"b":2},
+                  "jgraft": ["JGRAFT",{"v":1,"const":["pattern",{"a":1}]},["COPY",["IS",["CONST","pattern"]],["NODE"]]],
+                  "output": false
+                }
+              ]
+            },
+            {
+              "name": "Equal object",
+              "desc": "HAS allows unspecified properties or trailing elements; IS requires exact structure and equal scalar types.",
+              "tests": [
+                {
+                  "name": "Partial",
+                  "input": {"a":1},
+                  "jgraft": ["JGRAFT",{"v":1,"const":["pattern",{"a":1}]},["COPY",["HAS",["CONST","pattern"]],["NODE"]]],
+                  "output": true
+                },
+                {
+                  "name": "Exact",
+                  "input": {"a":1},
+                  "jgraft": ["JGRAFT",{"v":1,"const":["pattern",{"a":1}]},["COPY",["IS",["CONST","pattern"]],["NODE"]]],
+                  "output": true
+                }
+              ]
+            },
+            {
+              "name": "Nested subset",
+              "desc": "HAS allows unspecified properties or trailing elements; IS requires exact structure and equal scalar types.",
+              "tests": [
+                {
+                  "name": "Partial",
+                  "input": {"a":{"b":1,"c":2}},
+                  "jgraft": ["JGRAFT",{"v":1,"const":["pattern",{"a":{"b":1}}]},["COPY",["HAS",["CONST","pattern"]],["NODE"]]],
+                  "output": true
+                },
+                {
+                  "name": "Exact",
+                  "input": {"a":{"b":1,"c":2}},
+                  "jgraft": ["JGRAFT",{"v":1,"const":["pattern",{"a":{"b":1}}]},["COPY",["IS",["CONST","pattern"]],["NODE"]]],
+                  "output": false
+                }
+              ]
+            },
+            {
+              "name": "Missing object key",
+              "desc": "HAS allows unspecified properties or trailing elements; IS requires exact structure and equal scalar types.",
+              "tests": [
+                {
+                  "name": "Partial",
+                  "input": {},
+                  "jgraft": ["JGRAFT",{"v":1,"const":["pattern",{"a":1}]},["COPY",["HAS",["CONST","pattern"]],["NODE"]]],
+                  "output": false
+                },
+                {
+                  "name": "Exact",
+                  "input": {},
+                  "jgraft": ["JGRAFT",{"v":1,"const":["pattern",{"a":1}]},["COPY",["IS",["CONST","pattern"]],["NODE"]]],
+                  "output": false
+                }
+              ]
+            },
+            {
+              "name": "Array prefix",
+              "desc": "HAS allows unspecified properties or trailing elements; IS requires exact structure and equal scalar types.",
+              "tests": [
+                {
+                  "name": "Partial",
+                  "input": [1,2],
+                  "jgraft": ["JGRAFT",{"v":1,"const":["pattern",[[1]]]},["COPY",["HAS",["CONST","pattern"]],["NODE"]]],
+                  "output": true
+                },
+                {
+                  "name": "Exact",
+                  "input": [1,2],
+                  "jgraft": ["JGRAFT",{"v":1,"const":["pattern",[[1]]]},["COPY",["IS",["CONST","pattern"]],["NODE"]]],
+                  "output": false
+                }
+              ]
+            },
+            {
+              "name": "Equal array",
+              "desc": "HAS allows unspecified properties or trailing elements; IS requires exact structure and equal scalar types.",
+              "tests": [
+                {
+                  "name": "Partial",
+                  "input": [1,2],
+                  "jgraft": ["JGRAFT",{"v":1,"const":["pattern",[[1,2]]]},["COPY",["HAS",["CONST","pattern"]],["NODE"]]],
+                  "output": true
+                },
+                {
+                  "name": "Exact",
+                  "input": [1,2],
+                  "jgraft": ["JGRAFT",{"v":1,"const":["pattern",[[1,2]]]},["COPY",["IS",["CONST","pattern"]],["NODE"]]],
+                  "output": true
+                }
+              ]
+            },
+            {
+              "name": "Array too short",
+              "desc": "HAS allows unspecified properties or trailing elements; IS requires exact structure and equal scalar types.",
+              "tests": [
+                {
+                  "name": "Partial",
+                  "input": [1],
+                  "jgraft": ["JGRAFT",{"v":1,"const":["pattern",[[1,2]]]},["COPY",["HAS",["CONST","pattern"]],["NODE"]]],
+                  "output": false
+                },
+                {
+                  "name": "Exact",
+                  "input": [1],
+                  "jgraft": ["JGRAFT",{"v":1,"const":["pattern",[[1,2]]]},["COPY",["IS",["CONST","pattern"]],["NODE"]]],
+                  "output": false
+                }
+              ]
+            },
+            {
+              "name": "Null equals null",
+              "desc": "HAS allows unspecified properties or trailing elements; IS requires exact structure and equal scalar types.",
+              "tests": [
+                {
+                  "name": "Partial",
+                  "input": null,
+                  "jgraft": ["JGRAFT",{"v":1,"const":["pattern",null]},["COPY",["HAS",["CONST","pattern"]],["NODE"]]],
+                  "output": true
+                },
+                {
+                  "name": "Exact",
+                  "input": null,
+                  "jgraft": ["JGRAFT",{"v":1,"const":["pattern",null]},["COPY",["IS",["CONST","pattern"]],["NODE"]]],
+                  "output": true
+                }
+              ]
+            },
+            {
+              "name": "Null differs from false",
+              "desc": "HAS allows unspecified properties or trailing elements; IS requires exact structure and equal scalar types.",
+              "tests": [
+                {
+                  "name": "Partial",
+                  "input": false,
+                  "jgraft": ["JGRAFT",{"v":1,"const":["pattern",null]},["COPY",["HAS",["CONST","pattern"]],["NODE"]]],
+                  "output": false
+                },
+                {
+                  "name": "Exact",
+                  "input": false,
+                  "jgraft": ["JGRAFT",{"v":1,"const":["pattern",null]},["COPY",["IS",["CONST","pattern"]],["NODE"]]],
+                  "output": false
+                }
+              ]
+            },
+            {
+              "name": "Number differs from string",
+              "desc": "HAS allows unspecified properties or trailing elements; IS requires exact structure and equal scalar types.",
+              "tests": [
+                {
+                  "name": "Partial",
+                  "input": "1",
+                  "jgraft": ["JGRAFT",{"v":1,"const":["pattern",1]},["COPY",["HAS",["CONST","pattern"]],["NODE"]]],
+                  "output": false
+                },
+                {
+                  "name": "Exact",
+                  "input": "1",
+                  "jgraft": ["JGRAFT",{"v":1,"const":["pattern",1]},["COPY",["IS",["CONST","pattern"]],["NODE"]]],
+                  "output": false
+                }
+              ]
+            },
+            {
+              "name": "Operator-looking array",
+              "desc": "HAS allows unspecified properties or trailing elements; IS requires exact structure and equal scalar types.",
+              "tests": [
+                {
+                  "name": "Partial",
+                  "input": ["IS",1],
+                  "jgraft": ["JGRAFT",{"v":1,"const":["pattern",[["IS",1]]]},["COPY",["HAS",["CONST","pattern"]],["NODE"]]],
+                  "output": true
+                },
+                {
+                  "name": "Exact",
+                  "input": ["IS",1],
+                  "jgraft": ["JGRAFT",{"v":1,"const":["pattern",[["IS",1]]]},["COPY",["IS",["CONST","pattern"]],["NODE"]]],
+                  "output": true
+                }
+              ]
+            },
+            {
+              "name": "Operator-looking array is not invoked",
+              "desc": "HAS allows unspecified properties or trailing elements; IS requires exact structure and equal scalar types.",
+              "tests": [
+                {
+                  "name": "Partial",
+                  "input": 1,
+                  "jgraft": ["JGRAFT",{"v":1,"const":["pattern",[["IS",1]]]},["COPY",["HAS",["CONST","pattern"]],["NODE"]]],
+                  "output": false
+                },
+                {
+                  "name": "Exact",
+                  "input": 1,
+                  "jgraft": ["JGRAFT",{"v":1,"const":["pattern",[["IS",1]]]},["COPY",["IS",["CONST","pattern"]],["NODE"]]],
+                  "output": false
+                }
+              ]
+            },
+            {
+              "name": "Embedded operator-looking array",
+              "desc": "HAS allows unspecified properties or trailing elements; IS requires exact structure and equal scalar types.",
+              "tests": [
+                {
+                  "name": "Partial",
+                  "input": {"a":["EXISTS"]},
+                  "jgraft": ["JGRAFT",{"v":1,"const":["pattern",{"a":[["EXISTS"]]}]},["COPY",["HAS",["CONST","pattern"]],["NODE"]]],
+                  "output": true
+                },
+                {
+                  "name": "Exact",
+                  "input": {"a":["EXISTS"]},
+                  "jgraft": ["JGRAFT",{"v":1,"const":["pattern",{"a":[["EXISTS"]]}]},["COPY",["IS",["CONST","pattern"]],["NODE"]]],
+                  "output": true
+                }
+              ]
+            },
+            {
+              "name": "Embedded operator-looking array is not invoked",
+              "desc": "HAS allows unspecified properties or trailing elements; IS requires exact structure and equal scalar types.",
+              "tests": [
+                {
+                  "name": "Partial",
+                  "input": {"a":4},
+                  "jgraft": ["JGRAFT",{"v":1,"const":["pattern",{"a":[["EXISTS"]]}]},["COPY",["HAS",["CONST","pattern"]],["NODE"]]],
+                  "output": false
+                },
+                {
+                  "name": "Exact",
+                  "input": {"a":4},
+                  "jgraft": ["JGRAFT",{"v":1,"const":["pattern",{"a":[["EXISTS"]]}]},["COPY",["IS",["CONST","pattern"]],["NODE"]]],
+                  "output": false
+                }
+              ]
+            },
+            {
+              "name": "Namespace root as pattern",
+              "input": {"a":1,"b":2},
+              "jgraft": ["JGRAFT",{"v":1,"const":["a",1,"b",2]},["COPY",["IS",["CONST"]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Namespace root mismatch",
+              "input": {"a":1},
+              "jgraft": ["JGRAFT",{"v":1,"const":["a",1,"b",2]},["COPY",["IS",["CONST"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Missing property has no literal null value",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["pattern",{"x":null}]},["COPY",["HAS",["CONST","pattern"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Stored boolean does not rerun a match",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["pattern",false]},["COPY",["IS",["CONST","pattern"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Nested target position does not change namespace lookup",
+              "input": {"child":7},
+              "jgraft": ["JGRAFT",{"v":1,"const":["pattern",7]},["COPY",["IS",{"child":["CONST","pattern"]}],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Computed path in pattern uses original node",
+              "input": {"key":"value","value":4},
+              "jgraft": ["JGRAFT",{"v":1,"const":["value",4]},["COPY",["IS",["NODE","value"],["CONST",["NODE","key"]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Value supplies a LENGTH operand",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["text","a😀b"]},["COPY",["LENGTH",["CONST","text"]],["NODE"]]],
+              "output": 3
+            },
+            {
+              "name": "Value supplies a SLICE operand",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["list",[[1,2,3]]]},["COPY",["SLICE",["CONST","list"],1,1],["NODE"]]],
+              "output": [2]
+            },
+            {
+              "name": "Array used in a sequence is one literal element",
+              "input": [[1,2],3],
+              "jgraft": ["JGRAFT",{"v":1,"const":["pattern",[[1,2]]]},["COPY",["IS",[[["SEQ",["CONST","pattern"],3]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Regex string is literal rather than host regex syntax",
+              "input": "a.*",
+              "jgraft": ["JGRAFT",{"v":1,"const":["pattern","a.*"]},["COPY",["STR",["SEQ",["START"],["CONST","pattern"],["END"]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Regex punctuation does not act as wildcards",
+              "input": "abc",
+              "jgraft": ["JGRAFT",{"v":1,"const":["pattern","a.*"]},["COPY",["STR",["SEQ",["START"],["CONST","pattern"],["END"]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Regex non-BMP string",
+              "input": "😀x",
+              "jgraft": ["JGRAFT",{"v":1,"const":["pattern","😀x"]},["COPY",["STR",["SEQ",["START"],["CONST","pattern"],["END"]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Regex integer is a codepoint",
+              "input": "😀",
+              "jgraft": ["JGRAFT",{"v":1,"const":["pattern",128512]},["COPY",["STR",["SEQ",["START"],["CONST","pattern"],["END"]]],["NODE"]]],
+              "output": true
+            }
+          ]
+        },
+        {
+          "name": "STASH",
+          "desc": "Both namespaces follow the same reference-expression evaluation rules independently of current-node position.",
+          "tests": [
+            {
+              "name": "Object subset",
+              "desc": "HAS allows unspecified properties or trailing elements; IS requires exact structure and equal scalar types.",
+              "tests": [
+                {
+                  "name": "Partial",
+                  "input": {"a":1,"b":2},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",{"a":1},["STASH","pattern"]],["COPY",["HAS",["STASH","pattern"]],["NODE"]]],
+                  "output": true
+                },
+                {
+                  "name": "Exact",
+                  "input": {"a":1,"b":2},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",{"a":1},["STASH","pattern"]],["COPY",["IS",["STASH","pattern"]],["NODE"]]],
+                  "output": false
+                }
+              ]
+            },
+            {
+              "name": "Equal object",
+              "desc": "HAS allows unspecified properties or trailing elements; IS requires exact structure and equal scalar types.",
+              "tests": [
+                {
+                  "name": "Partial",
+                  "input": {"a":1},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",{"a":1},["STASH","pattern"]],["COPY",["HAS",["STASH","pattern"]],["NODE"]]],
+                  "output": true
+                },
+                {
+                  "name": "Exact",
+                  "input": {"a":1},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",{"a":1},["STASH","pattern"]],["COPY",["IS",["STASH","pattern"]],["NODE"]]],
+                  "output": true
+                }
+              ]
+            },
+            {
+              "name": "Nested subset",
+              "desc": "HAS allows unspecified properties or trailing elements; IS requires exact structure and equal scalar types.",
+              "tests": [
+                {
+                  "name": "Partial",
+                  "input": {"a":{"b":1,"c":2}},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",{"a":{"b":1}},["STASH","pattern"]],["COPY",["HAS",["STASH","pattern"]],["NODE"]]],
+                  "output": true
+                },
+                {
+                  "name": "Exact",
+                  "input": {"a":{"b":1,"c":2}},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",{"a":{"b":1}},["STASH","pattern"]],["COPY",["IS",["STASH","pattern"]],["NODE"]]],
+                  "output": false
+                }
+              ]
+            },
+            {
+              "name": "Missing object key",
+              "desc": "HAS allows unspecified properties or trailing elements; IS requires exact structure and equal scalar types.",
+              "tests": [
+                {
+                  "name": "Partial",
+                  "input": {},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",{"a":1},["STASH","pattern"]],["COPY",["HAS",["STASH","pattern"]],["NODE"]]],
+                  "output": false
+                },
+                {
+                  "name": "Exact",
+                  "input": {},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",{"a":1},["STASH","pattern"]],["COPY",["IS",["STASH","pattern"]],["NODE"]]],
+                  "output": false
+                }
+              ]
+            },
+            {
+              "name": "Array prefix",
+              "desc": "HAS allows unspecified properties or trailing elements; IS requires exact structure and equal scalar types.",
+              "tests": [
+                {
+                  "name": "Partial",
+                  "input": [1,2],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",[[1]],["STASH","pattern"]],["COPY",["HAS",["STASH","pattern"]],["NODE"]]],
+                  "output": true
+                },
+                {
+                  "name": "Exact",
+                  "input": [1,2],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",[[1]],["STASH","pattern"]],["COPY",["IS",["STASH","pattern"]],["NODE"]]],
+                  "output": false
+                }
+              ]
+            },
+            {
+              "name": "Equal array",
+              "desc": "HAS allows unspecified properties or trailing elements; IS requires exact structure and equal scalar types.",
+              "tests": [
+                {
+                  "name": "Partial",
+                  "input": [1,2],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",[[1,2]],["STASH","pattern"]],["COPY",["HAS",["STASH","pattern"]],["NODE"]]],
+                  "output": true
+                },
+                {
+                  "name": "Exact",
+                  "input": [1,2],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",[[1,2]],["STASH","pattern"]],["COPY",["IS",["STASH","pattern"]],["NODE"]]],
+                  "output": true
+                }
+              ]
+            },
+            {
+              "name": "Array too short",
+              "desc": "HAS allows unspecified properties or trailing elements; IS requires exact structure and equal scalar types.",
+              "tests": [
+                {
+                  "name": "Partial",
+                  "input": [1],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",[[1,2]],["STASH","pattern"]],["COPY",["HAS",["STASH","pattern"]],["NODE"]]],
+                  "output": false
+                },
+                {
+                  "name": "Exact",
+                  "input": [1],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",[[1,2]],["STASH","pattern"]],["COPY",["IS",["STASH","pattern"]],["NODE"]]],
+                  "output": false
+                }
+              ]
+            },
+            {
+              "name": "Null equals null",
+              "desc": "HAS allows unspecified properties or trailing elements; IS requires exact structure and equal scalar types.",
+              "tests": [
+                {
+                  "name": "Partial",
+                  "input": null,
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",null,["STASH","pattern"]],["COPY",["HAS",["STASH","pattern"]],["NODE"]]],
+                  "output": true
+                },
+                {
+                  "name": "Exact",
+                  "input": null,
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",null,["STASH","pattern"]],["COPY",["IS",["STASH","pattern"]],["NODE"]]],
+                  "output": true
+                }
+              ]
+            },
+            {
+              "name": "Null differs from false",
+              "desc": "HAS allows unspecified properties or trailing elements; IS requires exact structure and equal scalar types.",
+              "tests": [
+                {
+                  "name": "Partial",
+                  "input": false,
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",null,["STASH","pattern"]],["COPY",["HAS",["STASH","pattern"]],["NODE"]]],
+                  "output": false
+                },
+                {
+                  "name": "Exact",
+                  "input": false,
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",null,["STASH","pattern"]],["COPY",["IS",["STASH","pattern"]],["NODE"]]],
+                  "output": false
+                }
+              ]
+            },
+            {
+              "name": "Number differs from string",
+              "desc": "HAS allows unspecified properties or trailing elements; IS requires exact structure and equal scalar types.",
+              "tests": [
+                {
+                  "name": "Partial",
+                  "input": "1",
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",1,["STASH","pattern"]],["COPY",["HAS",["STASH","pattern"]],["NODE"]]],
+                  "output": false
+                },
+                {
+                  "name": "Exact",
+                  "input": "1",
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",1,["STASH","pattern"]],["COPY",["IS",["STASH","pattern"]],["NODE"]]],
+                  "output": false
+                }
+              ]
+            },
+            {
+              "name": "Operator-looking array",
+              "desc": "HAS allows unspecified properties or trailing elements; IS requires exact structure and equal scalar types.",
+              "tests": [
+                {
+                  "name": "Partial",
+                  "input": ["IS",1],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",[["IS",1]],["STASH","pattern"]],["COPY",["HAS",["STASH","pattern"]],["NODE"]]],
+                  "output": true
+                },
+                {
+                  "name": "Exact",
+                  "input": ["IS",1],
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",[["IS",1]],["STASH","pattern"]],["COPY",["IS",["STASH","pattern"]],["NODE"]]],
+                  "output": true
+                }
+              ]
+            },
+            {
+              "name": "Operator-looking array is not invoked",
+              "desc": "HAS allows unspecified properties or trailing elements; IS requires exact structure and equal scalar types.",
+              "tests": [
+                {
+                  "name": "Partial",
+                  "input": 1,
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",[["IS",1]],["STASH","pattern"]],["COPY",["HAS",["STASH","pattern"]],["NODE"]]],
+                  "output": false
+                },
+                {
+                  "name": "Exact",
+                  "input": 1,
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",[["IS",1]],["STASH","pattern"]],["COPY",["IS",["STASH","pattern"]],["NODE"]]],
+                  "output": false
+                }
+              ]
+            },
+            {
+              "name": "Embedded operator-looking array",
+              "desc": "HAS allows unspecified properties or trailing elements; IS requires exact structure and equal scalar types.",
+              "tests": [
+                {
+                  "name": "Partial",
+                  "input": {"a":["EXISTS"]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",{"a":[["EXISTS"]]},["STASH","pattern"]],["COPY",["HAS",["STASH","pattern"]],["NODE"]]],
+                  "output": true
+                },
+                {
+                  "name": "Exact",
+                  "input": {"a":["EXISTS"]},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",{"a":[["EXISTS"]]},["STASH","pattern"]],["COPY",["IS",["STASH","pattern"]],["NODE"]]],
+                  "output": true
+                }
+              ]
+            },
+            {
+              "name": "Embedded operator-looking array is not invoked",
+              "desc": "HAS allows unspecified properties or trailing elements; IS requires exact structure and equal scalar types.",
+              "tests": [
+                {
+                  "name": "Partial",
+                  "input": {"a":4},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",{"a":[["EXISTS"]]},["STASH","pattern"]],["COPY",["HAS",["STASH","pattern"]],["NODE"]]],
+                  "output": false
+                },
+                {
+                  "name": "Exact",
+                  "input": {"a":4},
+                  "jgraft": ["JGRAFT",{"v":1},["COPY",{"a":[["EXISTS"]]},["STASH","pattern"]],["COPY",["IS",["STASH","pattern"]],["NODE"]]],
+                  "output": false
+                }
+              ]
+            },
+            {
+              "name": "Namespace root as pattern",
+              "input": {"a":1,"b":2},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",1,["STASH","a"]],["COPY",2,["STASH","b"]],["COPY",["IS",["STASH"]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Namespace root mismatch",
+              "input": {"a":1},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",1,["STASH","a"]],["COPY",2,["STASH","b"]],["COPY",["IS",["STASH"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Missing property has no literal null value",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"x":null},["STASH","pattern"]],["COPY",["HAS",["STASH","pattern"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Stored boolean does not rerun a match",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",false,["STASH","pattern"]],["COPY",["IS",["STASH","pattern"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Nested target position does not change namespace lookup",
+              "input": {"child":7},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",7,["STASH","pattern"]],["COPY",["IS",{"child":["STASH","pattern"]}],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Computed path in pattern uses original node",
+              "input": {"key":"value","value":4},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",4,["STASH","value"]],["COPY",["IS",["NODE","value"],["STASH",["NODE","key"]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Value supplies a LENGTH operand",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY","a😀b",["STASH","text"]],["COPY",["LENGTH",["STASH","text"]],["NODE"]]],
+              "output": 3
+            },
+            {
+              "name": "Value supplies a SLICE operand",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",[[1,2,3]],["STASH","list"]],["COPY",["SLICE",["STASH","list"],1,1],["NODE"]]],
+              "output": [2]
+            },
+            {
+              "name": "Array used in a sequence is one literal element",
+              "input": [[1,2],3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",[[1,2]],["STASH","pattern"]],["COPY",["IS",[[["SEQ",["STASH","pattern"],3]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Regex string is literal rather than host regex syntax",
+              "input": "a.*",
+              "jgraft": ["JGRAFT",{"v":1},["COPY","a.*",["STASH","pattern"]],["COPY",["STR",["SEQ",["START"],["STASH","pattern"],["END"]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Regex punctuation does not act as wildcards",
+              "input": "abc",
+              "jgraft": ["JGRAFT",{"v":1},["COPY","a.*",["STASH","pattern"]],["COPY",["STR",["SEQ",["START"],["STASH","pattern"],["END"]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Regex non-BMP string",
+              "input": "😀x",
+              "jgraft": ["JGRAFT",{"v":1},["COPY","😀x",["STASH","pattern"]],["COPY",["STR",["SEQ",["START"],["STASH","pattern"],["END"]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Regex integer is a codepoint",
+              "input": "😀",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",128512,["STASH","pattern"]],["COPY",["STR",["SEQ",["START"],["STASH","pattern"],["END"]]],["NODE"]]],
+              "output": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Reference path expansion and validation",
+      "desc": "Every selector is a value-context operand. Array-valued operands expand exactly one level, empty expansions consume no selectors, and leading integer coercion applies after expansion. Literal invalid selector values are syntax errors; input-derived invalid values are operand errors. Resolution failures never create namespace properties.",
+      "tests": [
+        {
+          "name": "CONST",
+          "desc": "Root reads, deeper selectors, computed paths, and negative array aliases share ordinary path rules.",
+          "tests": [
+            {
+              "name": "Empty expansion reads namespace root",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["0",{"list":[[{"n":7},8]]},"x",{"list":[[{"n":7},8]]},"scalar",3]},["COPY",["CONST",[[]]],["NODE"]]],
+              "output": {"0":{"list":[{"n":7},8]},"x":{"list":[{"n":7},8]},"scalar":3}
+            },
+            {
+              "name": "Multiple empty expansions read root",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["0",{"list":[[{"n":7},8]]},"x",{"list":[[{"n":7},8]]},"scalar",3]},["COPY",["CONST",[[]],[[]]],["NODE"]]],
+              "output": {"0":{"list":[{"n":7},8]},"x":{"list":[{"n":7},8]},"scalar":3}
+            },
+            {
+              "name": "Empty expansions before integer name",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["0",{"list":[[{"n":7},8]]},"x",{"list":[[{"n":7},8]]},"scalar",3]},["COPY",["CONST",[[]],0,"list",0,"n"],["NODE"]]],
+              "output": 7
+            },
+            {
+              "name": "Empty expansions between selectors",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["0",{"list":[[{"n":7},8]]},"x",{"list":[[{"n":7},8]]},"scalar",3]},["COPY",["CONST","x",[[]],"list",[[]],0,[[]],"n",[[]]],["NODE"]]],
+              "output": 7
+            },
+            {
+              "name": "One expansion supplies entire path",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["0",{"list":[[{"n":7},8]]},"x",{"list":[[{"n":7},8]]},"scalar",3]},["COPY",["CONST",[["x","list",0,"n"]]],["NODE"]]],
+              "output": 7
+            },
+            {
+              "name": "Mixed scalar and expanded selectors",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["0",{"list":[[{"n":7},8]]},"x",{"list":[[{"n":7},8]]},"scalar",3]},["COPY",["CONST","x",[["list",0]],"n"],["NODE"]]],
+              "output": 7
+            },
+            {
+              "name": "Expansion coerces leading integer",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["0",{"list":[[{"n":7},8]]},"x",{"list":[[{"n":7},8]]},"scalar",3]},["COPY",["CONST",[[0,"list",0,"n"]]],["NODE"]]],
+              "output": 7
+            },
+            {
+              "name": "Expansion preserves deeper array index",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["0",{"list":[[{"n":7},8]]},"x",{"list":[[{"n":7},8]]},"scalar",3]},["COPY",["CONST",[[0,"list",-1]]],["NODE"]]],
+              "output": 8
+            },
+            {
+              "name": "Computed negative selector",
+              "input": {"index":-2},
+              "jgraft": ["JGRAFT",{"v":1,"const":["0",{"list":[[{"n":7},8]]},"x",{"list":[[{"n":7},8]]},"scalar",3]},["COPY",["CONST","x","list",["NODE","index"],"n"],["NODE"]]],
+              "output": 7
+            },
+            {
+              "name": "Array-valued reference supplies path",
+              "input": {"path":["x","list",0,"n"]},
+              "jgraft": ["JGRAFT",{"v":1,"const":["0",{"list":[[{"n":7},8]]},"x",{"list":[[{"n":7},8]]},"scalar",3]},["COPY",["CONST",["NODE","path"]],["NODE"]]],
+              "output": 7
+            },
+            {
+              "name": "Computed empty array reads root",
+              "input": {"path":[]},
+              "jgraft": ["JGRAFT",{"v":1,"const":["0",{"list":[[{"n":7},8]]},"x",{"list":[[{"n":7},8]]},"scalar",3]},["COPY",["CONST",["NODE","path"]],["NODE"]]],
+              "output": {"0":{"list":[{"n":7},8]},"x":{"list":[{"n":7},8]},"scalar":3}
+            },
+            {
+              "name": "Namespace value supplies a selector",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["0",{"list":[[{"n":7},8]]},"x",{"list":[[{"n":7},8]]},"scalar",3]},["COPY",["CONST",["CONST","scalar"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Through number",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["0",{"list":[[{"n":7},8]]},"x",{"list":[[{"n":7},8]]},"scalar",3]},["COPY",["CONST","scalar","n"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Negative before array start",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["0",{"list":[[{"n":7},8]]},"x",{"list":[[{"n":7},8]]},"scalar",3]},["COPY",["CONST","x","list",-3],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Beyond array end",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["0",{"list":[[{"n":7},8]]},"x",{"list":[[{"n":7},8]]},"scalar",3]},["COPY",["CONST","x","list",3],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Empty property",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["0",{"list":[[{"n":7},8]]},"x",{"list":[[{"n":7},8]]},"scalar",3]},["COPY",["CONST","x",""],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Nested numeric object selector",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["0",{"list":[[{"n":7},8]]},"x",{"list":[[{"n":7},8]]},"scalar",3]},["COPY",["CONST","x",0],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Literal Null at deeper position",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["0",{"list":[[{"n":7},8]]},"x",{"list":[[{"n":7},8]]},"scalar",3]},["COPY",["CONST","x",null],["NODE"]]],
+              "errors": {"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Computed Null at deeper position",
+              "input": {"selector":null},
+              "jgraft": ["JGRAFT",{"v":1,"const":["0",{"list":[[{"n":7},8]]},"x",{"list":[[{"n":7},8]]},"scalar",3]},["COPY",["CONST","x",["NODE","selector"]],["NODE"]]],
+              "errors": {"INVALID_OPERAND":true}
+            },
+            {
+              "name": "Computed expansion contains Null",
+              "input": {"path":["x",null]},
+              "jgraft": ["JGRAFT",{"v":1,"const":["0",{"list":[[{"n":7},8]]},"x",{"list":[[{"n":7},8]]},"scalar",3]},["COPY",["CONST",["NODE","path"]],["NODE"]]],
+              "errors": {"INVALID_OPERAND":true}
+            },
+            {
+              "name": "Literal True at deeper position",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["0",{"list":[[{"n":7},8]]},"x",{"list":[[{"n":7},8]]},"scalar",3]},["COPY",["CONST","x",true],["NODE"]]],
+              "errors": {"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Computed True at deeper position",
+              "input": {"selector":true},
+              "jgraft": ["JGRAFT",{"v":1,"const":["0",{"list":[[{"n":7},8]]},"x",{"list":[[{"n":7},8]]},"scalar",3]},["COPY",["CONST","x",["NODE","selector"]],["NODE"]]],
+              "errors": {"INVALID_OPERAND":true}
+            },
+            {
+              "name": "Computed expansion contains True",
+              "input": {"path":["x",true]},
+              "jgraft": ["JGRAFT",{"v":1,"const":["0",{"list":[[{"n":7},8]]},"x",{"list":[[{"n":7},8]]},"scalar",3]},["COPY",["CONST",["NODE","path"]],["NODE"]]],
+              "errors": {"INVALID_OPERAND":true}
+            },
+            {
+              "name": "Literal Fraction at deeper position",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["0",{"list":[[{"n":7},8]]},"x",{"list":[[{"n":7},8]]},"scalar",3]},["COPY",["CONST","x",0.5],["NODE"]]],
+              "errors": {"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Computed Fraction at deeper position",
+              "input": {"selector":0.5},
+              "jgraft": ["JGRAFT",{"v":1,"const":["0",{"list":[[{"n":7},8]]},"x",{"list":[[{"n":7},8]]},"scalar",3]},["COPY",["CONST","x",["NODE","selector"]],["NODE"]]],
+              "errors": {"INVALID_OPERAND":true}
+            },
+            {
+              "name": "Computed expansion contains Fraction",
+              "input": {"path":["x",0.5]},
+              "jgraft": ["JGRAFT",{"v":1,"const":["0",{"list":[[{"n":7},8]]},"x",{"list":[[{"n":7},8]]},"scalar",3]},["COPY",["CONST",["NODE","path"]],["NODE"]]],
+              "errors": {"INVALID_OPERAND":true}
+            },
+            {
+              "name": "Literal Object at deeper position",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["0",{"list":[[{"n":7},8]]},"x",{"list":[[{"n":7},8]]},"scalar",3]},["COPY",["CONST","x",{}],["NODE"]]],
+              "errors": {"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Computed Object at deeper position",
+              "input": {"selector":{}},
+              "jgraft": ["JGRAFT",{"v":1,"const":["0",{"list":[[{"n":7},8]]},"x",{"list":[[{"n":7},8]]},"scalar",3]},["COPY",["CONST","x",["NODE","selector"]],["NODE"]]],
+              "errors": {"INVALID_OPERAND":true}
+            },
+            {
+              "name": "Computed expansion contains Object",
+              "input": {"path":["x",{}]},
+              "jgraft": ["JGRAFT",{"v":1,"const":["0",{"list":[[{"n":7},8]]},"x",{"list":[[{"n":7},8]]},"scalar",3]},["COPY",["CONST",["NODE","path"]],["NODE"]]],
+              "errors": {"INVALID_OPERAND":true}
+            },
+            {
+              "name": "Nested expansion is not recursively flattened",
+              "input": {"path":["x",["list",0]]},
+              "jgraft": ["JGRAFT",{"v":1,"const":["0",{"list":[[{"n":7},8]]},"x",{"list":[[{"n":7},8]]},"scalar",3]},["COPY",["CONST",["NODE","path"]],["NODE"]]],
+              "errors": {"INVALID_OPERAND":true}
+            },
+            {
+              "name": "Escaped nested arrays are not recursively flattened",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["0",{"list":[[{"n":7},8]]},"x",{"list":[[{"n":7},8]]},"scalar",3]},["COPY",["CONST",[["x",[["list",0]]]]],["NODE"]]],
+              "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Selector expression missing input",
+              "input": {"other":1},
+              "jgraft": ["JGRAFT",{"v":1,"const":["0",{"list":[[{"n":7},8]]},"x",{"list":[[{"n":7},8]]},"scalar",3]},["COPY",["CONST",["NODE","missing"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Selector FAIL propagates",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["0",{"list":[[{"n":7},8]]},"x",{"list":[[{"n":7},8]]},"scalar",3]},["COPY",["CONST",["FAIL"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Unknown selector operator",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["0",{"list":[[{"n":7},8]]},"x",{"list":[[{"n":7},8]]},"scalar",3]},["COPY",["CONST",["UNKNOWN"]],["NODE"]]],
+              "errors": {"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Computed invalid selector is a failed match probe",
+              "input": {"selector":null},
+              "jgraft": ["JGRAFT",{"v":1,"const":["0",{"list":[[{"n":7},8]]},"x",{"list":[[{"n":7},8]]},"scalar",3]},["COPY",["HAS",["CONST","x",["NODE","selector"]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Missing reference in a match does not create properties",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":[]},["COPY",["HAS",["CONST","missing"]],"probe"],["COPY",["CONST"],"namespace"]],
+              "output": {"probe":false,"namespace":{}}
+            },
+            {
+              "name": "Missing intermediate node stays missing after a probe",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["x",{}]},["COPY",["HAS",["CONST","x","missing","deep"]],"probe"],["COPY",["CONST"],"namespace"]],
+              "output": {"probe":false,"namespace":{"x":{}}}
+            },
+            {
+              "name": "Read through Null",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["x",null]},["COPY",["CONST","x","child"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Read through False",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["x",false]},["COPY",["CONST","x","child"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Read through True",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["x",true]},["COPY",["CONST","x","child"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Read through String",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["x","abc"]},["COPY",["CONST","x","child"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Nested own constructor property",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["x",{"constructor":{"n":7}}]},["COPY",["CONST","x","constructor","n"],["NODE"]]],
+              "output": 7
+            },
+            {
+              "name": "Nested own hasOwnProperty property",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["x",{"hasOwnProperty":{"n":7}}]},["COPY",["CONST","x","hasOwnProperty","n"],["NODE"]]],
+              "output": 7
+            },
+            {
+              "name": "Nested own __proto__ property",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["x",{"__proto__":{"n":7}}]},["COPY",["CONST","x","__proto__","n"],["NODE"]]],
+              "output": 7,
+              "needProto": true
+            },
+            {
+              "name": "Lone surrogates remain data",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["x","a\ud800b\udc00"]},["COPY",["CONST","x"],["NODE"]]],
+              "output": "a\ud800b\udc00",
+              "needLoneSurrogate": true
+            }
+          ]
+        },
+        {
+          "name": "STASH",
+          "desc": "Root reads, deeper selectors, computed paths, and negative array aliases share ordinary path rules.",
+          "tests": [
+            {
+              "name": "Empty expansion reads namespace root",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"list":[[{"n":7},8]]},["STASH","0"]],["COPY",{"list":[[{"n":7},8]]},["STASH","x"]],["COPY",3,["STASH","scalar"]],["COPY",["STASH",[[]]],["NODE"]]],
+              "output": {"0":{"list":[{"n":7},8]},"x":{"list":[{"n":7},8]},"scalar":3}
+            },
+            {
+              "name": "Multiple empty expansions read root",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"list":[[{"n":7},8]]},["STASH","0"]],["COPY",{"list":[[{"n":7},8]]},["STASH","x"]],["COPY",3,["STASH","scalar"]],["COPY",["STASH",[[]],[[]]],["NODE"]]],
+              "output": {"0":{"list":[{"n":7},8]},"x":{"list":[{"n":7},8]},"scalar":3}
+            },
+            {
+              "name": "Empty expansions before integer name",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"list":[[{"n":7},8]]},["STASH","0"]],["COPY",{"list":[[{"n":7},8]]},["STASH","x"]],["COPY",3,["STASH","scalar"]],["COPY",["STASH",[[]],0,"list",0,"n"],["NODE"]]],
+              "output": 7
+            },
+            {
+              "name": "Empty expansions between selectors",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"list":[[{"n":7},8]]},["STASH","0"]],["COPY",{"list":[[{"n":7},8]]},["STASH","x"]],["COPY",3,["STASH","scalar"]],["COPY",["STASH","x",[[]],"list",[[]],0,[[]],"n",[[]]],["NODE"]]],
+              "output": 7
+            },
+            {
+              "name": "One expansion supplies entire path",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"list":[[{"n":7},8]]},["STASH","0"]],["COPY",{"list":[[{"n":7},8]]},["STASH","x"]],["COPY",3,["STASH","scalar"]],["COPY",["STASH",[["x","list",0,"n"]]],["NODE"]]],
+              "output": 7
+            },
+            {
+              "name": "Mixed scalar and expanded selectors",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"list":[[{"n":7},8]]},["STASH","0"]],["COPY",{"list":[[{"n":7},8]]},["STASH","x"]],["COPY",3,["STASH","scalar"]],["COPY",["STASH","x",[["list",0]],"n"],["NODE"]]],
+              "output": 7
+            },
+            {
+              "name": "Expansion coerces leading integer",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"list":[[{"n":7},8]]},["STASH","0"]],["COPY",{"list":[[{"n":7},8]]},["STASH","x"]],["COPY",3,["STASH","scalar"]],["COPY",["STASH",[[0,"list",0,"n"]]],["NODE"]]],
+              "output": 7
+            },
+            {
+              "name": "Expansion preserves deeper array index",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"list":[[{"n":7},8]]},["STASH","0"]],["COPY",{"list":[[{"n":7},8]]},["STASH","x"]],["COPY",3,["STASH","scalar"]],["COPY",["STASH",[[0,"list",-1]]],["NODE"]]],
+              "output": 8
+            },
+            {
+              "name": "Computed negative selector",
+              "input": {"index":-2},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"list":[[{"n":7},8]]},["STASH","0"]],["COPY",{"list":[[{"n":7},8]]},["STASH","x"]],["COPY",3,["STASH","scalar"]],["COPY",["STASH","x","list",["NODE","index"],"n"],["NODE"]]],
+              "output": 7
+            },
+            {
+              "name": "Array-valued reference supplies path",
+              "input": {"path":["x","list",0,"n"]},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"list":[[{"n":7},8]]},["STASH","0"]],["COPY",{"list":[[{"n":7},8]]},["STASH","x"]],["COPY",3,["STASH","scalar"]],["COPY",["STASH",["NODE","path"]],["NODE"]]],
+              "output": 7
+            },
+            {
+              "name": "Computed empty array reads root",
+              "input": {"path":[]},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"list":[[{"n":7},8]]},["STASH","0"]],["COPY",{"list":[[{"n":7},8]]},["STASH","x"]],["COPY",3,["STASH","scalar"]],["COPY",["STASH",["NODE","path"]],["NODE"]]],
+              "output": {"0":{"list":[{"n":7},8]},"x":{"list":[{"n":7},8]},"scalar":3}
+            },
+            {
+              "name": "Namespace value supplies a selector",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"list":[[{"n":7},8]]},["STASH","0"]],["COPY",{"list":[[{"n":7},8]]},["STASH","x"]],["COPY",3,["STASH","scalar"]],["COPY",["STASH",["STASH","scalar"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Through number",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"list":[[{"n":7},8]]},["STASH","0"]],["COPY",{"list":[[{"n":7},8]]},["STASH","x"]],["COPY",3,["STASH","scalar"]],["COPY",["STASH","scalar","n"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Negative before array start",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"list":[[{"n":7},8]]},["STASH","0"]],["COPY",{"list":[[{"n":7},8]]},["STASH","x"]],["COPY",3,["STASH","scalar"]],["COPY",["STASH","x","list",-3],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Beyond array end",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"list":[[{"n":7},8]]},["STASH","0"]],["COPY",{"list":[[{"n":7},8]]},["STASH","x"]],["COPY",3,["STASH","scalar"]],["COPY",["STASH","x","list",3],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Empty property",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"list":[[{"n":7},8]]},["STASH","0"]],["COPY",{"list":[[{"n":7},8]]},["STASH","x"]],["COPY",3,["STASH","scalar"]],["COPY",["STASH","x",""],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Nested numeric object selector",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"list":[[{"n":7},8]]},["STASH","0"]],["COPY",{"list":[[{"n":7},8]]},["STASH","x"]],["COPY",3,["STASH","scalar"]],["COPY",["STASH","x",0],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Literal Null at deeper position",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"list":[[{"n":7},8]]},["STASH","0"]],["COPY",{"list":[[{"n":7},8]]},["STASH","x"]],["COPY",3,["STASH","scalar"]],["COPY",["STASH","x",null],["NODE"]]],
+              "errors": {"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Computed Null at deeper position",
+              "input": {"selector":null},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"list":[[{"n":7},8]]},["STASH","0"]],["COPY",{"list":[[{"n":7},8]]},["STASH","x"]],["COPY",3,["STASH","scalar"]],["COPY",["STASH","x",["NODE","selector"]],["NODE"]]],
+              "errors": {"INVALID_OPERAND":true}
+            },
+            {
+              "name": "Computed expansion contains Null",
+              "input": {"path":["x",null]},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"list":[[{"n":7},8]]},["STASH","0"]],["COPY",{"list":[[{"n":7},8]]},["STASH","x"]],["COPY",3,["STASH","scalar"]],["COPY",["STASH",["NODE","path"]],["NODE"]]],
+              "errors": {"INVALID_OPERAND":true}
+            },
+            {
+              "name": "Literal True at deeper position",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"list":[[{"n":7},8]]},["STASH","0"]],["COPY",{"list":[[{"n":7},8]]},["STASH","x"]],["COPY",3,["STASH","scalar"]],["COPY",["STASH","x",true],["NODE"]]],
+              "errors": {"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Computed True at deeper position",
+              "input": {"selector":true},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"list":[[{"n":7},8]]},["STASH","0"]],["COPY",{"list":[[{"n":7},8]]},["STASH","x"]],["COPY",3,["STASH","scalar"]],["COPY",["STASH","x",["NODE","selector"]],["NODE"]]],
+              "errors": {"INVALID_OPERAND":true}
+            },
+            {
+              "name": "Computed expansion contains True",
+              "input": {"path":["x",true]},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"list":[[{"n":7},8]]},["STASH","0"]],["COPY",{"list":[[{"n":7},8]]},["STASH","x"]],["COPY",3,["STASH","scalar"]],["COPY",["STASH",["NODE","path"]],["NODE"]]],
+              "errors": {"INVALID_OPERAND":true}
+            },
+            {
+              "name": "Literal Fraction at deeper position",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"list":[[{"n":7},8]]},["STASH","0"]],["COPY",{"list":[[{"n":7},8]]},["STASH","x"]],["COPY",3,["STASH","scalar"]],["COPY",["STASH","x",0.5],["NODE"]]],
+              "errors": {"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Computed Fraction at deeper position",
+              "input": {"selector":0.5},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"list":[[{"n":7},8]]},["STASH","0"]],["COPY",{"list":[[{"n":7},8]]},["STASH","x"]],["COPY",3,["STASH","scalar"]],["COPY",["STASH","x",["NODE","selector"]],["NODE"]]],
+              "errors": {"INVALID_OPERAND":true}
+            },
+            {
+              "name": "Computed expansion contains Fraction",
+              "input": {"path":["x",0.5]},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"list":[[{"n":7},8]]},["STASH","0"]],["COPY",{"list":[[{"n":7},8]]},["STASH","x"]],["COPY",3,["STASH","scalar"]],["COPY",["STASH",["NODE","path"]],["NODE"]]],
+              "errors": {"INVALID_OPERAND":true}
+            },
+            {
+              "name": "Literal Object at deeper position",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"list":[[{"n":7},8]]},["STASH","0"]],["COPY",{"list":[[{"n":7},8]]},["STASH","x"]],["COPY",3,["STASH","scalar"]],["COPY",["STASH","x",{}],["NODE"]]],
+              "errors": {"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Computed Object at deeper position",
+              "input": {"selector":{}},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"list":[[{"n":7},8]]},["STASH","0"]],["COPY",{"list":[[{"n":7},8]]},["STASH","x"]],["COPY",3,["STASH","scalar"]],["COPY",["STASH","x",["NODE","selector"]],["NODE"]]],
+              "errors": {"INVALID_OPERAND":true}
+            },
+            {
+              "name": "Computed expansion contains Object",
+              "input": {"path":["x",{}]},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"list":[[{"n":7},8]]},["STASH","0"]],["COPY",{"list":[[{"n":7},8]]},["STASH","x"]],["COPY",3,["STASH","scalar"]],["COPY",["STASH",["NODE","path"]],["NODE"]]],
+              "errors": {"INVALID_OPERAND":true}
+            },
+            {
+              "name": "Nested expansion is not recursively flattened",
+              "input": {"path":["x",["list",0]]},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"list":[[{"n":7},8]]},["STASH","0"]],["COPY",{"list":[[{"n":7},8]]},["STASH","x"]],["COPY",3,["STASH","scalar"]],["COPY",["STASH",["NODE","path"]],["NODE"]]],
+              "errors": {"INVALID_OPERAND":true}
+            },
+            {
+              "name": "Escaped nested arrays are not recursively flattened",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"list":[[{"n":7},8]]},["STASH","0"]],["COPY",{"list":[[{"n":7},8]]},["STASH","x"]],["COPY",3,["STASH","scalar"]],["COPY",["STASH",[["x",[["list",0]]]]],["NODE"]]],
+              "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Selector expression missing input",
+              "input": {"other":1},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"list":[[{"n":7},8]]},["STASH","0"]],["COPY",{"list":[[{"n":7},8]]},["STASH","x"]],["COPY",3,["STASH","scalar"]],["COPY",["STASH",["NODE","missing"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Selector FAIL propagates",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"list":[[{"n":7},8]]},["STASH","0"]],["COPY",{"list":[[{"n":7},8]]},["STASH","x"]],["COPY",3,["STASH","scalar"]],["COPY",["STASH",["FAIL"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Unknown selector operator",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"list":[[{"n":7},8]]},["STASH","0"]],["COPY",{"list":[[{"n":7},8]]},["STASH","x"]],["COPY",3,["STASH","scalar"]],["COPY",["STASH",["UNKNOWN"]],["NODE"]]],
+              "errors": {"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Computed invalid selector is a failed match probe",
+              "input": {"selector":null},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"list":[[{"n":7},8]]},["STASH","0"]],["COPY",{"list":[[{"n":7},8]]},["STASH","x"]],["COPY",3,["STASH","scalar"]],["COPY",["HAS",["STASH","x",["NODE","selector"]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Missing reference in a match does not create properties",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["STASH","missing"]],"probe"],["COPY",["STASH"],"namespace"]],
+              "output": {"probe":false,"namespace":{}}
+            },
+            {
+              "name": "Missing intermediate node stays missing after a probe",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{},["STASH","x"]],["COPY",["HAS",["STASH","x","missing","deep"]],"probe"],["COPY",["STASH"],"namespace"]],
+              "output": {"probe":false,"namespace":{"x":{}}}
+            },
+            {
+              "name": "Read through Null",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",null,["STASH","x"]],["COPY",["STASH","x","child"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Read through False",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",false,["STASH","x"]],["COPY",["STASH","x","child"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Read through True",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",true,["STASH","x"]],["COPY",["STASH","x","child"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Read through String",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY","abc",["STASH","x"]],["COPY",["STASH","x","child"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Nested own constructor property",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"constructor":{"n":7}},["STASH","x"]],["COPY",["STASH","x","constructor","n"],["NODE"]]],
+              "output": 7
+            },
+            {
+              "name": "Nested own hasOwnProperty property",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"hasOwnProperty":{"n":7}},["STASH","x"]],["COPY",["STASH","x","hasOwnProperty","n"],["NODE"]]],
+              "output": 7
+            },
+            {
+              "name": "Nested own __proto__ property",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"__proto__":{"n":7}},["STASH","x"]],["COPY",["STASH","x","__proto__","n"],["NODE"]]],
+              "output": 7,
+              "needProto": true
+            },
+            {
+              "name": "Lone surrogates remain data",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY","a\ud800b\udc00",["STASH","x"]],["COPY",["STASH","x"],["NODE"]]],
+              "output": "a\ud800b\udc00",
+              "needLoneSurrogate": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Stash destination reference boundaries",
+      "desc": "Writable references use the same selector evaluation as reads. Appending at the length boundary is permitted, while scalar/container conversion, sparse writes, or root replacement through empty path expansion are forbidden.",
+      "tests": [
+        {
+          "name": "Computed expanded destination",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",7,["STASH",[[0,"list",0,"n"]]]],["COPY",["STASH"],["NODE"]]],
+          "output": {"0":{"list":[{"n":7}]}}
+        },
+        {
+          "name": "Append to an empty array",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[[]],["STASH","list"]],["COPY",1,["STASH","list",false]],["COPY",["STASH","list"],["NODE"]]],
+          "output": [1]
+        },
+        {
+          "name": "Append at explicit length",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[[1,2]],["STASH","list"]],["COPY",3,["STASH","list",2]],["COPY",["STASH","list"],["NODE"]]],
+          "output": [1,2,3]
+        },
+        {
+          "name": "Last element negative alias",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[[1,2]],["STASH","list"]],["COPY",3,["STASH","list",-1]],["COPY",["STASH","list"],["NODE"]]],
+          "output": [1,3]
+        },
+        {
+          "name": "Root COPY via empty expansion",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",{},["STASH",[[]]]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Root MOVE destination via empty expansion",
+          "input": {"source":1},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE","source",["STASH",[[]]]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Root MOVE source via empty expansion",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",["STASH",[[]]],"result"]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Through null",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",null,["STASH","x"]],["COPY",2,["STASH","x","a"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Through false",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",false,["STASH","x"]],["COPY",2,["STASH","x","a"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Through number",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",4,["STASH","x"]],["COPY",2,["STASH","x","a"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Through string",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY","abc",["STASH","x"]],["COPY",2,["STASH","x",0]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Object cannot become array",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",{},["STASH","x"]],["COPY",2,["STASH","x",0]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Array cannot become object",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[[]],["STASH","x"]],["COPY",2,["STASH","x","a"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Sparse array write",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[[1]],["STASH","x"]],["COPY",2,["STASH","x",2]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Before first array element",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[[1]],["STASH","x"]],["COPY",2,["STASH","x",-2]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Append alias requires array",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",{},["STASH","x"]],["COPY",2,["STASH","x",false]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Runtime invalid destination selector",
+          "input": {"key":null},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",2,["STASH",["NODE","key"]]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Read cannot auto-vivify missing stash ancestors",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["STASH","missing","child"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Pending deletion cannot be read again within MOVE",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[[1,2]],["STASH","list"]],["MOVE",["STASH","list",0],null,["STASH","list",0],"value"]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        }
+      ]
+    },
+    {
+      "name": "Reference metadata and namespace independence",
+      "desc": "Array references retain SPLIT separator metadata across constants, stash, and scope handoffs. References inside a computed path still use the current node rather than the progressively resolved namespace subtree.",
+      "tests": [
+        {
+          "name": "Constant reference retains separators",
+          "input": {"text":"a,b;c"},
+          "jgraft": ["JGRAFT",{"v":1,"const":["parts",["SPLIT",{"sep":["ANY",",",";"],"default":"/"},["NODE","text"]]]},["COPY",["JOIN",{"sep":["ANY",",",";"],"default":"/"},["CONST","parts"]],["NODE"]]],
+          "output": "a,b;c"
+        },
+        {
+          "name": "Stash reference retains separators",
+          "input": "a,b;c",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["ANY",",",";"],"default":"/"}],["STASH","parts"]],["COPY",["JOIN",{"sep":["ANY",",",";"],"default":"/"},["STASH","parts"]],["NODE"]]],
+          "output": "a,b;c"
+        },
+        {
+          "name": "Stash-to-constant handoff retains separators",
+          "input": "a,b;c",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SPLIT",{"sep":["ANY",",",";"],"default":"/"}],["STASH","parts"]],["JGRAFT",{"const":["parts",["STASH","parts"]]},["COPY",["JOIN",{"sep":["ANY",",",";"],"default":"/"},["CONST","parts"]],["NODE"]]]],
+          "output": "a,b;c"
+        },
+        {
+          "name": "CONST and STASH names remain independent",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",1]},["COPY",2,["STASH","x"]],["COPY",{"constant":["CONST","x"],"stash":["STASH","x"]},["NODE"]]],
+          "output": {"constant":1,"stash":2}
+        },
+        {
+          "name": "CONST later selector evaluates at original current node",
+          "input": {"key":"wanted"},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",{"key":"wrong","wanted":7,"wrong":9}]},["COPY",["CONST","x",["NODE","key"]],["NODE"]]],
+          "output": 7
+        },
+        {
+          "name": "STASH later selector evaluates at original current node",
+          "input": {"key":"wanted"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",{"key":"wrong","wanted":7,"wrong":9},["STASH","x"]],["COPY",["STASH","x",["NODE","key"]],["NODE"]]],
+          "output": 7
+        }
+      ]
+    },
+    {
+      "name": "Common expression definitions and evaluation",
+      "desc": "JGRAFT expr declarations store unevaluated value-construction syntax. EXPR selects one definition and evaluates it when invoked. This group tests declaration/evaluation behavior; match, regex, sequence, capture, and other context-specific composition belongs to the suites for those contexts.",
+      "tests": [
+        {
+          "name": "Null",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["value",null]},["COPY",["EXPR","value"],["NODE"]]],
+          "output": null
+        },
+        {
+          "name": "False",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["value",false]},["COPY",["EXPR","value"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "True",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["value",true]},["COPY",["EXPR","value"],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Zero",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["value",0]},["COPY",["EXPR","value"],["NODE"]]],
+          "output": 0
+        },
+        {
+          "name": "Negative integer",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["value",-7]},["COPY",["EXPR","value"],["NODE"]]],
+          "output": -7
+        },
+        {
+          "name": "Fraction",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["value",1.25]},["COPY",["EXPR","value"],["NODE"]]],
+          "output": 1.25
+        },
+        {
+          "name": "Empty string",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["value",""]},["COPY",["EXPR","value"],["NODE"]]],
+          "output": ""
+        },
+        {
+          "name": "Unicode string",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["value","a😀é"]},["COPY",["EXPR","value"],["NODE"]]],
+          "output": "a😀é"
+        },
+        {
+          "name": "Empty object",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["value",{}]},["COPY",["EXPR","value"],["NODE"]]],
+          "output": {}
+        },
+        {
+          "name": "Object tree",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["value",{"a":[[1,{"n":2}]]}]},["COPY",["EXPR","value"],["NODE"]]],
+          "output": {"a":[1,{"n":2}]}
+        },
+        {
+          "name": "Empty array",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["value",[[]]]},["COPY",["EXPR","value"],["NODE"]]],
+          "output": []
+        },
+        {
+          "name": "Array tree",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["value",[[1,{"a":[[2]]},null]]]},["COPY",["EXPR","value"],["NODE"]]],
+          "output": [1,{"a":[2]},null]
+        },
+        {
+          "name": "Operator-looking data",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["value",[["EXPR","missing"]]]},["COPY",["EXPR","value"],["NODE"]]],
+          "output": ["EXPR","missing"]
+        },
+        {
+          "name": "Embedded expressions construct a value",
+          "input": {"n":7},
+          "jgraft": ["JGRAFT",{"v":1,"const":["c",2],"expr":["value",{"input":["NODE","n"],"constant":["CONST","c"],"array":[[["NODE","n"],["CONST","c"]]]}]},["COPY",["EXPR","value"],["NODE"]]],
+          "output": {"input":7,"constant":2,"array":[7,2]}
+        },
+        {
+          "name": "Bare root match expression evaluates on invocation",
+          "input": 7,
+          "jgraft": ["JGRAFT",{"v":1,"expr":["check",["IS",7]]},["COPY",["EXPR","check"],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Unused FAIL is not evaluated",
+          "input": {"ok":1},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["unused",["FAIL"]]}],
+          "output": {"ok":1}
+        },
+        {
+          "name": "Unused missing input is not read",
+          "input": {"ok":1},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["unused",["NODE","missing"]]}],
+          "output": {"ok":1}
+        },
+        {
+          "name": "Unused absent common expression is not resolved",
+          "input": {"ok":1},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["unused",["EXPR","missing"]]}],
+          "output": {"ok":1}
+        },
+        {
+          "name": "Later action can supply data used by definition",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["value",["NODE","later"]]},["COPY",7,"later"],["COPY",["EXPR","value"],"result"]],
+          "output": {"later":7,"result":7}
+        },
+        {
+          "name": "Constant declarations precede expression invocation",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["n",8],"expr":["value",["CONST","n"]]},["COPY",["EXPR","value"],["NODE"]]],
+          "output": 8
+        },
+        {
+          "name": "Forward reference resolves after declarations",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["first",["EXPR","later"],"later",9]},["COPY",["EXPR","first"],["NODE"]]],
+          "output": 9
+        },
+        {
+          "name": "Multiple forward aliases",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["first",["EXPR","second"],"second",["EXPR","third"],"third",{"n":9}]},["COPY",["EXPR","first"],["NODE"]]],
+          "output": {"n":9}
+        },
+        {
+          "name": "Final repeated declaration wins",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["x",1,"x",2,"x",3]},["COPY",["EXPR","x"],["NODE"]]],
+          "output": 3
+        },
+        {
+          "name": "Earlier alias uses final repeated definition",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["x",1,"alias",["EXPR","x"],"x",2]},["COPY",["EXPR","alias"],["NODE"]]],
+          "output": 2
+        },
+        {
+          "name": "Overwritten FAIL was never invoked",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["x",["FAIL"],"x",1]},["COPY",["EXPR","x"],["NODE"]]],
+          "output": 1
+        },
+        {
+          "name": "Invoked FAIL remains an intentional runtime failure",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["x",["FAIL"]]},["COPY",["EXPR","x"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Invoked missing input is a target error",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["x",["NODE","missing"]]},["COPY",["EXPR","x"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Invoked absent definition is a target error",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["x",["EXPR","missing"]]},["COPY",["EXPR","x"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Empty declaration list leaves no definitions",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":[]},["COPY",["EXPR","missing"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        }
+      ]
+    },
+    {
+      "name": "Common expression invocation scope",
+      "desc": "Definitions capture no NODE, TEMP, STASH, CONST, or common-expression environment. Each invocation uses the current scope, and repeated calls evaluate again. Namespace inheritance, shadowing, and restoration remain local to JGRAFT boundaries.",
+      "tests": [
+        {
+          "name": "Current node is read on each invocation",
+          "input": {"n":1},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["read",["NODE","n"]]},["COPY",["EXPR","read"],"before"],["COPY",2,"n"],["COPY",["EXPR","read"],"after"]],
+          "output": {"n":2,"before":1,"after":2}
+        },
+        {
+          "name": "AT selects invocation node",
+          "input": {"child":{"n":7}},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["read",["NODE","n"]]},["AT","child",["COPY",["EXPR","read"],"result"]]],
+          "output": {"child":{"n":7,"result":7}}
+        },
+        {
+          "name": "Stash is read on each invocation",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["read",["STASH","x"]]},["COPY",1,["STASH","x"]],["COPY",["EXPR","read"],"before"],["COPY",2,["STASH","x"]],["COPY",["EXPR","read"],"after"]],
+          "output": {"before":1,"after":2}
+        },
+        {
+          "name": "TEMP comes from invoking action",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["read",["TEMP","x"]]},["COPY",7,["TEMP","x"],["EXPR","read"],"result"]],
+          "output": {"result":7}
+        },
+        {
+          "name": "TEMP from an earlier action is not captured",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["read",["TEMP","x"]]},["COPY",7,["TEMP","x"]],["COPY",["EXPR","read"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Inheritance with no declarations",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["read",7]},["JGRAFT",{},["COPY",["EXPR","read"],"inner"]],["COPY",["EXPR","read"],"outer"]],
+          "output": {"inner":7,"outer":7}
+        },
+        {
+          "name": "Inheritance with empty declarations",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["read",7]},["JGRAFT",{"expr":[]},["COPY",["EXPR","read"],"inner"]],["COPY",["EXPR","read"],"outer"]],
+          "output": {"inner":7,"outer":7}
+        },
+        {
+          "name": "Shadowed and added definitions stay local",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["x",1,"keep",2]},["JGRAFT",{"expr":["x",3,"new",4]},["COPY",{"x":["EXPR","x"],"keep":["EXPR","keep"],"added":["EXPR","new"]},"inner"]],["COPY",{"x":["EXPR","x"],"keep":["EXPR","keep"]},"outer"],["JGRAFT",{},["COPY",["EXPR","x"],"sibling"]]],
+          "output": {"inner":{"x":3,"keep":2,"added":4},"outer":{"x":1,"keep":2},"sibling":1}
+        },
+        {
+          "name": "Three levels restore immediate parent definitions",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["x","outer"]},["JGRAFT",{"expr":["x","middle"]},["JGRAFT",{"expr":["x","inner"]},["COPY",["EXPR","x"],"inner"]],["COPY",["EXPR","x"],"middle"]],["COPY",["EXPR","x"],"outer"]],
+          "output": {"inner":"inner","middle":"middle","outer":"outer"}
+        },
+        {
+          "name": "Child definition does not leak to parent",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["JGRAFT",{"expr":["local",1]}],["COPY",["EXPR","local"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Child definition does not leak to sibling",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["JGRAFT",{"expr":["local",1]}],["JGRAFT",{},["COPY",["EXPR","local"],["NODE"]]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Inherited definition uses shadowed constants",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",1],"expr":["read",["CONST","x"]]},["JGRAFT",{"const":["x",2]},["COPY",["EXPR","read"],"inner"]],["COPY",["EXPR","read"],"outer"]],
+          "output": {"inner":2,"outer":1}
+        },
+        {
+          "name": "Inherited alias uses shadowed common expression",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["read",["EXPR","x"],"x",1]},["JGRAFT",{"expr":["x",2]},["COPY",["EXPR","read"],"inner"]],["COPY",["EXPR","read"],"outer"]],
+          "output": {"inner":2,"outer":1}
+        },
+        {
+          "name": "Inherited definition sees fresh child stash",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["read",["STASH"]]},["COPY",1,["STASH","outer"]],["JGRAFT",{},["COPY",["EXPR","read"],"initial"],["COPY",2,["STASH","inner"]],["COPY",["EXPR","read"],"inner"]],["COPY",["EXPR","read"],"outer"]],
+          "output": {"initial":{},"inner":{"inner":2},"outer":{"outer":1}}
+        },
+        {
+          "name": "Constant initializer freezes one invocation",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["read",["STASH","x"]]},["COPY",1,["STASH","x"]],["JGRAFT",{"const":["saved",["EXPR","read"]]},["COPY",2,["STASH","x"]],["COPY",{"constant":["CONST","saved"],"expression":["EXPR","read"]},"inner"]],["COPY",["EXPR","read"],"outer"]],
+          "output": {"inner":{"constant":1,"expression":2},"outer":1}
+        },
+        {
+          "name": "Separate constructed results are independent",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["template",{"list":[[{"n":1}]]}]},["COPY",["EXPR","template"],"first"],["COPY",2,["NODE","first","list",0,"n"]],["COPY",["EXPR","template"],"second"]],
+          "output": {"first":{"list":[{"n":2}]},"second":{"list":[{"n":1}]}}
+        },
+        {
+          "name": "Alias results are independent from the referenced data",
+          "input": {"source":{"n":1}},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["read",["NODE","source"]]},["COPY",["EXPR","read"],"first"],["COPY",2,["NODE","first","n"]],["COPY",["EXPR","read"],"second"]],
+          "output": {"source":{"n":1},"first":{"n":2},"second":{"n":1}}
+        },
+        {
+          "name": "Three namespace names are independent",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["x",1],"expr":["x",3]},["COPY",2,["STASH","x"]],["COPY",{"constant":["CONST","x"],"stash":["STASH","x"],"expression":["EXPR","x"]},["NODE"]]],
+          "output": {"constant":1,"stash":2,"expression":3}
+        }
+      ]
+    },
+    {
+      "name": "Common expression names and lookup",
+      "desc": "EXPR accepts exactly one value-context name, a string or integer coerced to string, and has no namespace-root or descendant-path form. Names are flat literal properties; a computed array name is invalid rather than a path expansion.",
+      "tests": [
+        {
+          "name": "Name \"\"",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["",{"n":7}]},["COPY",["EXPR",""],["NODE"]]],
+          "output": {"n":7}
+        },
+        {
+          "name": "Name \"a.b\"",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["a.b",{"n":7}]},["COPY",["EXPR","a.b"],["NODE"]]],
+          "output": {"n":7}
+        },
+        {
+          "name": "Name \"a/b\"",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["a/b",{"n":7}]},["COPY",["EXPR","a/b"],["NODE"]]],
+          "output": {"n":7}
+        },
+        {
+          "name": "Name \"__proto__\"",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["__proto__",{"n":7}]},["COPY",["EXPR","__proto__"],["NODE"]]],
+          "output": {"n":7},
+          "needProto": true
+        },
+        {
+          "name": "Name \"constructor\"",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["constructor",{"n":7}]},["COPY",["EXPR","constructor"],["NODE"]]],
+          "output": {"n":7}
+        },
+        {
+          "name": "Name \"hasOwnProperty\"",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["hasOwnProperty",{"n":7}]},["COPY",["EXPR","hasOwnProperty"],["NODE"]]],
+          "output": {"n":7}
+        },
+        {
+          "name": "Name \"toString\"",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["toString",{"n":7}]},["COPY",["EXPR","toString"],["NODE"]]],
+          "output": {"n":7}
+        },
+        {
+          "name": "Name \"valueOf\"",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["valueOf",{"n":7}]},["COPY",["EXPR","valueOf"],["NODE"]]],
+          "output": {"n":7}
+        },
+        {
+          "name": "Name \"prototype\"",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["prototype",{"n":7}]},["COPY",["EXPR","prototype"],["NODE"]]],
+          "output": {"n":7}
+        },
+        {
+          "name": "Name \"0\"",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["0",{"n":7}]},["COPY",["EXPR","0"],["NODE"]]],
+          "output": {"n":7}
+        },
+        {
+          "name": "Name \"-1\"",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["-1",{"n":7}]},["COPY",["EXPR","-1"],["NODE"]]],
+          "output": {"n":7}
+        },
+        {
+          "name": "Name \"1.5\"",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["1.5",{"n":7}]},["COPY",["EXPR","1.5"],["NODE"]]],
+          "output": {"n":7}
+        },
+        {
+          "name": "Name \"雪😀\"",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["雪😀",{"n":7}]},["COPY",["EXPR","雪😀"],["NODE"]]],
+          "output": {"n":7}
+        },
+        {
+          "name": "Name 0",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":[0,{"n":7}]},["COPY",["EXPR",0],["NODE"]]],
+          "output": {"n":7}
+        },
+        {
+          "name": "Name -1",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":[-1,{"n":7}]},["COPY",["EXPR",-1],["NODE"]]],
+          "output": {"n":7}
+        },
+        {
+          "name": "Name 17",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":[17,{"n":7}]},["COPY",["EXPR",17],["NODE"]]],
+          "output": {"n":7}
+        },
+        {
+          "name": "Integer and string names collide",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":[0,1,"0",2]},["COPY",["EXPR",0],["NODE"]]],
+          "output": 2
+        },
+        {
+          "name": "Negative name is not an array alias",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":[-1,3,0,4]},["COPY",["EXPR",-1],["NODE"]]],
+          "output": 3
+        },
+        {
+          "name": "Punctuation does not imply descent",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["a.b",7,"a",{"b":9}]},["COPY",["EXPR","a.b"],["NODE"]]],
+          "output": 7
+        },
+        {
+          "name": "Numeric expression identifier",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["value",7]},["COPY",[-5,"value"],["NODE"]]],
+          "output": 7
+        },
+        {
+          "name": "Computed name \"value\"",
+          "input": {"key":"value"},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["value",7,0,8,-1,9]},["COPY",["EXPR",["NODE","key"]],["NODE"]]],
+          "output": 7
+        },
+        {
+          "name": "Computed name 0",
+          "input": {"key":0},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["value",7,0,8,-1,9]},["COPY",["EXPR",["NODE","key"]],["NODE"]]],
+          "output": 8
+        },
+        {
+          "name": "Computed name -1",
+          "input": {"key":-1},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["value",7,0,8,-1,9]},["COPY",["EXPR",["NODE","key"]],["NODE"]]],
+          "output": 9
+        },
+        {
+          "name": "Constant supplies computed name",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"const":["name","value"],"expr":["value",7]},["COPY",["EXPR",["CONST","name"]],["NODE"]]],
+          "output": 7
+        },
+        {
+          "name": "Stash supplies computed name",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["value",7]},["COPY","value",["STASH","name"]],["COPY",["EXPR",["STASH","name"]],["NODE"]]],
+          "output": 7
+        },
+        {
+          "name": "Definition supplies another name",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["name","value","value",7]},["COPY",["EXPR",["EXPR","name"]],["NODE"]]],
+          "output": 7
+        },
+        {
+          "name": "Missing definition",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["EXPR","missing"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Absent host property constructor",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["EXPR","constructor"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Absent host property hasOwnProperty",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["EXPR","hasOwnProperty"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Absent host property toString",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["EXPR","toString"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid literal name null",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["value",7]},["COPY",["EXPR",null],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid computed name null",
+          "input": {"key":null},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["value",7]},["COPY",["EXPR",["NODE","key"]],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Invalid literal name false",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["value",7]},["COPY",["EXPR",false],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid computed name false",
+          "input": {"key":false},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["value",7]},["COPY",["EXPR",["NODE","key"]],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Invalid literal name true",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["value",7]},["COPY",["EXPR",true],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid computed name true",
+          "input": {"key":true},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["value",7]},["COPY",["EXPR",["NODE","key"]],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Invalid literal name 1.5",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["value",7]},["COPY",["EXPR",1.5],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid computed name 1.5",
+          "input": {"key":1.5},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["value",7]},["COPY",["EXPR",["NODE","key"]],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Invalid literal name {}",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["value",7]},["COPY",["EXPR",{}],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid computed name {}",
+          "input": {"key":{}},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["value",7]},["COPY",["EXPR",["NODE","key"]],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Invalid literal name []",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["value",7]},["COPY",["EXPR",[[]]],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid computed name []",
+          "input": {"key":[]},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["value",7]},["COPY",["EXPR",["NODE","key"]],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Invalid literal name [\"value\"]",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["value",7]},["COPY",["EXPR",[["value"]]],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid computed name [\"value\"]",
+          "input": {"key":["value"]},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["value",7]},["COPY",["EXPR",["NODE","key"]],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Missing input while computing name",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["EXPR",["NODE","missing"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "FAIL while computing name",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["EXPR",["FAIL"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "No root reference",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["value",7]},["COPY",["EXPR"],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Extra argument is not a descendant path",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["value",{"n":7}]},["COPY",["EXPR","value","n"],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Unknown name expression",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["EXPR",["UNKNOWN"]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        }
+      ]
+    },
+    {
+      "name": "Common expression declaration validation and recursion",
+      "desc": "Declaration shape is validated independently of invocation. Runtime failures are deferred until called; intrinsically malformed unused expression syntax may instead be diagnosed statically. Recursive expansion is legal syntax and must respect resource limits without requiring a particular recursion strategy or counter total.",
+      "tests": [
+        {
+          "name": "Invalid declaration list null",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":null}],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid declaration list false",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":false}],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid declaration list 0",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":0}],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid declaration list \"\"",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":""}],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid declaration list {}",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":{}}],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid declaration list [\"name\"]",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["name"]}],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid declaration list [\"name\",1,\"other\"]",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["name",1,"other"]}],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid declaration name null",
+          "input": {"name":"value"},
+          "jgraft": ["JGRAFT",{"v":1,"expr":[null,1]}],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid declaration name false",
+          "input": {"name":"value"},
+          "jgraft": ["JGRAFT",{"v":1,"expr":[false,1]}],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid declaration name true",
+          "input": {"name":"value"},
+          "jgraft": ["JGRAFT",{"v":1,"expr":[true,1]}],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid declaration name 1.5",
+          "input": {"name":"value"},
+          "jgraft": ["JGRAFT",{"v":1,"expr":[1.5,1]}],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid declaration name []",
+          "input": {"name":"value"},
+          "jgraft": ["JGRAFT",{"v":1,"expr":[[],1]}],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid declaration name {}",
+          "input": {"name":"value"},
+          "jgraft": ["JGRAFT",{"v":1,"expr":[{},1]}],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid declaration name [\"NODE\",\"name\"]",
+          "input": {"name":"value"},
+          "jgraft": ["JGRAFT",{"v":1,"expr":[["NODE","name"],1]}],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Unknown invoked operator",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["value",["UNKNOWN"]]},["COPY",["EXPR","value"],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Malformed invoked expression arity",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["value",["IS"]]},["COPY",["EXPR","value"],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Unused malformed syntax may be rejected statically",
+          "input": {"ok":1},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["unused",["UNKNOWN"]]}],
+          "output": {"ok":1},
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Unused direct recursion does not execute",
+          "input": {"ok":1},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["loop",["EXPR","loop"]]}],
+          "output": {"ok":1}
+        },
+        {
+          "name": "Unused mutual recursion does not execute",
+          "input": {"ok":1},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["a",["EXPR","b"],"b",["EXPR","a"]]}],
+          "output": {"ok":1}
+        },
+        {
+          "name": "Direct",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["loop",["EXPR","loop"]]},["COPY",["EXPR","loop"],["NODE"]]],
+          "errors": {"RESOURCE_LIMIT":true},
+          "limits": {"depth":32}
+        },
+        {
+          "name": "Mutual",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["loop",["EXPR","other"],"other",["EXPR","loop"]]},["COPY",["EXPR","loop"],["NODE"]]],
+          "errors": {"RESOURCE_LIMIT":true},
+          "limits": {"depth":32}
+        },
+        {
+          "name": "Repeated name replaces rather than captures previous definition",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["loop",1,"loop",["EXPR","loop"]]},["COPY",["EXPR","loop"],["NODE"]]],
+          "errors": {"RESOURCE_LIMIT":true},
+          "limits": {"depth":32}
+        },
+        {
+          "name": "Structural",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["loop",{"next":["EXPR","loop"]}]},["COPY",["EXPR","loop"],["NODE"]]],
+          "errors": {"RESOURCE_LIMIT":true},
+          "limits": {"depth":32}
+        }
+      ]
+    }
+  ]
+}
