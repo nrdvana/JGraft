@@ -1251,10 +1251,14 @@ or a literal object with a more elaborate specification:
     }
 
 The `split_spec` object must be literal, not value context, since it needs to
-be able to contain expressions without evaluating them.  Unknown properties and
-illegal property values count as `INVALID_OPERAND`.  If `sep` or `default` are
-expressions, match expressions are interpreted as regular expressions and any
-other expression gets evaluated immediately and must return a string.
+be able to contain expressions without evaluating them.  Unknown properties
+and illegal property values count as `INVALID_OPERAND`.  The `sep` parameter
+is interpreted in value context.  If the root is a match expression it is
+treated as a regular expression to be applied repeatedly when searching for
+separators, but otherwise it is evaluated immediately and must return a
+string.  If the `sep` parameter is a regular expression and `keep` is not
+used, the `default` parameter is required, otherwise it is ignored.
+It is also declared in value context, and must resolve to a string.
 
 The split operation iterates through the characters of the string looking for
 [the longest match](#regex-context) of the separator pattern.  If you specify
