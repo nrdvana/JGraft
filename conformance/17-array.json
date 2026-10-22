@@ -1,0 +1,2733 @@
+{
+  "version": 1,
+  "name": "ARRAY",
+  "desc": "Covers the ARRAY expression: array type checks, partial/exact length assertions, positive and negative subset offsets, end boundaries and missing nodes, inherited match modes, explicit sequence terms, nested-array consumption, captures, evaluated operands, and failure propagation. ARRAY does not initiate sequence context, and with element patterns it leaves an unmatched suffix permitted even under IS. Expected results are derived from the specification rather than implementation behavior.",
+  "tests": [
+    {
+      "name": "Array type checks",
+      "desc": "With no arguments ARRAY checks only whether the current node exists and is an array. No conversion from strings, objects, null, or booleans is implied.",
+      "tests": [
+        {
+          "name": "Empty array HAS",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Empty array IS",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Populated array HAS",
+          "input": [1,null,false,{},[]],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Populated array IS",
+          "input": [1,null,false,{},[]],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Nested arrays HAS",
+          "input": [[1],[2]],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Nested arrays IS",
+          "input": [[1],[2]],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Null HAS",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Null IS",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "False HAS",
+          "input": false,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "False IS",
+          "input": false,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "True HAS",
+          "input": true,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "True IS",
+          "input": true,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Zero HAS",
+          "input": 0,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Zero IS",
+          "input": 0,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Number HAS",
+          "input": 1.5,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Number IS",
+          "input": 1.5,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Empty string HAS",
+          "input": "",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Empty string IS",
+          "input": "",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "String HAS",
+          "input": "abc",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "String IS",
+          "input": "abc",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Empty object HAS",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Empty object IS",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Array-looking object HAS",
+          "input": {"0":"a","length":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Array-looking object IS",
+          "input": {"0":"a","length":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Missing property",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",{"missing":["ARRAY"]}],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Null property",
+          "input": {"value":null},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",{"value":["ARRAY"]}],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Empty array property",
+          "input": {"value":[]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",{"value":["ARRAY"]}],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Numeric opcode",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[7],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Boolean value result",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY"],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "MATCH accepts arrays",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["MATCH",["ARRAY"]]],
+          "output": [1]
+        },
+        {
+          "name": "MATCH rejects scalars",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["MATCH",["ARRAY"]]],
+          "errors": {"NO_MATCH":true}
+        }
+      ]
+    },
+    {
+      "name": "Length assertions",
+      "desc": "The one-argument form compares array length: HAS requires at least the supplied integer, while IS requires exactly it. Negative integers are valid operands; no array has a negative length, and every array has at least a negative number of elements.",
+      "tests": [
+        {
+          "name": "Array length 0",
+          "desc": "Length checks depend on the array length rather than the types or values of its elements.",
+          "tests": [
+            {
+              "name": "Requested -2 HAS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",-2]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Requested -2 IS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",-2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested -1 HAS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",-1]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Requested -1 IS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",-1]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 0 HAS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",0]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Requested 0 IS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",0]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Requested 1 HAS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",1]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 1 IS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",1]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 2 HAS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 2 IS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 3 HAS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",3]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 3 IS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",3]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 4 HAS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",4]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 4 IS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",4]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 5 HAS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",5]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 5 IS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",5]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 1000000000 HAS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",1000000000]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 1000000000 IS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",1000000000]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Array length 1",
+          "desc": "Length checks depend on the array length rather than the types or values of its elements.",
+          "tests": [
+            {
+              "name": "Requested -2 HAS",
+              "input": [0],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",-2]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Requested -2 IS",
+              "input": [0],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",-2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested -1 HAS",
+              "input": [0],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",-1]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Requested -1 IS",
+              "input": [0],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",-1]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 0 HAS",
+              "input": [0],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",0]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Requested 0 IS",
+              "input": [0],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",0]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 1 HAS",
+              "input": [0],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",1]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Requested 1 IS",
+              "input": [0],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",1]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Requested 2 HAS",
+              "input": [0],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 2 IS",
+              "input": [0],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 3 HAS",
+              "input": [0],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",3]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 3 IS",
+              "input": [0],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",3]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 4 HAS",
+              "input": [0],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",4]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 4 IS",
+              "input": [0],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",4]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 5 HAS",
+              "input": [0],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",5]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 5 IS",
+              "input": [0],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",5]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 1000000000 HAS",
+              "input": [0],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",1000000000]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 1000000000 IS",
+              "input": [0],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",1000000000]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Array length 2",
+          "desc": "Length checks depend on the array length rather than the types or values of its elements.",
+          "tests": [
+            {
+              "name": "Requested -2 HAS",
+              "input": [0,null],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",-2]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Requested -2 IS",
+              "input": [0,null],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",-2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested -1 HAS",
+              "input": [0,null],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",-1]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Requested -1 IS",
+              "input": [0,null],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",-1]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 0 HAS",
+              "input": [0,null],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",0]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Requested 0 IS",
+              "input": [0,null],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",0]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 1 HAS",
+              "input": [0,null],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",1]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Requested 1 IS",
+              "input": [0,null],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",1]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 2 HAS",
+              "input": [0,null],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",2]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Requested 2 IS",
+              "input": [0,null],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",2]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Requested 3 HAS",
+              "input": [0,null],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",3]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 3 IS",
+              "input": [0,null],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",3]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 4 HAS",
+              "input": [0,null],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",4]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 4 IS",
+              "input": [0,null],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",4]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 5 HAS",
+              "input": [0,null],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",5]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 5 IS",
+              "input": [0,null],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",5]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 1000000000 HAS",
+              "input": [0,null],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",1000000000]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 1000000000 IS",
+              "input": [0,null],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",1000000000]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Array length 3",
+          "desc": "Length checks depend on the array length rather than the types or values of its elements.",
+          "tests": [
+            {
+              "name": "Requested -2 HAS",
+              "input": [0,null,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",-2]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Requested -2 IS",
+              "input": [0,null,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",-2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested -1 HAS",
+              "input": [0,null,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",-1]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Requested -1 IS",
+              "input": [0,null,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",-1]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 0 HAS",
+              "input": [0,null,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",0]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Requested 0 IS",
+              "input": [0,null,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",0]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 1 HAS",
+              "input": [0,null,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",1]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Requested 1 IS",
+              "input": [0,null,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",1]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 2 HAS",
+              "input": [0,null,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",2]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Requested 2 IS",
+              "input": [0,null,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 3 HAS",
+              "input": [0,null,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",3]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Requested 3 IS",
+              "input": [0,null,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",3]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Requested 4 HAS",
+              "input": [0,null,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",4]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 4 IS",
+              "input": [0,null,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",4]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 5 HAS",
+              "input": [0,null,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",5]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 5 IS",
+              "input": [0,null,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",5]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 1000000000 HAS",
+              "input": [0,null,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",1000000000]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 1000000000 IS",
+              "input": [0,null,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",1000000000]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Array length 4",
+          "desc": "Length checks depend on the array length rather than the types or values of its elements.",
+          "tests": [
+            {
+              "name": "Requested -2 HAS",
+              "input": [0,null,2,null],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",-2]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Requested -2 IS",
+              "input": [0,null,2,null],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",-2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested -1 HAS",
+              "input": [0,null,2,null],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",-1]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Requested -1 IS",
+              "input": [0,null,2,null],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",-1]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 0 HAS",
+              "input": [0,null,2,null],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",0]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Requested 0 IS",
+              "input": [0,null,2,null],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",0]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 1 HAS",
+              "input": [0,null,2,null],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",1]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Requested 1 IS",
+              "input": [0,null,2,null],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",1]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 2 HAS",
+              "input": [0,null,2,null],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",2]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Requested 2 IS",
+              "input": [0,null,2,null],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 3 HAS",
+              "input": [0,null,2,null],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",3]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Requested 3 IS",
+              "input": [0,null,2,null],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",3]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 4 HAS",
+              "input": [0,null,2,null],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",4]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Requested 4 IS",
+              "input": [0,null,2,null],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",4]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Requested 5 HAS",
+              "input": [0,null,2,null],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",5]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 5 IS",
+              "input": [0,null,2,null],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",5]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 1000000000 HAS",
+              "input": [0,null,2,null],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",1000000000]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Requested 1000000000 IS",
+              "input": [0,null,2,null],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",1000000000]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Non-array null HAS",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",0]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Non-array null IS",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",0]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Non-array false HAS",
+          "input": false,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",0]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Non-array false IS",
+          "input": false,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",0]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Non-array 3 HAS",
+          "input": 3,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",0]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Non-array 3 IS",
+          "input": 3,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",0]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Non-array \"abc\" HAS",
+          "input": "abc",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",0]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Non-array \"abc\" IS",
+          "input": "abc",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",0]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Non-array {} HAS",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",0]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Non-array {} IS",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",0]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Non-array {\"0\":1,\"length\":1} HAS",
+          "input": {"0":1,"length":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",0]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Non-array {\"0\":1,\"length\":1} IS",
+          "input": {"0":1,"length":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",0]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Numeric opcode",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[7,2],["NODE"]]],
+          "output": true
+        }
+      ]
+    },
+    {
+      "name": "Subset offsets and literal elements",
+      "desc": "Offsets count from the start, or from the end when negative. Offsets outside [0,length] fail without errors; a position at length is a missing node rather than null. With patterns both HAS and IS permit an unmatched suffix.",
+      "tests": [
+        {
+          "name": "Input []",
+          "desc": "A single literal term is compared at the normalized offset; exact mode does not require matching the rest of the containing array.",
+          "tests": [
+            {
+              "name": "Offset -6 HAS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",-6,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset -6 IS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",-6,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset -4 HAS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",-4,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset -4 IS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",-4,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset -3 HAS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",-3,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset -3 IS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",-3,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset -2 HAS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",-2,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset -2 IS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",-2,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset -1 HAS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",-1,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset -1 IS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",-1,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 0 HAS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",0,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 0 IS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",0,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 1 HAS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",1,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 1 IS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",1,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 2 HAS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",2,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 2 IS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",2,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 3 HAS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",3,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 3 IS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",3,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 4 HAS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",4,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 4 IS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",4,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 5 HAS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",5,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 5 IS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",5,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 1000000000 HAS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",1000000000,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 1000000000 IS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",1000000000,2]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Input [2]",
+          "desc": "A single literal term is compared at the normalized offset; exact mode does not require matching the rest of the containing array.",
+          "tests": [
+            {
+              "name": "Offset -6 HAS",
+              "input": [2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",-6,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset -6 IS",
+              "input": [2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",-6,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset -4 HAS",
+              "input": [2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",-4,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset -4 IS",
+              "input": [2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",-4,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset -3 HAS",
+              "input": [2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",-3,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset -3 IS",
+              "input": [2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",-3,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset -2 HAS",
+              "input": [2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",-2,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset -2 IS",
+              "input": [2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",-2,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset -1 HAS",
+              "input": [2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",-1,2]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Offset -1 IS",
+              "input": [2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",-1,2]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Offset 0 HAS",
+              "input": [2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",0,2]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Offset 0 IS",
+              "input": [2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",0,2]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Offset 1 HAS",
+              "input": [2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",1,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 1 IS",
+              "input": [2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",1,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 2 HAS",
+              "input": [2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",2,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 2 IS",
+              "input": [2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",2,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 3 HAS",
+              "input": [2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",3,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 3 IS",
+              "input": [2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",3,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 4 HAS",
+              "input": [2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",4,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 4 IS",
+              "input": [2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",4,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 5 HAS",
+              "input": [2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",5,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 5 IS",
+              "input": [2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",5,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 1000000000 HAS",
+              "input": [2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",1000000000,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 1000000000 IS",
+              "input": [2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",1000000000,2]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Input [1,2]",
+          "desc": "A single literal term is compared at the normalized offset; exact mode does not require matching the rest of the containing array.",
+          "tests": [
+            {
+              "name": "Offset -6 HAS",
+              "input": [1,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",-6,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset -6 IS",
+              "input": [1,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",-6,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset -4 HAS",
+              "input": [1,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",-4,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset -4 IS",
+              "input": [1,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",-4,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset -3 HAS",
+              "input": [1,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",-3,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset -3 IS",
+              "input": [1,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",-3,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset -2 HAS",
+              "input": [1,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",-2,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset -2 IS",
+              "input": [1,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",-2,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset -1 HAS",
+              "input": [1,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",-1,2]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Offset -1 IS",
+              "input": [1,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",-1,2]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Offset 0 HAS",
+              "input": [1,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",0,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 0 IS",
+              "input": [1,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",0,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 1 HAS",
+              "input": [1,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",1,2]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Offset 1 IS",
+              "input": [1,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",1,2]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Offset 2 HAS",
+              "input": [1,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",2,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 2 IS",
+              "input": [1,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",2,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 3 HAS",
+              "input": [1,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",3,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 3 IS",
+              "input": [1,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",3,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 4 HAS",
+              "input": [1,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",4,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 4 IS",
+              "input": [1,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",4,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 5 HAS",
+              "input": [1,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",5,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 5 IS",
+              "input": [1,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",5,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 1000000000 HAS",
+              "input": [1,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",1000000000,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 1000000000 IS",
+              "input": [1,2],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",1000000000,2]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Input [1,2,3]",
+          "desc": "A single literal term is compared at the normalized offset; exact mode does not require matching the rest of the containing array.",
+          "tests": [
+            {
+              "name": "Offset -6 HAS",
+              "input": [1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",-6,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset -6 IS",
+              "input": [1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",-6,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset -4 HAS",
+              "input": [1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",-4,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset -4 IS",
+              "input": [1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",-4,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset -3 HAS",
+              "input": [1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",-3,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset -3 IS",
+              "input": [1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",-3,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset -2 HAS",
+              "input": [1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",-2,2]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Offset -2 IS",
+              "input": [1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",-2,2]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Offset -1 HAS",
+              "input": [1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",-1,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset -1 IS",
+              "input": [1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",-1,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 0 HAS",
+              "input": [1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",0,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 0 IS",
+              "input": [1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",0,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 1 HAS",
+              "input": [1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",1,2]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Offset 1 IS",
+              "input": [1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",1,2]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Offset 2 HAS",
+              "input": [1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",2,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 2 IS",
+              "input": [1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",2,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 3 HAS",
+              "input": [1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",3,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 3 IS",
+              "input": [1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",3,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 4 HAS",
+              "input": [1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",4,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 4 IS",
+              "input": [1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",4,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 5 HAS",
+              "input": [1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",5,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 5 IS",
+              "input": [1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",5,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 1000000000 HAS",
+              "input": [1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",1000000000,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 1000000000 IS",
+              "input": [1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",1000000000,2]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Input [0,1,2,3]",
+          "desc": "A single literal term is compared at the normalized offset; exact mode does not require matching the rest of the containing array.",
+          "tests": [
+            {
+              "name": "Offset -6 HAS",
+              "input": [0,1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",-6,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset -6 IS",
+              "input": [0,1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",-6,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset -4 HAS",
+              "input": [0,1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",-4,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset -4 IS",
+              "input": [0,1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",-4,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset -3 HAS",
+              "input": [0,1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",-3,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset -3 IS",
+              "input": [0,1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",-3,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset -2 HAS",
+              "input": [0,1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",-2,2]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Offset -2 IS",
+              "input": [0,1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",-2,2]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Offset -1 HAS",
+              "input": [0,1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",-1,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset -1 IS",
+              "input": [0,1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",-1,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 0 HAS",
+              "input": [0,1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",0,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 0 IS",
+              "input": [0,1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",0,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 1 HAS",
+              "input": [0,1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",1,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 1 IS",
+              "input": [0,1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",1,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 2 HAS",
+              "input": [0,1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",2,2]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Offset 2 IS",
+              "input": [0,1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",2,2]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Offset 3 HAS",
+              "input": [0,1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",3,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 3 IS",
+              "input": [0,1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",3,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 4 HAS",
+              "input": [0,1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",4,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 4 IS",
+              "input": [0,1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",4,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 5 HAS",
+              "input": [0,1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",5,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 5 IS",
+              "input": [0,1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",5,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 1000000000 HAS",
+              "input": [0,1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",1000000000,2]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Offset 1000000000 IS",
+              "input": [0,1,2,3],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",1000000000,2]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Several adjacent elements HAS",
+          "input": [9,"x","y","z",8],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",1,"x","y","z"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Several adjacent elements IS",
+          "input": [9,"x","y","z",8],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",1,"x","y","z"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Negative suffix offset HAS",
+          "input": [9,"x","y","z"],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",-3,"x","y","z"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Negative suffix offset IS",
+          "input": [9,"x","y","z"],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",-3,"x","y","z"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Negative offset is normalized once HAS",
+          "input": [0,1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",-2,2,3]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Negative offset is normalized once IS",
+          "input": [0,1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",-2,2,3]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Pattern runs past end HAS",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",1,2,3]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Pattern runs past end IS",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",1,2,3]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "No implicit search HAS",
+          "input": [0,1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",0,1,2]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "No implicit search IS",
+          "input": [0,1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",0,1,2]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Missing boundary is not null HAS",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",0,null]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Missing boundary is not null IS",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",0,null]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Existing null matches HAS",
+          "input": [null],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",0,null]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Existing null matches IS",
+          "input": [null],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",0,null]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Numeric opcode",
+          "input": [0,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[7,1,2],["NODE"]]],
+          "output": true
+        }
+      ]
+    },
+    {
+      "name": "End boundaries and missing elements",
+      "desc": "Patterns may probe the one missing position immediately after the final element. Offsets past that boundary cannot be matched even by a negative existence assertion or an empty sequence.",
+      "tests": [
+        {
+          "name": "End EXISTS 0 HAS",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",0,["EXISTS"]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "End EXISTS 0 IS",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",0,["EXISTS"]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "End negative EXISTS 0 HAS",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",0,["NONE",["EXISTS"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "End negative EXISTS 0 IS",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",0,["NONE",["EXISTS"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "End empty SEQ 0 HAS",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",0,["SEQ"]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "End empty SEQ 0 IS",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",0,["SEQ"]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Beyond end negative EXISTS 0 HAS",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",1,["NONE",["EXISTS"]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Beyond end negative EXISTS 0 IS",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",1,["NONE",["EXISTS"]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Beyond end empty SEQ 0 HAS",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",1,["SEQ"]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Beyond end empty SEQ 0 IS",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",1,["SEQ"]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "End EXISTS 1 HAS",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",1,["EXISTS"]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "End EXISTS 1 IS",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",1,["EXISTS"]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "End negative EXISTS 1 HAS",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",1,["NONE",["EXISTS"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "End negative EXISTS 1 IS",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",1,["NONE",["EXISTS"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "End empty SEQ 1 HAS",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",1,["SEQ"]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "End empty SEQ 1 IS",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",1,["SEQ"]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Beyond end negative EXISTS 1 HAS",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",2,["NONE",["EXISTS"]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Beyond end negative EXISTS 1 IS",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",2,["NONE",["EXISTS"]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Beyond end empty SEQ 1 HAS",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",2,["SEQ"]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Beyond end empty SEQ 1 IS",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",2,["SEQ"]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "End EXISTS 2 HAS",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",2,["EXISTS"]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "End EXISTS 2 IS",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",2,["EXISTS"]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "End negative EXISTS 2 HAS",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",2,["NONE",["EXISTS"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "End negative EXISTS 2 IS",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",2,["NONE",["EXISTS"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "End empty SEQ 2 HAS",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",2,["SEQ"]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "End empty SEQ 2 IS",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",2,["SEQ"]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Beyond end negative EXISTS 2 HAS",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",3,["NONE",["EXISTS"]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Beyond end negative EXISTS 2 IS",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",3,["NONE",["EXISTS"]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Beyond end empty SEQ 2 HAS",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",3,["SEQ"]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Beyond end empty SEQ 2 IS",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",3,["SEQ"]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Exactly negative length selects first element HAS",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",-2,1]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Exactly negative length selects first element IS",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",-2,1]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "More negative than length fails HAS",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",-3,["NONE",["EXISTS"]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "More negative than length fails IS",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",-3,["NONE",["EXISTS"]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Literal followed by missing end probe HAS",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",0,1,["NONE",["EXISTS"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Literal followed by missing end probe IS",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",0,1,["NONE",["EXISTS"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Two ordinary missing probes exceed boundary HAS",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",0,["NONE",["EXISTS"]],["NONE",["EXISTS"]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Two ordinary missing probes exceed boundary IS",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",0,["NONE",["EXISTS"]],["NONE",["EXISTS"]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Missing object property inside an element HAS",
+          "input": [{}],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",0,{"missing":["NONE",["EXISTS"]]}]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Missing object property inside an element IS",
+          "input": [{}],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",0,{"missing":["NONE",["EXISTS"]]}]],["NODE"]]],
+          "output": true
+        }
+      ]
+    },
+    {
+      "name": "Matching mode and structures",
+      "desc": "ARRAY preserves inherited HAS/IS mode within its element patterns, while always allowing a remaining suffix in the containing array. Nested ARRAY expressions start another array match, and explicit child comparisons may override matching mode.",
+      "tests": [
+        {
+          "name": "Object subset HAS",
+          "input": [{"a":1,"b":2},9],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",0,{"a":1}]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Object subset IS",
+          "input": [{"a":1,"b":2},9],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",0,{"a":1}]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Array prefix HAS",
+          "input": [[1,2],9],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",0,[[1]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Array prefix IS",
+          "input": [[1,2],9],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",0,[[1]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Equal object with ignored containing suffix HAS",
+          "input": [{"a":1},9],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",0,{"a":1}]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Equal object with ignored containing suffix IS",
+          "input": [{"a":1},9],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",0,{"a":1}]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Nested ARRAY with ignored suffix HAS",
+          "input": [[1,2],9],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",0,["ARRAY",0,1]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Nested ARRAY with ignored suffix IS",
+          "input": [[1,2],9],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",0,["ARRAY",0,1]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Nested ARRAY length inherits mode HAS",
+          "input": [[1,2],9],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",0,["ARRAY",1]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Nested ARRAY length inherits mode IS",
+          "input": [[1,2],9],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",0,["ARRAY",1]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Child HAS overrides exactness HAS",
+          "input": [{"a":1,"b":2},9],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",0,["HAS",{"a":1}]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Child HAS overrides exactness IS",
+          "input": [{"a":1,"b":2},9],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",0,["HAS",{"a":1}]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Child IS overrides partial matching HAS",
+          "input": [{"a":1,"b":2},9],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",0,["IS",{"a":1}]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Child IS overrides partial matching IS",
+          "input": [{"a":1,"b":2},9],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",0,["IS",{"a":1}]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Element strings are literal HAS",
+          "input": ["ab",9],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",0,"ab"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Element strings are literal IS",
+          "input": ["ab",9],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",0,"ab"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Literal operator-looking array HAS",
+          "input": [["EXISTS"],9],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",0,[["EXISTS"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Literal operator-looking array IS",
+          "input": [["EXISTS"],9],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",0,[["EXISTS"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Expression is an element predicate in a structural object",
+          "input": {"items":[1,2]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",{"items":["ARRAY",0,1]}],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Function-local value result",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","unused",1,["ARRAY",0,1]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Common expression expansion",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1,"expr":["pattern",["ARRAY",0,1]]},["COPY",["IS",["EXPR","pattern"]],["NODE"]]],
+          "output": true
+        }
+      ]
+    },
+    {
+      "name": "Sequence initialization and nested consumption",
+      "desc": "ARRAY starts with ordinary one-element predicates. SEQ terms can explicitly enable sequence behavior; an ARRAY inside a parent sequence consumes one nested array and starts a fresh context for its children.",
+      "tests": [
+        {
+          "name": "ANY without SEQ consumes one HAS",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",0,["ANY",1,["IS",9]],2]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "ANY without SEQ consumes one IS",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",0,["ANY",1,["IS",9]],2]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "NONE without SEQ consumes one HAS",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",0,["NONE",9],2]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "NONE without SEQ consumes one IS",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",0,["NONE",9],2]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Explicit SEQ consumes several HAS",
+          "input": [0,1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",1,["SEQ",1,2],3]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Explicit SEQ consumes several IS",
+          "input": [0,1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",1,["SEQ",1,2],3]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Explicit repetition HAS",
+          "input": [0,1,1,2,9],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",1,["SEQ",["REP",1,-1,1]],2]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Explicit repetition IS",
+          "input": [0,1,1,2,9],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",1,["SEQ",["REP",1,-1,1]],2]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Sequence alternatives backtrack HAS",
+          "input": [1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",0,["SEQ",["ANY",1,["SEQ",1,2]],3]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Sequence alternatives backtrack IS",
+          "input": [1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",0,["SEQ",["ANY",1,["SEQ",1,2]],3]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Empty SEQ does not consume HAS",
+          "input": [0,1,9],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",1,["SEQ"],1]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Empty SEQ does not consume IS",
+          "input": [0,1,9],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",1,["SEQ"],1]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Ordinary literal after SEQ consumes one HAS",
+          "input": [1,2,3,9],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",0,["SEQ",1,2],3]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Ordinary literal after SEQ consumes one IS",
+          "input": [1,2,3,9],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",0,["SEQ",1,2],3]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "START is absolute array start HAS",
+          "input": [0,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",1,["SEQ",["START"],1]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "START is absolute array start IS",
+          "input": [0,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",1,["SEQ",["START"],1]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "END is absolute array end HAS",
+          "input": [0,1,9],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",1,["SEQ",1,["END"]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "END is absolute array end IS",
+          "input": [0,1,9],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",1,["SEQ",1,["END"]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "END can match the real boundary HAS",
+          "input": [0,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ARRAY",1,["SEQ",1,["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "END can match the real boundary IS",
+          "input": [0,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",1,["SEQ",1,["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Parent sequence consumes one nested array",
+          "input": [[1,2],3],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",[[["SEQ",["ARRAY",0,1],3]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Child NONE does not inherit parent sequence",
+          "input": [[1,2],3],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",[[["SEQ",["ARRAY",0,["NONE",9],2],3]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Child REP cannot inherit parent sequence",
+          "input": [[1],3],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",[[["SEQ",["ARRAY",0,["REP",1,0,1]],3]]]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "REP requires an explicit child SEQ",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",0,["REP",1,0,1]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "ARRAY does not match virtual string characters",
+          "input": "ab",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["STR",["ARRAY"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Regex type mismatch cannot reinterpret an array as characters",
+          "input": "ab",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["STR",["ARRAY",0,97]],["NODE"]]],
+          "output": false
+        }
+      ]
+    },
+    {
+      "name": "Evaluated operands and references",
+      "desc": "The length/offset expression evaluates on the current array before selecting elements. References and common expressions may supply integers or literal patterns without becoming target aliases or being evaluated as syntax twice.",
+      "tests": [
+        {
+          "name": "Length from current node",
+          "input": [2,9],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",["NODE",0]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Offset from current node",
+          "input": [1,7,8],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",["NODE",0],7],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Negative offset from current node",
+          "input": [-1,7,8],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",["NODE",0],8],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LENGTH supplies exact length",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ARRAY",["LENGTH"]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "CONST supplies offset",
+          "input": [0,7,8],
+          "jgraft": ["JGRAFT",{"v":1,"const":["offset",1]},["COPY",["ARRAY",["CONST","offset"],7],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "STASH supplies length",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",2,["STASH","length"]],["COPY",["IS",["ARRAY",["STASH","length"]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "EXPR supplies offset",
+          "input": [0,7],
+          "jgraft": ["JGRAFT",{"v":1,"expr":["offset",1]},["COPY",["ARRAY",["EXPR","offset"],7],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Reference result remains literal data",
+          "input": [["IS",7]],
+          "jgraft": ["JGRAFT",{"v":1,"const":["pattern",[["IS",7]]]},["COPY",["ARRAY",0,["CONST","pattern"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Reference pattern sees the positioned element",
+          "input": [7],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",0,["NODE"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Alternate target supplies current array",
+          "input": {"items":[1,2]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["NODE","items"],["ARRAY",0,1]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Computed offset sees alternate array",
+          "input": {"items":[1,7]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["NODE","items"],["ARRAY",["NODE",0],7]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Nested pattern gets each positioned current node",
+          "input": [{"n":7},{"n":8}],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",0,{"n":["NODE"]},{"n":["NODE"]}],["NODE"]]],
+          "output": true
+        }
+      ]
+    },
+    {
+      "name": "Captures and action scope",
+      "desc": "Named sequences among ARRAY patterns report absolute offsets in the matched array and retain paths into nested input. Captures are visible to MATCH subactions; ANY/NONE/REP retain their usual suppression behavior.",
+      "tests": [
+        {
+          "name": "Absolute capture bounds",
+          "input": [9,1,1,2,7],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["ARRAY",1,["SEQMAX","body",["REP",0,-1,1]],2]],["NODE"]]],
+          "output": {"body":{"path":[],"ofs":1,"len":2,"lim":3}}
+        },
+        {
+          "name": "Exact mode still allows uncaptured suffix",
+          "input": [9,1,1,2,7],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",["ARRAY",1,["SEQMAX","body",["REP",0,-1,1]],2]]],["NODE"]]],
+          "output": {"body":{"path":[],"ofs":1,"len":2,"lim":3}}
+        },
+        {
+          "name": "Nested array capture path",
+          "input": {"items":[9,1,1,2,7]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",{"items":["ARRAY",1,["SEQMAX","body",["REP",0,-1,1]],2]}],["NODE"]]],
+          "output": {"body":{"path":["items"],"ofs":1,"len":2,"lim":3}}
+        },
+        {
+          "name": "Negative offset capture",
+          "input": [9,1,1,2,7],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["ARRAY",-4,["SEQMIN","body",["REP",2,0,1]]]],["NODE"]]],
+          "output": {"body":{"path":[],"ofs":1,"len":2,"lim":3}}
+        },
+        {
+          "name": "Root sequence preference is retained",
+          "input": [1,1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["ARRAY",0,["SEQMAX","body",["REP",0,-1,1]]]],["NODE"]]],
+          "output": {"body":{"path":[],"ofs":0,"len":2,"lim":2}}
+        },
+        {
+          "name": "Suppressed capture name is not evaluated",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["ANY",["ARRAY",0,["SEQMAX",["FAIL"],1]]]],["NODE"]]],
+          "output": {}
+        },
+        {
+          "name": "Name evaluation sees a missing current node",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["ARRAY",0,["SEQMAX",["NODE"],1]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "MATCH exposes capture and SLICE",
+          "input": [9,1,1,2,7],
+          "jgraft": ["JGRAFT",{"v":1},["MATCH",["ARRAY",1,["SEQMAX","body",["REP",0,-1,1]],2],["COPY",["SLICE",["CAP","body"]],["STASH","slice"]]],["COPY",["STASH","slice"],["NODE"]]],
+          "output": [1,1]
+        },
+        {
+          "name": "Subaction failure propagates",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["MATCH",["ARRAY",0,1],["COPY",["FAIL"],["NODE"]]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Own arbitrary object key",
+          "input": [{"__proto__":7}],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",0,{"__proto__":7}],["NODE"]]],
+          "output": true,
+          "needProto": true
+        },
+        {
+          "name": "Lone surrogate data",
+          "input": ["\ud800"],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",0,"\ud800"],["NODE"]]],
+          "output": true,
+          "needLoneSurrogate": true
+        }
+      ]
+    },
+    {
+      "name": "Invalid operands, laziness, and syntax",
+      "desc": "Noninteger computed arguments are recoverable operand failures and become false inside matches. Intrinsically invalid literal arguments may be diagnosed as INVALID_GRAFT. Target failures, intentional FAIL, and offset bounds do not become syntax errors. Fatal syntax and resource errors remain fatal.",
+      "tests": [
+        {
+          "name": "Literal length null",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",null],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Literal offset null",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",null,1],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Computed length null",
+          "input": [null],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",["NODE",0]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Computed offset null",
+          "input": [null,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",["NODE",0],1],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Literal length false",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",false],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Literal offset false",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",false,1],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Computed length false",
+          "input": [false],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",["NODE",0]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Computed offset false",
+          "input": [false,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",["NODE",0],1],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Literal length true",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",true],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Literal offset true",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",true,1],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Computed length true",
+          "input": [true],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",["NODE",0]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Computed offset true",
+          "input": [true,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",["NODE",0],1],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Literal length 1.5",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",1.5],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Literal offset 1.5",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",1.5,1],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Computed length 1.5",
+          "input": [1.5],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",["NODE",0]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Computed offset 1.5",
+          "input": [1.5,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",["NODE",0],1],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Literal length \"1\"",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY","1"],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Literal offset \"1\"",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY","1",1],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Computed length \"1\"",
+          "input": ["1"],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",["NODE",0]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Computed offset \"1\"",
+          "input": ["1",1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",["NODE",0],1],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Literal length {}",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",{}],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Literal offset {}",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",{},1],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Computed length {}",
+          "input": [{}],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",["NODE",0]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Computed offset {}",
+          "input": [{},1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",["NODE",0],1],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Literal length []",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",[[]]],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Literal offset []",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",[[]],1],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Computed length []",
+          "input": [[]],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",["NODE",0]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Computed offset []",
+          "input": [[],1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",["NODE",0],1],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Literal length [1]",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",[[1]]],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Literal offset [1]",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",[[1]],1],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Computed length [1]",
+          "input": [[1]],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",["NODE",0]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Computed offset [1]",
+          "input": [[1],1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",["NODE",0],1],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Missing length source",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",["NODE","missing"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Missing offset source",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",["NODE","missing"],1],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Intentional FAIL operand",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",["FAIL"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Intentional FAIL pattern",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",0,["FAIL"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Out-of-bounds skips pattern",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",2,["FAIL"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Mismatching earlier pattern skips later failure",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",0,9,["FAIL"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "False bounds do not validate unused syntax at runtime",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",2,["UNKNOWN"]],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Unknown offset expression",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",["UNKNOWN"]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Unknown pattern expression",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",0,["UNKNOWN"]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Unknown nested pattern syntax",
+          "input": [{}],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ARRAY",0,{"x":["UNKNOWN"]}],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid syntax escapes ANY",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ANY",["ARRAY",0,["UNKNOWN"]],true],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Recursive operand cannot be swallowed",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1,"expr":["loop",["EXPR","loop"]]},["COPY",["ARRAY",["EXPR","loop"]],["NODE"]]],
+          "errors": {"RESOURCE_LIMIT":true},
+          "limits": {"depth":24}
+        }
+      ]
+    },
+    {
+      "name": "Pending array edits",
+      "desc": "During MOVE, deleted array slots are missing although length and unshifted indices remain unchanged until the action completes. ARRAY length/type checks do not enumerate elements. The equivalent leading EXISTS checks must reject missing prefix elements; exact-mode trailing EXISTS checks reject missing suffix elements, while explicit patterns may match a missing slot. To expose a probe inside MOVE, the final destination selector is arranged to be false (the valid append alias) when the expected boolean is obtained; true would be invalid.",
+      "tests": [
+        {
+          "name": "Type check does not enumerate",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",["NODE",0],null,null,["STASH","probe",["NONE",["ARRAY"]]]],["COPY",["STASH","probe"],["NODE"]]],
+          "output": [null]
+        },
+        {
+          "name": "Length check retains unshifted length",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",["NODE",0],null,null,["STASH","probe",["NONE",["IS",["ARRAY",3]]]]],["COPY",["STASH","probe"],["NODE"]]],
+          "output": [null]
+        },
+        {
+          "name": "Skipped prefix must exist",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",["NODE",0],null,null,["STASH","probe",["ARRAY",2,3]]],["COPY",["STASH","probe"],["NODE"]]],
+          "output": [null]
+        },
+        {
+          "name": "Partial mode ignores deleted suffix",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",["NODE",2],null,null,["STASH","probe",["NONE",["HAS",["ARRAY",0,1]]]]],["COPY",["STASH","probe"],["NODE"]]],
+          "output": [null]
+        },
+        {
+          "name": "Exact mode requires existing suffix",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",["NODE",2],null,null,["STASH","probe",["IS",["ARRAY",0,1]]]],["COPY",["STASH","probe"],["NODE"]]],
+          "output": [null]
+        },
+        {
+          "name": "Explicit missing-slot pattern may match",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",["NODE",1],null,null,["STASH","probe",["NONE",["IS",["ARRAY",0,1,["NONE",["EXISTS"]],3]]]]],["COPY",["STASH","probe"],["NODE"]]],
+          "output": [null]
+        },
+        {
+          "name": "Deleted slot is not a literal null",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",["NODE",0],null,null,["STASH","probe",["ARRAY",0,null]]],["COPY",["STASH","probe"],["NODE"]]],
+          "output": [null]
+        },
+        {
+          "name": "Boundary probe still requires prefix",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["MOVE",["NODE",0],null,null,["STASH","probe",["ARRAY",3,["NONE",["EXISTS"]]]]],["COPY",["STASH","probe"],["NODE"]]],
+          "output": [null]
+        }
+      ]
+    }
+  ]
+}
