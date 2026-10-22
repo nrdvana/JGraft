@@ -1,0 +1,4567 @@
+{
+  "version": 1,
+  "name": "Scalar casts and type checks",
+  "desc": "Covers CASTBOOL, CASTNUM, CASTSTR, BOOL, NUM, and STR. Casts accept current-node or explicit value operands and enforce their specified conversions without host truthiness, loose numeric parsing, or object coercion. CASTNUM requires a whole JSON number token without surrounding whitespace; valid numeric text outside the supported host range (including nonzero underflow to zero) is UNSUPPORTED_GRAFT. BOOL/NUM/STR cover type checks, NUM inclusive/null bounds, and STR interface edges; regex algorithms and capture combinations remain in the sequence/regex suites. Fractional CASTSTR spellings are checked by round trip rather than fixed cross-platform formatting. Native Date and non-JSON number extensions require implementation-specific tests.",
+  "tests": [
+    {
+      "name": "CASTBOOL accepted values",
+      "desc": "Only booleans, numeric zero/one, and the exact lowercase strings true/false can be converted. False results remain successful values rather than failed expression evaluation.",
+      "tests": [
+        {
+          "name": "False",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": false,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL"],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",false],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":false},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",["NODE","source"]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "True",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": true,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL"],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",true],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":true},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",["NODE","source"]],["NODE"]]],
+              "output": true
+            }
+          ]
+        },
+        {
+          "name": "Zero",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": 0,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL"],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",0],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":0},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",["NODE","source"]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "One",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": 1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL"],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",1],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":1},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",["NODE","source"]],["NODE"]]],
+              "output": true
+            }
+          ]
+        },
+        {
+          "name": "False string",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "false",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL"],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL","false"],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":"false"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",["NODE","source"]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "True string",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "true",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL"],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL","true"],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":"true"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",["NODE","source"]],["NODE"]]],
+              "output": true
+            }
+          ]
+        },
+        {
+          "name": "Numeric opcode",
+          "input": "true",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[68],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "False output can be matched",
+          "input": "false",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["CASTBOOL"],false],["NODE"]]],
+          "output": true
+        }
+      ]
+    },
+    {
+      "name": "CASTBOOL rejected values",
+      "desc": "There is no generic truthiness, case folding, whitespace trimming, numeric-string conversion, or array/object unwrapping.",
+      "tests": [
+        {
+          "name": "null",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",null],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":null},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "-1",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": -1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",-1],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":-1},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "2",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": 2,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",2],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":2},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "0.5",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": 0.5,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",0.5],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":0.5},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "\"\"",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",""],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":""},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "\"0\"",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "0",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL","0"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":"0"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "\"1\"",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "1",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL","1"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":"1"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "\"TRUE\"",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "TRUE",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL","TRUE"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":"TRUE"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "\"FALSE\"",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "FALSE",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL","FALSE"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":"FALSE"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "\"True\"",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "True",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL","True"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":"True"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "\"False\"",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "False",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL","False"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":"False"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "\" true\"",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": " true",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL"," true"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":" true"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "\"true \"",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "true ",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL","true "],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":"true "},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "\"false\\n\"",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "false\n",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL","false\n"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":"false\n"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "\"null\"",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "null",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL","null"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":"null"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "\"yes\"",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "yes",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL","yes"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":"yes"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "\"no\"",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "no",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL","no"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":"no"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "[]",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",[[]]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":[]},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "[0]",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": [0],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",[[0]]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":[0]},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "[1]",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": [1],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",[[1]]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":[1]},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "{}",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",{}],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":{}},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "{\"value\":1}",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": {"value":1},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",{"value":1}],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":{"value":1}},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "CASTNUM numeric values and JSON tokens",
+      "desc": "Numbers pass through. String parsing accepts precisely JSON number syntax: optional leading minus, canonical integer part, optional nonempty fraction, and optional exponent with optional sign and nonempty digits.",
+      "tests": [
+        {
+          "name": "Numeric 0",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": 0,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+              "output": 0
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",0],["NODE"]]],
+              "output": 0
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":0},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+              "output": 0
+            }
+          ]
+        },
+        {
+          "name": "Numeric 1",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": 1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+              "output": 1
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",1],["NODE"]]],
+              "output": 1
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":1},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+              "output": 1
+            }
+          ]
+        },
+        {
+          "name": "Numeric -1",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": -1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+              "output": -1
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",-1],["NODE"]]],
+              "output": -1
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":-1},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+              "output": -1
+            }
+          ]
+        },
+        {
+          "name": "Numeric 17",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": 17,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+              "output": 17
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",17],["NODE"]]],
+              "output": 17
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":17},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+              "output": 17
+            }
+          ]
+        },
+        {
+          "name": "Numeric -99",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": -99,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+              "output": -99
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",-99],["NODE"]]],
+              "output": -99
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":-99},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+              "output": -99
+            }
+          ]
+        },
+        {
+          "name": "Numeric 0.5",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": 0.5,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+              "output": 0.5
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",0.5],["NODE"]]],
+              "output": 0.5
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":0.5},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+              "output": 0.5
+            }
+          ]
+        },
+        {
+          "name": "Numeric -2.5",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": -2.5,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+              "output": -2.5
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",-2.5],["NODE"]]],
+              "output": -2.5
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":-2.5},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+              "output": -2.5
+            }
+          ]
+        },
+        {
+          "name": "Numeric 1e-7",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": 1e-7,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+              "output": 1e-7
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",1e-7],["NODE"]]],
+              "output": 1e-7
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":1e-7},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+              "output": 1e-7
+            }
+          ]
+        },
+        {
+          "name": "Numeric 100000000000000000000",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": 100000000000000000000,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+              "output": 100000000000000000000
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",100000000000000000000],["NODE"]]],
+              "output": 100000000000000000000
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":100000000000000000000},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+              "output": 100000000000000000000
+            }
+          ]
+        },
+        {
+          "name": "Token 0",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "0",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+              "output": 0
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM","0"],["NODE"]]],
+              "output": 0
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":"0"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+              "output": 0
+            }
+          ]
+        },
+        {
+          "name": "Token -0",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "-0",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+              "output": 0
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM","-0"],["NODE"]]],
+              "output": 0
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":"-0"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+              "output": 0
+            }
+          ]
+        },
+        {
+          "name": "Token 1",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "1",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+              "output": 1
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM","1"],["NODE"]]],
+              "output": 1
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":"1"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+              "output": 1
+            }
+          ]
+        },
+        {
+          "name": "Token -1",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "-1",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+              "output": -1
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM","-1"],["NODE"]]],
+              "output": -1
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":"-1"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+              "output": -1
+            }
+          ]
+        },
+        {
+          "name": "Token 12345",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "12345",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+              "output": 12345
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM","12345"],["NODE"]]],
+              "output": 12345
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":"12345"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+              "output": 12345
+            }
+          ]
+        },
+        {
+          "name": "Token 0.0",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "0.0",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+              "output": 0
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM","0.0"],["NODE"]]],
+              "output": 0
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":"0.0"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+              "output": 0
+            }
+          ]
+        },
+        {
+          "name": "Token -0.0",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "-0.0",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+              "output": 0
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM","-0.0"],["NODE"]]],
+              "output": 0
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":"-0.0"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+              "output": 0
+            }
+          ]
+        },
+        {
+          "name": "Token 1.0",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "1.0",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+              "output": 1
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM","1.0"],["NODE"]]],
+              "output": 1
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":"1.0"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+              "output": 1
+            }
+          ]
+        },
+        {
+          "name": "Token 0.125",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "0.125",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+              "output": 0.125
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM","0.125"],["NODE"]]],
+              "output": 0.125
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":"0.125"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+              "output": 0.125
+            }
+          ]
+        },
+        {
+          "name": "Token -2.50",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "-2.50",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+              "output": -2.5
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM","-2.50"],["NODE"]]],
+              "output": -2.5
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":"-2.50"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+              "output": -2.5
+            }
+          ]
+        },
+        {
+          "name": "Token 1e0",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "1e0",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+              "output": 1
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM","1e0"],["NODE"]]],
+              "output": 1
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":"1e0"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+              "output": 1
+            }
+          ]
+        },
+        {
+          "name": "Token 1E0",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "1E0",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+              "output": 1
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM","1E0"],["NODE"]]],
+              "output": 1
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":"1E0"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+              "output": 1
+            }
+          ]
+        },
+        {
+          "name": "Token 1e+2",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "1e+2",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+              "output": 100
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM","1e+2"],["NODE"]]],
+              "output": 100
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":"1e+2"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+              "output": 100
+            }
+          ]
+        },
+        {
+          "name": "Token 1E-2",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "1E-2",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+              "output": 0.01
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM","1E-2"],["NODE"]]],
+              "output": 0.01
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":"1E-2"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+              "output": 0.01
+            }
+          ]
+        },
+        {
+          "name": "Token -1.25e+2",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "-1.25e+2",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+              "output": -125
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM","-1.25e+2"],["NODE"]]],
+              "output": -125
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":"-1.25e+2"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+              "output": -125
+            }
+          ]
+        },
+        {
+          "name": "Token 1e0002",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "1e0002",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+              "output": 100
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM","1e0002"],["NODE"]]],
+              "output": 100
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":"1e0002"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+              "output": 100
+            }
+          ]
+        },
+        {
+          "name": "Token 1.0E+0002",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "1.0E+0002",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+              "output": 100
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM","1.0E+0002"],["NODE"]]],
+              "output": 100
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":"1.0E+0002"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+              "output": 100
+            }
+          ]
+        },
+        {
+          "name": "Token 0e-9999",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "0e-9999",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+              "output": 0
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM","0e-9999"],["NODE"]]],
+              "output": 0
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":"0e-9999"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+              "output": 0
+            }
+          ]
+        },
+        {
+          "name": "Token 0e9999",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "0e9999",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+              "output": 0
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM","0e9999"],["NODE"]]],
+              "output": 0
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":"0e9999"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+              "output": 0
+            }
+          ]
+        },
+        {
+          "name": "Token -0e9999",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "-0e9999",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+              "output": 0
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM","-0e9999"],["NODE"]]],
+              "output": 0
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":"-0e9999"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+              "output": 0
+            }
+          ]
+        },
+        {
+          "name": "Token 9007199254740991",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "9007199254740991",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+              "output": 9007199254740991
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM","9007199254740991"],["NODE"]]],
+              "output": 9007199254740991
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":"9007199254740991"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+              "output": 9007199254740991
+            }
+          ]
+        },
+        {
+          "name": "Token 1e20",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "1e20",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+              "output": 100000000000000000000
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM","1e20"],["NODE"]]],
+              "output": 100000000000000000000
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":"1e20"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+              "output": 100000000000000000000
+            }
+          ]
+        },
+        {
+          "name": "Token 1e21",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "1e21",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+              "output": 1e+21
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM","1e21"],["NODE"]]],
+              "output": 1e+21
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":"1e21"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+              "output": 1e+21
+            }
+          ]
+        },
+        {
+          "name": "Numeric opcode",
+          "input": "12.5",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[69],["NODE"]]],
+          "output": 12.5
+        }
+      ]
+    },
+    {
+      "name": "CASTNUM malformed tokens and wrong types",
+      "desc": "The entire string must be one number token. Host-specific hexadecimal/octal/binary prefixes, nonfinite names, leading plus/zeros, incomplete components, whitespace, and trailing characters are invalid targets rather than partial parses.",
+      "tests": [
+        {
+          "name": "Type null",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",null],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":null},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "Type false",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": false,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",false],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":false},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "Type true",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": true,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",true],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":true},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "Type {}",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",{}],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":{}},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "Type []",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",[[]]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":[]},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "Type [1]",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": [1],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",[[1]]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":[1]},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "Type [\"2\"]",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": ["2"],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",[["2"]]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":["2"]},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "Type {\"value\":\"1\"}",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": {"value":"1"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",{"value":"1"}],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":{"value":"1"}},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "\"\"",
+          "input": "",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \"\"",
+          "input": {"source":""},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\" \"",
+          "input": " ",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \" \"",
+          "input": {"source":" "},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\"\\t\"",
+          "input": "\t",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \"\\t\"",
+          "input": {"source":"\t"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\"\\n\"",
+          "input": "\n",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \"\\n\"",
+          "input": {"source":"\n"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\" 1\"",
+          "input": " 1",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \" 1\"",
+          "input": {"source":" 1"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\"1 \"",
+          "input": "1 ",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \"1 \"",
+          "input": {"source":"1 "},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\"1\\n\"",
+          "input": "1\n",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \"1\\n\"",
+          "input": {"source":"1\n"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\"1\\r\"",
+          "input": "1\r",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \"1\\r\"",
+          "input": {"source":"1\r"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\"1\\r\\n\"",
+          "input": "1\r\n",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \"1\\r\\n\"",
+          "input": {"source":"1\r\n"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\"1 \"",
+          "input": "1 ",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \"1 \"",
+          "input": {"source":"1 "},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\"1 \"",
+          "input": "1 ",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \"1 \"",
+          "input": {"source":"1 "},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\" 1\"",
+          "input": " 1",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \" 1\"",
+          "input": {"source":" 1"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\"1 \"",
+          "input": "1 ",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \"1 \"",
+          "input": {"source":"1 "},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\"+1\"",
+          "input": "+1",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \"+1\"",
+          "input": {"source":"+1"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\"01\"",
+          "input": "01",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \"01\"",
+          "input": {"source":"01"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\"00\"",
+          "input": "00",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \"00\"",
+          "input": {"source":"00"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\"-01\"",
+          "input": "-01",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \"-01\"",
+          "input": {"source":"-01"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\"1.\"",
+          "input": "1.",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \"1.\"",
+          "input": {"source":"1."},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\".1\"",
+          "input": ".1",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \".1\"",
+          "input": {"source":".1"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\"-.1\"",
+          "input": "-.1",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \"-.1\"",
+          "input": {"source":"-.1"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\"1e\"",
+          "input": "1e",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \"1e\"",
+          "input": {"source":"1e"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\"1e+\"",
+          "input": "1e+",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \"1e+\"",
+          "input": {"source":"1e+"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\"1e-\"",
+          "input": "1e-",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \"1e-\"",
+          "input": {"source":"1e-"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\"1e1.5\"",
+          "input": "1e1.5",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \"1e1.5\"",
+          "input": {"source":"1e1.5"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\"1e 2\"",
+          "input": "1e 2",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \"1e 2\"",
+          "input": {"source":"1e 2"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\"1 2\"",
+          "input": "1 2",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \"1 2\"",
+          "input": {"source":"1 2"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\"1x\"",
+          "input": "1x",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \"1x\"",
+          "input": {"source":"1x"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\"1\\u0000\"",
+          "input": "1\u0000",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \"1\\u0000\"",
+          "input": {"source":"1\u0000"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\"0x10\"",
+          "input": "0x10",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \"0x10\"",
+          "input": {"source":"0x10"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\"0Xff\"",
+          "input": "0Xff",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \"0Xff\"",
+          "input": {"source":"0Xff"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\"0o10\"",
+          "input": "0o10",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \"0o10\"",
+          "input": {"source":"0o10"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\"0b10\"",
+          "input": "0b10",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \"0b10\"",
+          "input": {"source":"0b10"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\"NaN\"",
+          "input": "NaN",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \"NaN\"",
+          "input": {"source":"NaN"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\"Infinity\"",
+          "input": "Infinity",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \"Infinity\"",
+          "input": {"source":"Infinity"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\"-Infinity\"",
+          "input": "-Infinity",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \"-Infinity\"",
+          "input": {"source":"-Infinity"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\"null\"",
+          "input": "null",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \"null\"",
+          "input": {"source":"null"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\"true\"",
+          "input": "true",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \"true\"",
+          "input": {"source":"true"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\"false\"",
+          "input": "false",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \"false\"",
+          "input": {"source":"false"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\"[1]\"",
+          "input": "[1]",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \"[1]\"",
+          "input": {"source":"[1]"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\"{\\\"n\\\":1}\"",
+          "input": "{\"n\":1}",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \"{\\\"n\\\":1}\"",
+          "input": {"source":"{\"n\":1}"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\"1,2\"",
+          "input": "1,2",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \"1,2\"",
+          "input": {"source":"1,2"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\"--1\"",
+          "input": "--1",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \"--1\"",
+          "input": {"source":"--1"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "\"+-1\"",
+          "input": "+-1",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Computed \"+-1\"",
+          "input": {"source":"+-1"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Unicode/non-JSON whitespace \"١\"",
+          "input": "١",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Unicode/non-JSON whitespace \"１\"",
+          "input": "１",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Unicode/non-JSON whitespace \"﻿1\"",
+          "input": "﻿1",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Unicode/non-JSON whitespace \"1\\u000b\"",
+          "input": "1\u000b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        }
+      ]
+    },
+    {
+      "name": "CASTNUM range and fatal host limits",
+      "desc": "Valid tokens may exceed the implementation numeric range. Implementations that can represent these values succeed; otherwise UNSUPPORTED_GRAFT must propagate through match probes, including alternatives and negation. Malformed tokens remain INVALID_TARGET regardless of an overflowing-looking prefix. The same rule applies to nonzero values too small for the host to retain; zero mantissas with extreme exponents are still zero.",
+      "tests": [
+        {
+          "name": "1e400",
+          "input": "1e400",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["CASTNUM"],["NUM"]],["NODE"]]],
+          "output": true,
+          "errors": {"UNSUPPORTED_GRAFT":true}
+        },
+        {
+          "name": "-1e400",
+          "input": "-1e400",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["CASTNUM"],["NUM"]],["NODE"]]],
+          "output": true,
+          "errors": {"UNSUPPORTED_GRAFT":true}
+        },
+        {
+          "name": "1.25e+400",
+          "input": "1.25e+400",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["CASTNUM"],["NUM"]],["NODE"]]],
+          "output": true,
+          "errors": {"UNSUPPORTED_GRAFT":true}
+        },
+        {
+          "name": "9e999999",
+          "input": "9e999999",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["CASTNUM"],["NUM"]],["NODE"]]],
+          "output": true,
+          "errors": {"UNSUPPORTED_GRAFT":true}
+        },
+        {
+          "name": "ANY cannot hide unsupported range",
+          "input": "1e400",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ANY",["IS",["CASTNUM"],["NUM"]],true],["NODE"]]],
+          "output": true,
+          "errors": {"UNSUPPORTED_GRAFT":true}
+        },
+        {
+          "name": "NONE cannot hide unsupported range",
+          "input": "1e400",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NONE",["IS",["CASTNUM"],["NUM"]]],["NODE"]]],
+          "output": false,
+          "errors": {"UNSUPPORTED_GRAFT":true}
+        },
+        {
+          "name": "Malformed \"1e400x\"",
+          "input": "1e400x",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Malformed \"1e400\\n\"",
+          "input": "1e400\n",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Underflow 1e-400",
+          "input": "1e-400",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["CASTNUM"],0],["NODE"]]],
+          "output": false,
+          "errors": {"UNSUPPORTED_GRAFT":true}
+        },
+        {
+          "name": "Underflow -1e-400",
+          "input": "-1e-400",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["CASTNUM"],0],["NODE"]]],
+          "output": false,
+          "errors": {"UNSUPPORTED_GRAFT":true}
+        },
+        {
+          "name": "Underflow 1e-999999",
+          "input": "1e-999999",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["CASTNUM"],0],["NODE"]]],
+          "output": false,
+          "errors": {"UNSUPPORTED_GRAFT":true}
+        }
+      ]
+    },
+    {
+      "name": "CASTSTR permitted scalar conversions",
+      "desc": "Strings pass through verbatim and booleans use lowercase spellings. Integers use decimal digits without exponent notation, including large integers that host default stringification writes exponentially.",
+      "tests": [
+        {
+          "name": "String \"\"",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR"],["NODE"]]],
+              "output": ""
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",""],["NODE"]]],
+              "output": ""
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":""},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["NODE","source"]],["NODE"]]],
+              "output": ""
+            }
+          ]
+        },
+        {
+          "name": "String \"true\"",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "true",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR"],["NODE"]]],
+              "output": "true"
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR","true"],["NODE"]]],
+              "output": "true"
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":"true"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["NODE","source"]],["NODE"]]],
+              "output": "true"
+            }
+          ]
+        },
+        {
+          "name": "String \" false \"",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": " false ",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR"],["NODE"]]],
+              "output": " false "
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR"," false "],["NODE"]]],
+              "output": " false "
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":" false "},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["NODE","source"]],["NODE"]]],
+              "output": " false "
+            }
+          ]
+        },
+        {
+          "name": "String \"\\n\\t\"",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "\n\t",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR"],["NODE"]]],
+              "output": "\n\t"
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR","\n\t"],["NODE"]]],
+              "output": "\n\t"
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":"\n\t"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["NODE","source"]],["NODE"]]],
+              "output": "\n\t"
+            }
+          ]
+        },
+        {
+          "name": "String \"a😀é\"",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "a😀é",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR"],["NODE"]]],
+              "output": "a😀é"
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR","a😀é"],["NODE"]]],
+              "output": "a😀é"
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":"a😀é"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["NODE","source"]],["NODE"]]],
+              "output": "a😀é"
+            }
+          ]
+        },
+        {
+          "name": "String \"12e3\"",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": "12e3",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR"],["NODE"]]],
+              "output": "12e3"
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR","12e3"],["NODE"]]],
+              "output": "12e3"
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":"12e3"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["NODE","source"]],["NODE"]]],
+              "output": "12e3"
+            }
+          ]
+        },
+        {
+          "name": "Scalar false",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": false,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR"],["NODE"]]],
+              "output": "false"
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",false],["NODE"]]],
+              "output": "false"
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":false},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["NODE","source"]],["NODE"]]],
+              "output": "false"
+            }
+          ]
+        },
+        {
+          "name": "Scalar true",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": true,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR"],["NODE"]]],
+              "output": "true"
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",true],["NODE"]]],
+              "output": "true"
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":true},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["NODE","source"]],["NODE"]]],
+              "output": "true"
+            }
+          ]
+        },
+        {
+          "name": "Scalar 0",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": 0,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR"],["NODE"]]],
+              "output": "0"
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",0],["NODE"]]],
+              "output": "0"
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":0},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["NODE","source"]],["NODE"]]],
+              "output": "0"
+            }
+          ]
+        },
+        {
+          "name": "Scalar 1",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": 1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR"],["NODE"]]],
+              "output": "1"
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",1],["NODE"]]],
+              "output": "1"
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":1},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["NODE","source"]],["NODE"]]],
+              "output": "1"
+            }
+          ]
+        },
+        {
+          "name": "Scalar -1",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": -1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR"],["NODE"]]],
+              "output": "-1"
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",-1],["NODE"]]],
+              "output": "-1"
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":-1},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["NODE","source"]],["NODE"]]],
+              "output": "-1"
+            }
+          ]
+        },
+        {
+          "name": "Scalar 123456789",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": 123456789,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR"],["NODE"]]],
+              "output": "123456789"
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",123456789],["NODE"]]],
+              "output": "123456789"
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":123456789},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["NODE","source"]],["NODE"]]],
+              "output": "123456789"
+            }
+          ]
+        },
+        {
+          "name": "Scalar 100000000000000000000",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": 100000000000000000000,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR"],["NODE"]]],
+              "output": "100000000000000000000"
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",100000000000000000000],["NODE"]]],
+              "output": "100000000000000000000"
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":100000000000000000000},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["NODE","source"]],["NODE"]]],
+              "output": "100000000000000000000"
+            }
+          ]
+        },
+        {
+          "name": "Scalar 1e+21",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": 1e+21,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR"],["NODE"]]],
+              "output": "1000000000000000000000"
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",1e+21],["NODE"]]],
+              "output": "1000000000000000000000"
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":1e+21},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["NODE","source"]],["NODE"]]],
+              "output": "1000000000000000000000"
+            }
+          ]
+        },
+        {
+          "name": "Scalar -1e+21",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": -1e+21,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR"],["NODE"]]],
+              "output": "-1000000000000000000000"
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",-1e+21],["NODE"]]],
+              "output": "-1000000000000000000000"
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":-1e+21},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["NODE","source"]],["NODE"]]],
+              "output": "-1000000000000000000000"
+            }
+          ]
+        },
+        {
+          "name": "Scalar 1.25e+21",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": 1.25e+21,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR"],["NODE"]]],
+              "output": "1250000000000000000000"
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",1.25e+21],["NODE"]]],
+              "output": "1250000000000000000000"
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":1.25e+21},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["NODE","source"]],["NODE"]]],
+              "output": "1250000000000000000000"
+            }
+          ]
+        },
+        {
+          "name": "Fraction round trip 0.125",
+          "input": 0.125,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["CASTSTR"]],["NODE"]]],
+          "output": 0.125
+        },
+        {
+          "name": "Fraction round trip -2.5",
+          "input": -2.5,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["CASTSTR"]],["NODE"]]],
+          "output": -2.5
+        },
+        {
+          "name": "Fraction round trip 1e-7",
+          "input": 1e-7,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["CASTSTR"]],["NODE"]]],
+          "output": 1e-7
+        },
+        {
+          "name": "Fraction round trip 1.23456789",
+          "input": 1.23456789,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["CASTSTR"]],["NODE"]]],
+          "output": 1.23456789
+        },
+        {
+          "name": "Fraction result is a string",
+          "input": 0.125,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["CASTSTR"],["STR"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Numeric opcode",
+          "input": false,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[70],["NODE"]]],
+          "output": "false"
+        },
+        {
+          "name": "Lone surrogate remains unchanged",
+          "input": "a\ud800b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR"],["NODE"]]],
+          "output": "a\ud800b",
+          "needLoneSurrogate": true
+        }
+      ]
+    },
+    {
+      "name": "CASTSTR rejected values",
+      "desc": "Null, objects, and arrays cannot stringify. User data resembling expressions or host coercion methods must not be interpreted or invoked.",
+      "tests": [
+        {
+          "name": "null",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",null],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":null},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "{}",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",{}],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":{}},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "[]",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",[[]]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":[]},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "[1]",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": [1],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",[[1]]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":[1]},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "[\"a\"]",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": ["a"],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",[["a"]]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":["a"]},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        },
+        {
+          "name": "{\"toString\":\"x\",\"valueOf\":2,\"toJSON\":true}",
+          "desc": "Current-node and explicit operands have the same conversion rules; an explicit reference returns data without interpreting it as expression syntax.",
+          "tests": [
+            {
+              "name": "Current node",
+              "input": {"toString":"x","valueOf":2,"toJSON":true},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR"],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit literal",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",{"toString":"x","valueOf":2,"toJSON":true}],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Explicit reference",
+              "input": {"source":{"toString":"x","valueOf":2,"toJSON":true}},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["NODE","source"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "BOOL NUM STR type checks",
+      "desc": "These are strict type predicates. False is a boolean, zero is numeric, and the empty string is a string; arrays and objects never coerce. HAS and IS do not change scalar type tests.",
+      "tests": [
+        {
+          "name": "Null",
+          "desc": "Type checks return boolean values and preserve scalar type distinctions in both partial and exact context.",
+          "tests": [
+            {
+              "name": "BOOL HAS",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["BOOL"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "BOOL IS",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["BOOL"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "NUM HAS",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["NUM"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "NUM IS",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["NUM"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "STR HAS",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["STR"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "STR IS",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR"]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "False",
+          "desc": "Type checks return boolean values and preserve scalar type distinctions in both partial and exact context.",
+          "tests": [
+            {
+              "name": "BOOL HAS",
+              "input": false,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["BOOL"]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "BOOL IS",
+              "input": false,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["BOOL"]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "NUM HAS",
+              "input": false,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["NUM"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "NUM IS",
+              "input": false,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["NUM"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "STR HAS",
+              "input": false,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["STR"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "STR IS",
+              "input": false,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR"]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "True",
+          "desc": "Type checks return boolean values and preserve scalar type distinctions in both partial and exact context.",
+          "tests": [
+            {
+              "name": "BOOL HAS",
+              "input": true,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["BOOL"]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "BOOL IS",
+              "input": true,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["BOOL"]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "NUM HAS",
+              "input": true,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["NUM"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "NUM IS",
+              "input": true,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["NUM"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "STR HAS",
+              "input": true,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["STR"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "STR IS",
+              "input": true,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR"]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Zero",
+          "desc": "Type checks return boolean values and preserve scalar type distinctions in both partial and exact context.",
+          "tests": [
+            {
+              "name": "BOOL HAS",
+              "input": 0,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["BOOL"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "BOOL IS",
+              "input": 0,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["BOOL"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "NUM HAS",
+              "input": 0,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["NUM"]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "NUM IS",
+              "input": 0,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["NUM"]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "STR HAS",
+              "input": 0,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["STR"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "STR IS",
+              "input": 0,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR"]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Negative integer",
+          "desc": "Type checks return boolean values and preserve scalar type distinctions in both partial and exact context.",
+          "tests": [
+            {
+              "name": "BOOL HAS",
+              "input": -7,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["BOOL"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "BOOL IS",
+              "input": -7,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["BOOL"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "NUM HAS",
+              "input": -7,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["NUM"]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "NUM IS",
+              "input": -7,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["NUM"]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "STR HAS",
+              "input": -7,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["STR"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "STR IS",
+              "input": -7,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR"]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Fraction",
+          "desc": "Type checks return boolean values and preserve scalar type distinctions in both partial and exact context.",
+          "tests": [
+            {
+              "name": "BOOL HAS",
+              "input": 1.25,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["BOOL"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "BOOL IS",
+              "input": 1.25,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["BOOL"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "NUM HAS",
+              "input": 1.25,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["NUM"]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "NUM IS",
+              "input": 1.25,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["NUM"]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "STR HAS",
+              "input": 1.25,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["STR"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "STR IS",
+              "input": 1.25,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR"]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Empty string",
+          "desc": "Type checks return boolean values and preserve scalar type distinctions in both partial and exact context.",
+          "tests": [
+            {
+              "name": "BOOL HAS",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["BOOL"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "BOOL IS",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["BOOL"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "NUM HAS",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["NUM"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "NUM IS",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["NUM"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "STR HAS",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["STR"]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "STR IS",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR"]],["NODE"]]],
+              "output": true
+            }
+          ]
+        },
+        {
+          "name": "String",
+          "desc": "Type checks return boolean values and preserve scalar type distinctions in both partial and exact context.",
+          "tests": [
+            {
+              "name": "BOOL HAS",
+              "input": "abc",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["BOOL"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "BOOL IS",
+              "input": "abc",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["BOOL"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "NUM HAS",
+              "input": "abc",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["NUM"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "NUM IS",
+              "input": "abc",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["NUM"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "STR HAS",
+              "input": "abc",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["STR"]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "STR IS",
+              "input": "abc",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR"]],["NODE"]]],
+              "output": true
+            }
+          ]
+        },
+        {
+          "name": "Empty object",
+          "desc": "Type checks return boolean values and preserve scalar type distinctions in both partial and exact context.",
+          "tests": [
+            {
+              "name": "BOOL HAS",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["BOOL"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "BOOL IS",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["BOOL"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "NUM HAS",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["NUM"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "NUM IS",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["NUM"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "STR HAS",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["STR"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "STR IS",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR"]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Array-looking object",
+          "desc": "Type checks return boolean values and preserve scalar type distinctions in both partial and exact context.",
+          "tests": [
+            {
+              "name": "BOOL HAS",
+              "input": {"0":1,"length":1},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["BOOL"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "BOOL IS",
+              "input": {"0":1,"length":1},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["BOOL"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "NUM HAS",
+              "input": {"0":1,"length":1},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["NUM"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "NUM IS",
+              "input": {"0":1,"length":1},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["NUM"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "STR HAS",
+              "input": {"0":1,"length":1},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["STR"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "STR IS",
+              "input": {"0":1,"length":1},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR"]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Empty array",
+          "desc": "Type checks return boolean values and preserve scalar type distinctions in both partial and exact context.",
+          "tests": [
+            {
+              "name": "BOOL HAS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["BOOL"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "BOOL IS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["BOOL"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "NUM HAS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["NUM"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "NUM IS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["NUM"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "STR HAS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["STR"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "STR IS",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR"]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Array",
+          "desc": "Type checks return boolean values and preserve scalar type distinctions in both partial and exact context.",
+          "tests": [
+            {
+              "name": "BOOL HAS",
+              "input": [1],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["BOOL"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "BOOL IS",
+              "input": [1],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["BOOL"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "NUM HAS",
+              "input": [1],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["NUM"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "NUM IS",
+              "input": [1],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["NUM"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "STR HAS",
+              "input": [1],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["STR"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "STR IS",
+              "input": [1],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR"]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Expression-looking array",
+          "desc": "Type checks return boolean values and preserve scalar type distinctions in both partial and exact context.",
+          "tests": [
+            {
+              "name": "BOOL HAS",
+              "input": ["FAIL"],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["BOOL"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "BOOL IS",
+              "input": ["FAIL"],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["BOOL"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "NUM HAS",
+              "input": ["FAIL"],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["NUM"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "NUM IS",
+              "input": ["FAIL"],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["NUM"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "STR HAS",
+              "input": ["FAIL"],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["STR"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "STR IS",
+              "input": ["FAIL"],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR"]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "BOOL missing property",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",{"missing":["BOOL"]}],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "BOOL current node missing at array end",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[["BOOL"]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "BOOL alternate target",
+          "input": {"value":false},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["NODE","value"],["BOOL"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "NUM missing property",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",{"missing":["NUM"]}],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "NUM current node missing at array end",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[["NUM"]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "NUM alternate target",
+          "input": {"value":0},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["NODE","value"],["NUM"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "STR missing property",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",{"missing":["STR"]}],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "STR current node missing at array end",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[["STR"]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "STR alternate target",
+          "input": {"value":""},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["NODE","value"],["STR"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "BOOL numeric opcode",
+          "input": false,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[10],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "NUM numeric opcode",
+          "input": 0,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[9],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "STR numeric opcode",
+          "input": "",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[8],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "BOOL common expression",
+          "input": false,
+          "jgraft": ["JGRAFT",{"v":1,"expr":["predicate",["BOOL"]]},["COPY",["IS",["EXPR","predicate"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "NUM common expression",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1,"expr":["predicate",["NUM",0,2]]},["COPY",["IS",["EXPR","predicate"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "NUM common expression on a virtual codepoint",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1,"expr":["predicate",["NUM",97,97]]},["COPY",["STR",["EXPR","predicate"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "BOOL common expression rejects virtual codepoints",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1,"expr":["predicate",["BOOL"]]},["COPY",["STR",["EXPR","predicate"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Scalar type predicates consume individual array elements",
+          "input": [1,false,""],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",[[["SEQ",["NUM",0,2],["BOOL"],["STR"]]]]],["NODE"]]],
+          "output": true
+        }
+      ]
+    },
+    {
+      "name": "NUM inclusive and omitted bounds",
+      "desc": "Both bounds are value-context operands. A missing or null bound omits its comparison; finite numeric bounds are inclusive and, when both exist, min must not exceed max.",
+      "tests": [
+        {
+          "name": "No bounds",
+          "desc": "All scalar numbers are compared without coercion or range rounding; HAS and IS apply the same numeric range.",
+          "tests": [
+            {
+              "name": "Value -2",
+              "input": -2,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM"],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Value -1",
+              "input": -1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM"],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Value -0.5",
+              "input": -0.5,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM"],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Value 0",
+              "input": 0,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM"],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Value 0.5",
+              "input": 0.5,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM"],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Value 1",
+              "input": 1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM"],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Value 2",
+              "input": 2,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM"],["NODE"]]],
+              "output": true
+            }
+          ]
+        },
+        {
+          "name": "Null minimum",
+          "desc": "All scalar numbers are compared without coercion or range rounding; HAS and IS apply the same numeric range.",
+          "tests": [
+            {
+              "name": "Value -2",
+              "input": -2,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",null],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Value -1",
+              "input": -1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",null],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Value -0.5",
+              "input": -0.5,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",null],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Value 0",
+              "input": 0,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",null],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Value 0.5",
+              "input": 0.5,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",null],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Value 1",
+              "input": 1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",null],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Value 2",
+              "input": 2,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",null],["NODE"]]],
+              "output": true
+            }
+          ]
+        },
+        {
+          "name": "Both null",
+          "desc": "All scalar numbers are compared without coercion or range rounding; HAS and IS apply the same numeric range.",
+          "tests": [
+            {
+              "name": "Value -2",
+              "input": -2,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",null,null],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Value -1",
+              "input": -1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",null,null],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Value -0.5",
+              "input": -0.5,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",null,null],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Value 0",
+              "input": 0,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",null,null],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Value 0.5",
+              "input": 0.5,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",null,null],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Value 1",
+              "input": 1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",null,null],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Value 2",
+              "input": 2,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",null,null],["NODE"]]],
+              "output": true
+            }
+          ]
+        },
+        {
+          "name": "Minimum zero",
+          "desc": "All scalar numbers are compared without coercion or range rounding; HAS and IS apply the same numeric range.",
+          "tests": [
+            {
+              "name": "Value -2",
+              "input": -2,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",0],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Value -1",
+              "input": -1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",0],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Value -0.5",
+              "input": -0.5,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",0],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Value 0",
+              "input": 0,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",0],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Value 0.5",
+              "input": 0.5,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",0],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Value 1",
+              "input": 1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",0],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Value 2",
+              "input": 2,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",0],["NODE"]]],
+              "output": true
+            }
+          ]
+        },
+        {
+          "name": "Minimum zero and null maximum",
+          "desc": "All scalar numbers are compared without coercion or range rounding; HAS and IS apply the same numeric range.",
+          "tests": [
+            {
+              "name": "Value -2",
+              "input": -2,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",0,null],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Value -1",
+              "input": -1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",0,null],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Value -0.5",
+              "input": -0.5,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",0,null],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Value 0",
+              "input": 0,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",0,null],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Value 0.5",
+              "input": 0.5,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",0,null],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Value 1",
+              "input": 1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",0,null],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Value 2",
+              "input": 2,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",0,null],["NODE"]]],
+              "output": true
+            }
+          ]
+        },
+        {
+          "name": "Maximum zero",
+          "desc": "All scalar numbers are compared without coercion or range rounding; HAS and IS apply the same numeric range.",
+          "tests": [
+            {
+              "name": "Value -2",
+              "input": -2,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",null,0],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Value -1",
+              "input": -1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",null,0],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Value -0.5",
+              "input": -0.5,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",null,0],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Value 0",
+              "input": 0,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",null,0],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Value 0.5",
+              "input": 0.5,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",null,0],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Value 1",
+              "input": 1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",null,0],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Value 2",
+              "input": 2,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",null,0],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Range minus one to one",
+          "desc": "All scalar numbers are compared without coercion or range rounding; HAS and IS apply the same numeric range.",
+          "tests": [
+            {
+              "name": "Value -2",
+              "input": -2,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",-1,1],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Value -1",
+              "input": -1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",-1,1],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Value -0.5",
+              "input": -0.5,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",-1,1],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Value 0",
+              "input": 0,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",-1,1],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Value 0.5",
+              "input": 0.5,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",-1,1],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Value 1",
+              "input": 1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",-1,1],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Value 2",
+              "input": 2,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",-1,1],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Equal bounds",
+          "desc": "All scalar numbers are compared without coercion or range rounding; HAS and IS apply the same numeric range.",
+          "tests": [
+            {
+              "name": "Value -2",
+              "input": -2,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",1,1],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Value -1",
+              "input": -1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",1,1],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Value -0.5",
+              "input": -0.5,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",1,1],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Value 0",
+              "input": 0,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",1,1],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Value 0.5",
+              "input": 0.5,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",1,1],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Value 1",
+              "input": 1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",1,1],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Value 2",
+              "input": 2,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",1,1],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Fractional bounds",
+          "desc": "All scalar numbers are compared without coercion or range rounding; HAS and IS apply the same numeric range.",
+          "tests": [
+            {
+              "name": "Value -2",
+              "input": -2,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",-0.5,0.5],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Value -1",
+              "input": -1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",-0.5,0.5],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Value -0.5",
+              "input": -0.5,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",-0.5,0.5],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Value 0",
+              "input": 0,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",-0.5,0.5],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Value 0.5",
+              "input": 0.5,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",-0.5,0.5],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Value 1",
+              "input": 1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",-0.5,0.5],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Value 2",
+              "input": 2,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",-0.5,0.5],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "HAS uses the same inclusive range",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["NUM",1,1]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "IS uses the same inclusive range",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["NUM",1,1]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Numeric zero is not an omitted bound",
+          "input": -1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",0,null],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Scalar strings are not numeric",
+          "input": "1",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",0,2],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Nested value supplies both bounds",
+          "input": {"n":2,"min":1,"max":3},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","min",["NODE","min"],"max",["NODE","max"],["IS",["NODE","n"],["NUM",["TEMP","min"],["TEMP","max"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "CONST supplies bounds",
+          "input": 2,
+          "jgraft": ["JGRAFT",{"v":1,"const":["min",1,"max",3]},["COPY",["NUM",["CONST","min"],["CONST","max"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "STASH supplies bounds",
+          "input": 2,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",1,["STASH","min"]],["COPY",3,["STASH","max"]],["COPY",["NUM",["STASH","min"],["STASH","max"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Bound expression sees current number",
+          "input": 2,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",["NODE"],["NODE"]],["NODE"]]],
+          "output": true
+        }
+      ]
+    },
+    {
+      "name": "NUM invalid bounds and type-check syntax",
+      "desc": "Invalid range operands are trapped as false matches; intrinsically invalid literals may instead be rejected statically. Incorrect expression arity and malformed expression syntax are fatal.",
+      "tests": [
+        {
+          "name": "Literal minimum false",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",false],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Literal maximum false",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",null,false],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Computed minimum false",
+          "input": {"n":1,"bound":false},
+          "jgraft": ["JGRAFT",{"v":1,"const":["bound",["NODE","bound"]]},["COPY",["IS",["NODE","n"],["NUM",["CONST","bound"]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Computed maximum false",
+          "input": {"n":1,"bound":false},
+          "jgraft": ["JGRAFT",{"v":1,"const":["bound",["NODE","bound"]]},["COPY",["IS",["NODE","n"],["NUM",null,["CONST","bound"]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Literal minimum true",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",true],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Literal maximum true",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",null,true],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Computed minimum true",
+          "input": {"n":1,"bound":true},
+          "jgraft": ["JGRAFT",{"v":1,"const":["bound",["NODE","bound"]]},["COPY",["IS",["NODE","n"],["NUM",["CONST","bound"]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Computed maximum true",
+          "input": {"n":1,"bound":true},
+          "jgraft": ["JGRAFT",{"v":1,"const":["bound",["NODE","bound"]]},["COPY",["IS",["NODE","n"],["NUM",null,["CONST","bound"]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Literal minimum \"0\"",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM","0"],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Literal maximum \"0\"",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",null,"0"],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Computed minimum \"0\"",
+          "input": {"n":1,"bound":"0"},
+          "jgraft": ["JGRAFT",{"v":1,"const":["bound",["NODE","bound"]]},["COPY",["IS",["NODE","n"],["NUM",["CONST","bound"]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Computed maximum \"0\"",
+          "input": {"n":1,"bound":"0"},
+          "jgraft": ["JGRAFT",{"v":1,"const":["bound",["NODE","bound"]]},["COPY",["IS",["NODE","n"],["NUM",null,["CONST","bound"]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Literal minimum {}",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",{}],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Literal maximum {}",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",null,{}],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Computed minimum {}",
+          "input": {"n":1,"bound":{}},
+          "jgraft": ["JGRAFT",{"v":1,"const":["bound",["NODE","bound"]]},["COPY",["IS",["NODE","n"],["NUM",["CONST","bound"]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Computed maximum {}",
+          "input": {"n":1,"bound":{}},
+          "jgraft": ["JGRAFT",{"v":1,"const":["bound",["NODE","bound"]]},["COPY",["IS",["NODE","n"],["NUM",null,["CONST","bound"]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Literal minimum []",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",[[]]],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Literal maximum []",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",null,[[]]],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Computed minimum []",
+          "input": {"n":1,"bound":[]},
+          "jgraft": ["JGRAFT",{"v":1,"const":["bound",["NODE","bound"]]},["COPY",["IS",["NODE","n"],["NUM",["CONST","bound"]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Computed maximum []",
+          "input": {"n":1,"bound":[]},
+          "jgraft": ["JGRAFT",{"v":1,"const":["bound",["NODE","bound"]]},["COPY",["IS",["NODE","n"],["NUM",null,["CONST","bound"]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Literal minimum [0]",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",[[0]]],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Literal maximum [0]",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",null,[[0]]],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Computed minimum [0]",
+          "input": {"n":1,"bound":[0]},
+          "jgraft": ["JGRAFT",{"v":1,"const":["bound",["NODE","bound"]]},["COPY",["IS",["NODE","n"],["NUM",["CONST","bound"]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Computed maximum [0]",
+          "input": {"n":1,"bound":[0]},
+          "jgraft": ["JGRAFT",{"v":1,"const":["bound",["NODE","bound"]]},["COPY",["IS",["NODE","n"],["NUM",null,["CONST","bound"]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Reversed literal bounds",
+          "input": 2,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",3,1],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reversed computed bounds",
+          "input": {"n":2,"min":3,"max":1},
+          "jgraft": ["JGRAFT",{"v":1,"const":["min",["NODE","min"],"max",["NODE","max"]]},["COPY",["IS",["NODE","n"],["NUM",["CONST","min"],["CONST","max"]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Missing bound",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",["NODE","missing"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "FAIL bound",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",["FAIL"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Wrong target can skip a FAIL bound",
+          "input": "x",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",["FAIL"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Arity [\"BOOL\",true]",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["BOOL",true],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Arity [\"NUM\",0,1,2]",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",0,1,2],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Arity [\"STR\",\"a\",\"b\"]",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["STR","a","b"],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Malformed minimum syntax",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",["UNKNOWN"]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Malformed maximum syntax",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NUM",null,["UNKNOWN"]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        }
+      ]
+    },
+    {
+      "name": "STR interface edges",
+      "desc": "Type-only checks, literal unanchored matching, empty patterns, and operand validation belong here. Repetition, alternatives, sequence resolution, and regex capture matrices remain in their dedicated suites.",
+      "tests": [
+        {
+          "name": "Unanchored literal",
+          "input": "prefix-middle-suffix",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["STR","middle"],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Literal punctuation is not host regex syntax",
+          "input": "abc",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["STR","a.*"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Empty literal matches empty string",
+          "input": "",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["STR",""],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Empty literal matches nonempty string",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["STR",""],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Non-string does not evaluate runtime regex failure",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["STR",["FAIL"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Regex FAIL becomes no match",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["STR",["FAIL"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Unknown regex syntax is fatal",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["STR",["UNKNOWN"]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Alternate target type check",
+          "input": {"text":""},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["NODE","text"],["STR"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Unicode is a string",
+          "input": "😀",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["STR"],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "NUM tests virtual codepoints",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["STR",["NUM",97,97]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "BOOL rejects virtual codepoints",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["STR",["BOOL"]],["NODE"]]],
+          "output": false
+        }
+      ]
+    },
+    {
+      "name": "Cast operands, scopes, matching, and failures",
+      "desc": "Casts evaluate one explicit value-context operand or read the current node. Missing values and invalid targets are recoverable during matching; malformed syntax and resource failures escape. Cast functions used as direct alternate-target patterns evaluate before NODE is rebound.",
+      "tests": [
+        {
+          "name": "CASTBOOL",
+          "desc": "Explicit source evaluation uses ordinary function scope and does not mutate the input.",
+          "tests": [
+            {
+              "name": "Explicit operand overrides current node",
+              "input": {"unrelated":1},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL","true"],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Missing explicit reference",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",["NODE","missing"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit FAIL",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",["FAIL"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Missing current node in a match",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",{"missing":["CASTBOOL"]}],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Invalid target is a failed probe",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["CASTBOOL"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Unknown operand syntax",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",["UNKNOWN"]],["NODE"]]],
+              "errors": {"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Wrong arity",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",1,2],["NODE"]]],
+              "errors": {"INVALID_GRAFT":true}
+            },
+            {
+              "name": "CONST operand",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["source","true"]},["COPY",["CASTBOOL",["CONST","source"]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "STASH operand",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY","true",["STASH","source"]],["COPY",["CASTBOOL",["STASH","source"]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Common expression",
+              "input": "true",
+              "jgraft": ["JGRAFT",{"v":1,"expr":["convert",["CASTBOOL"]]},["COPY",["EXPR","convert"],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Direct function uses original node",
+              "input": {"source":"true","target":true},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["NODE","target"],["CASTBOOL",["NODE","source"]]],["NODE"]]],
+              "output": true
+            }
+          ]
+        },
+        {
+          "name": "CASTNUM",
+          "desc": "Explicit source evaluation uses ordinary function scope and does not mutate the input.",
+          "tests": [
+            {
+              "name": "Explicit operand overrides current node",
+              "input": {"unrelated":1},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM","7"],["NODE"]]],
+              "output": 7
+            },
+            {
+              "name": "Missing explicit reference",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["NODE","missing"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit FAIL",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["FAIL"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Missing current node in a match",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",{"missing":["CASTNUM"]}],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Invalid target is a failed probe",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["CASTNUM"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Unknown operand syntax",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",["UNKNOWN"]],["NODE"]]],
+              "errors": {"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Wrong arity",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTNUM",1,2],["NODE"]]],
+              "errors": {"INVALID_GRAFT":true}
+            },
+            {
+              "name": "CONST operand",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["source","7"]},["COPY",["CASTNUM",["CONST","source"]],["NODE"]]],
+              "output": 7
+            },
+            {
+              "name": "STASH operand",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY","7",["STASH","source"]],["COPY",["CASTNUM",["STASH","source"]],["NODE"]]],
+              "output": 7
+            },
+            {
+              "name": "Common expression",
+              "input": "7",
+              "jgraft": ["JGRAFT",{"v":1,"expr":["convert",["CASTNUM"]]},["COPY",["EXPR","convert"],["NODE"]]],
+              "output": 7
+            },
+            {
+              "name": "Direct function uses original node",
+              "input": {"source":"7","target":7},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["NODE","target"],["CASTNUM",["NODE","source"]]],["NODE"]]],
+              "output": true
+            }
+          ]
+        },
+        {
+          "name": "CASTSTR",
+          "desc": "Explicit source evaluation uses ordinary function scope and does not mutate the input.",
+          "tests": [
+            {
+              "name": "Explicit operand overrides current node",
+              "input": {"unrelated":1},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",7],["NODE"]]],
+              "output": "7"
+            },
+            {
+              "name": "Missing explicit reference",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["NODE","missing"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Explicit FAIL",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["FAIL"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Missing current node in a match",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",{"missing":["CASTSTR"]}],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Invalid target is a failed probe",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["CASTSTR"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Unknown operand syntax",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["UNKNOWN"]],["NODE"]]],
+              "errors": {"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Wrong arity",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",1,2],["NODE"]]],
+              "errors": {"INVALID_GRAFT":true}
+            },
+            {
+              "name": "CONST operand",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1,"const":["source",7]},["COPY",["CASTSTR",["CONST","source"]],["NODE"]]],
+              "output": "7"
+            },
+            {
+              "name": "STASH operand",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",7,["STASH","source"]],["COPY",["CASTSTR",["STASH","source"]],["NODE"]]],
+              "output": "7"
+            },
+            {
+              "name": "Common expression",
+              "input": 7,
+              "jgraft": ["JGRAFT",{"v":1,"expr":["convert",["CASTSTR"]]},["COPY",["EXPR","convert"],["NODE"]]],
+              "output": "7"
+            },
+            {
+              "name": "Direct function uses original node",
+              "input": {"source":7,"target":"7"},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["NODE","target"],["CASTSTR",["NODE","source"]]],["NODE"]]],
+              "output": true
+            }
+          ]
+        },
+        {
+          "name": "CASTBOOL does not treat literal object as a reference",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTBOOL",{"source":["UNKNOWN"]}],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Input method-like properties are data",
+          "input": {"source":{"toString":["UNKNOWN"],"valueOf":["FAIL"]}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["NODE","source"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Lazy alternative need not execute a cast failure",
+          "input": true,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ANY",true,["CASTNUM"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Recursive operand respects limits",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["loop",["EXPR","loop"]]},["COPY",["CASTSTR",["EXPR","loop"]],["NODE"]]],
+          "errors": {"RESOURCE_LIMIT":true},
+          "limits": {"depth":24}
+        }
+      ]
+    }
+  ]
+}
