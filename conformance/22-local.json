@@ -1,0 +1,791 @@
+{
+  "version": 1,
+  "name": "LOCAL",
+  "desc": "Covers the LOCAL function: sequential lexical TEMP bindings, computed string/number names, null-name current-node overrides, arbitrary return values, nested scopes, restoration after success or trapped failure, original-tree isolation, value-context construction, namespaces, SPLIT metadata, and error/resource propagation. LOCAL returns a constructed value rather than passing its final expression through in match context. Supporting expressions expose LOCAL semantics without enumerating every interaction with other contexts.",
+  "tests": [
+    {
+      "name": "Return values",
+      "desc": "LOCAL evaluates its return expression in value context. With no binding pairs it still evaluates and returns that expression. Binding values and returned structures support all JSON types.",
+      "tests": [
+        {
+          "name": "No bindings: null",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",null],["NODE"]]],
+          "output": null
+        },
+        {
+          "name": "TEMP binding: null",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","x",null,["TEMP","x"]],["NODE"]]],
+          "output": null
+        },
+        {
+          "name": "NODE binding: null",
+          "input": "outer",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",null,null,["NODE"]],["NODE"]]],
+          "output": null
+        },
+        {
+          "name": "No bindings: false",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",false],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "TEMP binding: false",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","x",false,["TEMP","x"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "NODE binding: false",
+          "input": "outer",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",null,false,["NODE"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "No bindings: true",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",true],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "TEMP binding: true",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","x",true,["TEMP","x"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "NODE binding: true",
+          "input": "outer",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",null,true,["NODE"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "No bindings: zero",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",0],["NODE"]]],
+          "output": 0
+        },
+        {
+          "name": "TEMP binding: zero",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","x",0,["TEMP","x"]],["NODE"]]],
+          "output": 0
+        },
+        {
+          "name": "NODE binding: zero",
+          "input": "outer",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",null,0,["NODE"]],["NODE"]]],
+          "output": 0
+        },
+        {
+          "name": "No bindings: negative integer",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",-2],["NODE"]]],
+          "output": -2
+        },
+        {
+          "name": "TEMP binding: negative integer",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","x",-2,["TEMP","x"]],["NODE"]]],
+          "output": -2
+        },
+        {
+          "name": "NODE binding: negative integer",
+          "input": "outer",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",null,-2,["NODE"]],["NODE"]]],
+          "output": -2
+        },
+        {
+          "name": "No bindings: fraction",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",1.25],["NODE"]]],
+          "output": 1.25
+        },
+        {
+          "name": "TEMP binding: fraction",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","x",1.25,["TEMP","x"]],["NODE"]]],
+          "output": 1.25
+        },
+        {
+          "name": "NODE binding: fraction",
+          "input": "outer",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",null,1.25,["NODE"]],["NODE"]]],
+          "output": 1.25
+        },
+        {
+          "name": "No bindings: empty string",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",""],["NODE"]]],
+          "output": ""
+        },
+        {
+          "name": "TEMP binding: empty string",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","x","",["TEMP","x"]],["NODE"]]],
+          "output": ""
+        },
+        {
+          "name": "NODE binding: empty string",
+          "input": "outer",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",null,"",["NODE"]],["NODE"]]],
+          "output": ""
+        },
+        {
+          "name": "No bindings: text",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","abc"],["NODE"]]],
+          "output": "abc"
+        },
+        {
+          "name": "TEMP binding: text",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","x","abc",["TEMP","x"]],["NODE"]]],
+          "output": "abc"
+        },
+        {
+          "name": "NODE binding: text",
+          "input": "outer",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",null,"abc",["NODE"]],["NODE"]]],
+          "output": "abc"
+        },
+        {
+          "name": "No bindings: empty array",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",[[]]],["NODE"]]],
+          "output": []
+        },
+        {
+          "name": "TEMP binding: empty array",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","x",[[]],["TEMP","x"]],["NODE"]]],
+          "output": []
+        },
+        {
+          "name": "NODE binding: empty array",
+          "input": "outer",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",null,[[]],["NODE"]],["NODE"]]],
+          "output": []
+        },
+        {
+          "name": "No bindings: nested array",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",[[1,[[2]]]]],["NODE"]]],
+          "output": [1,[2]]
+        },
+        {
+          "name": "TEMP binding: nested array",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","x",[[1,[[2]]]],["TEMP","x"]],["NODE"]]],
+          "output": [1,[2]]
+        },
+        {
+          "name": "NODE binding: nested array",
+          "input": "outer",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",null,[[1,[[2]]]],["NODE"]],["NODE"]]],
+          "output": [1,[2]]
+        },
+        {
+          "name": "No bindings: empty object",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",{}],["NODE"]]],
+          "output": {}
+        },
+        {
+          "name": "TEMP binding: empty object",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","x",{},["TEMP","x"]],["NODE"]]],
+          "output": {}
+        },
+        {
+          "name": "NODE binding: empty object",
+          "input": "outer",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",null,{},["NODE"]],["NODE"]]],
+          "output": {}
+        },
+        {
+          "name": "No bindings: nested object",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",{"a":[[1]]}],["NODE"]]],
+          "output": {"a":[1]}
+        },
+        {
+          "name": "TEMP binding: nested object",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","x",{"a":[[1]]},["TEMP","x"]],["NODE"]]],
+          "output": {"a":[1]}
+        },
+        {
+          "name": "NODE binding: nested object",
+          "input": "outer",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",null,{"a":[[1]]},["NODE"]],["NODE"]]],
+          "output": {"a":[1]}
+        },
+        {
+          "name": "Numeric expression identifier",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[51,"x",3,["TEMP","x"]],["NODE"]]],
+          "output": 3
+        },
+        {
+          "name": "Return expression computes a value",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","a","x","b","y",["CONCAT",["TEMP","a"],["TEMP","b"]]],["NODE"]]],
+          "output": "xy"
+        },
+        {
+          "name": "Returned expression-looking input remains data",
+          "input": ["FAIL"],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","x",["NODE"],["TEMP","x"]],["NODE"]]],
+          "output": ["FAIL"]
+        }
+      ]
+    },
+    {
+      "name": "Binding names",
+      "desc": "Names are evaluated in value context. Strings name exactly one TEMP root property; numbers are coerced to strings, including fractions and negative values. Dots and slashes do not form paths. Repeated names overwrite the local binding.",
+      "tests": [
+        {
+          "name": "String \"\"",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","",7,["TEMP",""]],["NODE"]]],
+          "output": 7
+        },
+        {
+          "name": "String \"x\"",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","x",7,["TEMP","x"]],["NODE"]]],
+          "output": 7
+        },
+        {
+          "name": "String \"0\"",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","0",7,["TEMP","0"]],["NODE"]]],
+          "output": 7
+        },
+        {
+          "name": "String \"00\"",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","00",7,["TEMP","00"]],["NODE"]]],
+          "output": 7
+        },
+        {
+          "name": "String \"-0\"",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","-0",7,["TEMP","-0"]],["NODE"]]],
+          "output": 7
+        },
+        {
+          "name": "String \"a.b\"",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","a.b",7,["TEMP","a.b"]],["NODE"]]],
+          "output": 7
+        },
+        {
+          "name": "String \"a/b\"",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","a/b",7,["TEMP","a/b"]],["NODE"]]],
+          "output": 7
+        },
+        {
+          "name": "String \"constructor\"",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","constructor",7,["TEMP","constructor"]],["NODE"]]],
+          "output": 7
+        },
+        {
+          "name": "String \"toString\"",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","toString",7,["TEMP","toString"]],["NODE"]]],
+          "output": 7
+        },
+        {
+          "name": "String \"hasOwnProperty\"",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","hasOwnProperty",7,["TEMP","hasOwnProperty"]],["NODE"]]],
+          "output": 7
+        },
+        {
+          "name": "String \"__proto__\"",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","__proto__",7,["TEMP","__proto__"]],["NODE"]]],
+          "output": 7,
+          "needProto": true
+        },
+        {
+          "name": "String \"\\n\"",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","\n",7,["TEMP","\n"]],["NODE"]]],
+          "output": 7
+        },
+        {
+          "name": "String \"\\u0000\"",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","\u0000",7,["TEMP","\u0000"]],["NODE"]]],
+          "output": 7
+        },
+        {
+          "name": "String \"é\"",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","é",7,["TEMP","é"]],["NODE"]]],
+          "output": 7
+        },
+        {
+          "name": "String \"é\"",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","é",7,["TEMP","é"]],["NODE"]]],
+          "output": 7
+        },
+        {
+          "name": "String \"🙂\"",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","🙂",7,["TEMP","🙂"]],["NODE"]]],
+          "output": 7
+        },
+        {
+          "name": "String \"\\ud800\"",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","\ud800",7,["TEMP","\ud800"]],["NODE"]]],
+          "output": 7,
+          "needLoneSurrogate": true
+        },
+        {
+          "name": "Number 0",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",0,"value",["TEMP","0"]],["NODE"]]],
+          "output": "value"
+        },
+        {
+          "name": "Number -1",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",-1,"value",["TEMP","-1"]],["NODE"]]],
+          "output": "value"
+        },
+        {
+          "name": "Number 1",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",1,"value",["TEMP","1"]],["NODE"]]],
+          "output": "value"
+        },
+        {
+          "name": "Number 1.25",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",1.25,"value",["TEMP","1.25"]],["NODE"]]],
+          "output": "value"
+        },
+        {
+          "name": "Number -2.5",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",-2.5,"value",["TEMP","-2.5"]],["NODE"]]],
+          "output": "value"
+        },
+        {
+          "name": "Number 1000",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",1000,"value",["TEMP","1000"]],["NODE"]]],
+          "output": "value"
+        },
+        {
+          "name": "Computed name from input",
+          "input": {"key":"answer","value":4},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",["NODE","key"],["NODE","value"],["TEMP","answer"]],["NODE"]]],
+          "output": 4
+        },
+        {
+          "name": "Computed name from an earlier TEMP binding",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","key","answer",["TEMP","key"],4,["TEMP","answer"]],["NODE"]]],
+          "output": 4
+        },
+        {
+          "name": "Computed numeric name",
+          "input": 2,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",["NODE"],3,["TEMP","2"]],["NODE"]]],
+          "output": 3
+        },
+        {
+          "name": "Numeric and string aliases overwrite",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",1,"old","1","new",["TEMP",1]],["NODE"]]],
+          "output": "new"
+        },
+        {
+          "name": "Empty string name is distinct from null",
+          "input": 5,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","",3,{"temp":["TEMP",""],"node":["NODE"]}],["NODE"]]],
+          "output": {"temp":3,"node":5}
+        },
+        {
+          "name": "Null computed by an expression overrides NODE",
+          "input": {"key":null,"value":8},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",["NODE","key"],["NODE","value"],["NODE"]],["NODE"]]],
+          "output": 8
+        }
+      ]
+    },
+    {
+      "name": "Sequential evaluation",
+      "desc": "Each name and value is evaluated using earlier bindings. An assignment becomes visible only after its value is evaluated, so self-references see the previous binding. NODE overrides take effect for later names, values, and the return expression.",
+      "tests": [
+        {
+          "name": "Later values see earlier TEMP names",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","a","one","b",["CONCAT",["TEMP","a"],"two"],{"a":["TEMP","a"],"b":["TEMP","b"]}],["NODE"]]],
+          "output": {"a":"one","b":"onetwo"}
+        },
+        {
+          "name": "Repeated binding reads the old value",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","x","one","x",["CONCAT",["TEMP","x"],"two"],["TEMP","x"]],["NODE"]]],
+          "output": "onetwo"
+        },
+        {
+          "name": "Forward reference is missing",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NONE",["LOCAL","a",["TEMP","b"],"b",1,["TEMP","a"]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "NODE assignment value sees original NODE",
+          "input": {"child":{"x":2}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",null,["NODE","child"],["NODE","x"]],["NODE"]]],
+          "output": 2
+        },
+        {
+          "name": "Repeated NODE assignments use the current local node",
+          "input": {"child":{"child":{"x":3}}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",null,["NODE","child"],null,["NODE","child"],["NODE","x"]],["NODE"]]],
+          "output": 3
+        },
+        {
+          "name": "Later name uses rebound NODE",
+          "input": {"child":{"name":"x","value":4}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",null,["NODE","child"],["NODE","name"],["NODE","value"],["TEMP","x"]],["NODE"]]],
+          "output": 4
+        },
+        {
+          "name": "Saved original NODE remains accessible",
+          "input": {"child":{"x":2},"x":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","saved",["NODE"],null,["NODE","child"],{"saved":["TEMP","saved"],"local":["NODE"]}],["NODE"]]],
+          "output": {"saved":{"child":{"x":2},"x":1},"local":{"x":2}}
+        },
+        {
+          "name": "Override NODE from an earlier TEMP value",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","source",{"x":4},null,["TEMP","source"],["NODE","x"]],["NODE"]]],
+          "output": 4
+        },
+        {
+          "name": "NODE override to null still exists",
+          "input": "outer",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",null,null,["IS",["EXISTS"]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Later name and value share the same earlier state",
+          "input": {"a":"x","b":9},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","key",["NODE","a"],["TEMP","key"],["NODE","b"],["TEMP","x"]],["NODE"]]],
+          "output": 9
+        }
+      ]
+    },
+    {
+      "name": "Lexical isolation",
+      "desc": "Nested overlays inherit other TEMP names, shadow only their own roots, and restore bindings when they exit. Rebinding NODE never writes through to the original input, const, stash, or another TEMP path.",
+      "tests": [
+        {
+          "name": "Nested shadowing and restoration",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","x","outer",{"inner":["LOCAL","x","inner",["TEMP","x"]],"outer":["TEMP","x"]}],["NODE"]]],
+          "output": {"inner":"inner","outer":"outer"}
+        },
+        {
+          "name": "Unshadowed name is inherited",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","x",1,["LOCAL","y",2,{"x":["TEMP","x"],"y":["TEMP","y"]}]],["NODE"]]],
+          "output": {"x":1,"y":2}
+        },
+        {
+          "name": "Nested NODE restoration",
+          "input": {"n":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",null,{"n":2},{"inner":["LOCAL",null,{"n":3},["NODE"]],"outer":["NODE"]}],["NODE"]]],
+          "output": {"inner":{"n":3},"outer":{"n":2}}
+        },
+        {
+          "name": "Rebinding a root cannot change a saved subtree",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","a",{"x":1},"saved",["TEMP","a"],"a",{"x":2},{"a":["TEMP","a"],"saved":["TEMP","saved"]}],["NODE"]]],
+          "output": {"a":{"x":2},"saved":{"x":1}}
+        },
+        {
+          "name": "NODE alias to TEMP does not replace that TEMP root",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","a",{"x":1},null,["TEMP","a"],null,{"x":2},{"node":["NODE"],"temp":["TEMP","a"]}],["NODE"]]],
+          "output": {"node":{"x":2},"temp":{"x":1}}
+        },
+        {
+          "name": "Outer action TEMP survives",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY","outer",["TEMP","x"],["LOCAL","x","inner",["TEMP","x"]],"inner",["TEMP","x"],"outer"]],
+          "output": {"inner":"inner","outer":"outer"}
+        },
+        {
+          "name": "New TEMP binding disappears on return",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","x",1,["TEMP","x"]],"value",["NONE",["IS",["TEMP","x"],["EXISTS"]]],"missing"]],
+          "output": {"value":1,"missing":true}
+        },
+        {
+          "name": "Outer NODE survives successful return",
+          "input": {"n":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",null,{"n":2},["NODE"]],"local",["NODE","n"],"original"]],
+          "output": {"n":1,"local":{"n":2},"original":1}
+        },
+        {
+          "name": "CONST and STASH roots are unchanged",
+          "input": {"n":1},
+          "jgraft": ["JGRAFT",{"v":1,"const":["obj",{"n":2}]},["COPY",{"n":3},["STASH","obj"]],["COPY",["LOCAL",null,["CONST","obj"],null,{"n":4},["NODE"]],"fromConst",["LOCAL",null,["STASH","obj"],null,{"n":5},["NODE"]],"fromStash",["CONST","obj"],"constant",["STASH","obj"],"stash"]],
+          "output": {"n":1,"fromConst":{"n":4},"fromStash":{"n":5},"constant":{"n":2},"stash":{"n":3}}
+        },
+        {
+          "name": "Failed inner scope restores outer TEMP",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","x","outer",{"failed":["NONE",["LOCAL","x","inner",["FAIL"]]],"x":["TEMP","x"]}],["NODE"]]],
+          "output": {"failed":true,"x":"outer"}
+        },
+        {
+          "name": "Failed inner scope restores outer NODE",
+          "input": {"n":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",{"failed":["NONE",["LOCAL",null,{"n":2},["FAIL"]]],"node":["NODE"]}],["NODE"]]],
+          "output": {"failed":true,"node":{"n":1}}
+        },
+        {
+          "name": "Editing result cannot change its source",
+          "input": {"source":{"x":[1]}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","a",["NODE","source"],["TEMP","a"]],"result"],["COPY",2,["NODE","result","x",0]]],
+          "output": {"source":{"x":[1]},"result":{"x":[2]}}
+        }
+      ]
+    },
+    {
+      "name": "Value and matching contexts",
+      "desc": "The return expression is evaluated as a value, including boolean results from explicit match expressions. When LOCAL itself is used as a pattern, its returned structure is a literal constructed value. EXPR uses invocation-time lexical bindings.",
+      "tests": [
+        {
+          "name": "Bare return object constructs its fields",
+          "input": {"x":2},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","n",2,{"x":["TEMP","n"]}],["NODE"]]],
+          "output": {"x":2}
+        },
+        {
+          "name": "Bare return array constructs its fields",
+          "input": 2,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","n",["NODE"],[[["TEMP","n"],["NUM"]]]],["NODE"]]],
+          "output": [2,true]
+        },
+        {
+          "name": "Explicit match result is a boolean",
+          "input": 2,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","n",2,["IS",["TEMP","n"]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "HAS compares a returned subset",
+          "input": {"x":1,"y":2},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["LOCAL","n",1,{"x":["TEMP","n"]}]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "IS compares a returned complete value",
+          "input": {"x":1,"y":2},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["LOCAL","n",1,{"x":["TEMP","n"]}]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Embedded predicate returns a literal boolean",
+          "input": {"x":2},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["LOCAL",{"x":["NUM"]}]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Common expression sees local TEMP",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1,"expr":["read",["TEMP","x"]]},["COPY",["LOCAL","x",4,["EXPR","read"]],["NODE"]]],
+          "output": 4
+        },
+        {
+          "name": "Common expression sees rebound NODE",
+          "input": {"x":1},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["read",["NODE","x"]]},["COPY",["LOCAL",null,{"x":2},["EXPR","read"]],["NODE"]]],
+          "output": 2
+        },
+        {
+          "name": "Regex function returns literal text",
+          "input": "abc",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["LOCAL","text","abc",["TEMP","text"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Parsed date can be the local NODE",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",null,["CASTDATE","2024-01-01"],["NODE","year"]],["NODE"]]],
+          "output": 2024
+        },
+        {
+          "name": "Returned parsed date exports as text",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","d",["CASTDATE","2024-01-01"],["TEMP","d"]],["NODE"]]],
+          "output": "2024-01-01"
+        },
+        {
+          "name": "Returned TEMP array retains SPLIT metadata",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":["ANY",":","|"],"default":"/"},["LOCAL","a",["SPLIT",{"sep":["ANY",":","|"],"default":"/","trim":" "}," a : b|c "],["TEMP","a"]]],["NODE"]]],
+          "output": " a : b|c "
+        },
+        {
+          "name": "Rebound NODE array retains SPLIT metadata",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":["ANY",":","|"],"default":"/"},["LOCAL",null,["SPLIT",{"sep":["ANY",":","|"],"default":"/","trim":" "}," a : b|c "],["NODE"]]],["NODE"]]],
+          "output": " a : b|c "
+        },
+        {
+          "name": "Outer capture namespace is visible",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["MATCH",[[["SEQMAX","whole",1,2]]],["COPY",["LOCAL","length",["CAP","whole","len"],["TEMP","length"]],["NODE"]]]],
+          "output": 2
+        }
+      ]
+    },
+    {
+      "name": "Failures and limits",
+      "desc": "Invalid evaluated names are INVALID_OPERAND; missing bindings and explicit FAIL are INVALID_TARGET. Malformed arity, invalid nested syntax, and forbidden TEMP-root references remain INVALID_GRAFT. Failure cannot leak lexical bindings. Resource failures remain fatal through match probes.",
+      "tests": [
+        {
+          "name": "Invalid name: false",
+          "input": {"name":false},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",["NODE","name"],1,["NODE"]],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Invalid name: true",
+          "input": {"name":true},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",["NODE","name"],1,["NODE"]],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Invalid name: object",
+          "input": {"name":{}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",["NODE","name"],1,["NODE"]],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Invalid name: empty array",
+          "input": {"name":[]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",["NODE","name"],1,["NODE"]],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "Invalid name: path array",
+          "input": {"name":["a","b"]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",["NODE","name"],1,["NODE"]],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true}
+        },
+        {
+          "name": "No return expression",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL"],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Unpaired binding",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","x",1],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Incomplete second binding",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","x",1,"y",2],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Missing name reference",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",["NODE","missing"],1,["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Missing value reference",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","x",["NODE","missing"],["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Missing return reference",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","x",1,["TEMP","missing"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Unknown name expression",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",["UNKNOWN"],1,["NODE"]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Unknown value expression",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","x",["UNKNOWN"],["NODE"]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Unknown return expression",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","x",1,["UNKNOWN"]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "TEMP root remains inaccessible",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","x",1,["TEMP"]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Return FAIL",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","x",1,["FAIL"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Unused failing value is evaluated",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","unused",["FAIL"],1],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Negative probe traps invalid evaluated name",
+          "input": {"name":[]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NONE",["LOCAL",["NODE","name"],1,2]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Long binding value allocation",
+          "input": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","x",["CONCAT",["NODE"],["NODE"]],["TEMP","x"]],["NODE"]]],
+          "errors": {"RESOURCE_LIMIT":true},
+          "limits": {"mem":10000}
+        },
+        {
+          "name": "Deep recursive binding scope",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1,"expr":["loop",["LOCAL","x",1,["EXPR","loop"]]]},["COPY",["EXPR","loop"],["NODE"]]],
+          "errors": {"RESOURCE_LIMIT":true},
+          "limits": {"depth":24}
+        }
+      ]
+    }
+  ]
+}
