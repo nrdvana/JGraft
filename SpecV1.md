@@ -2396,9 +2396,12 @@ false values to the `ANY` expression:
 Cast a value to a number.
 
 Numeric values always pass through.  Any string which parses as a valid number
-according to JSON syntax also become a number.  Extensions to the data model
-permitted by the implementation may also support numification, as decided by
-the implementation.  Every other value generates `INVALID_TARGET`.
+according to JSON syntax also become a number, but non-numeric characters like
+whitespace are not permitted.  (use `SPLIT`'s `trim` feature for that)
+Extensions to the data model permitted by the implementation may also support
+numification, as decided by the implementation.
+Numbers outside the range supported by an implementation generate
+`UNSUPPORTED_GRAFT` errors.  Every other value generates `INVALID_TARGET`.
 
 #### <span id="ex-caststr">CASTSTR</span>
 
