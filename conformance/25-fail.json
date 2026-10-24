@@ -1,0 +1,385 @@
+{
+  "version": 1,
+  "name": "FAIL",
+  "desc": "Covers the FAIL function: unconditional INVALID_TARGET in value context, numeric identifier, propagation through enclosing value construction and selected CASE results, conversion to failed matches in match/sequence/regex contexts, recovery in ANY/IF/CASE, lazy branches, syntax, localized NODE, and unchanged input/partial output. Explicit FAIL remains INVALID_TARGET even when its reachability is statically known.",
+  "tests": [
+    {
+      "name": "Value-context failure",
+      "desc": "FAIL takes no operands and always raises INVALID_TARGET independently of NODE type or content. Its failure is never upgraded to INVALID_GRAFT merely because it is explicit or statically reachable.",
+      "tests": [
+        {
+          "name": "Current NODE: null",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FAIL"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Current NODE: false",
+          "input": false,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FAIL"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Current NODE: true",
+          "input": true,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FAIL"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Current NODE: zero",
+          "input": 0,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FAIL"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Current NODE: integer",
+          "input": 2,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FAIL"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Current NODE: fraction",
+          "input": 1.5,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FAIL"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Current NODE: empty string",
+          "input": "",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FAIL"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Current NODE: text",
+          "input": "abc",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FAIL"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Current NODE: empty array",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FAIL"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Current NODE: nested array",
+          "input": [1,[2]],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FAIL"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Current NODE: empty object",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FAIL"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Current NODE: nested object",
+          "input": {"x":[1]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FAIL"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Numeric expression identifier",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[67],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Object field",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",{"x":["FAIL"]},["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Array element",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[[["FAIL"]]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "CONCAT operand",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CONCAT","x",["FAIL"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MKOBJ value",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MKOBJ","x",["FAIL"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LOCAL binding value",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","x",["FAIL"],1],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LOCAL return",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","x",1,["FAIL"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Localized NODE does not suppress FAIL",
+          "input": {"x":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",null,["NODE","x"],["FAIL"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Selected CASE branch",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASE",1,["FAIL"],"else"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "CASE else",
+          "input": 2,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASE",1,"one",["FAIL"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "CASE implicit else",
+          "input": 2,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASE",1,"one"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        }
+      ]
+    },
+    {
+      "name": "Match recovery",
+      "desc": "A FAIL reached as a match or within a match is trapped as a non-match. ANY may try another alternative, NONE inverts it, and ALL fails. Match actions still report NO_MATCH when their pattern fails.",
+      "tests": [
+        {
+          "name": "HAS traps FAIL",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["FAIL"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "IS traps FAIL",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["FAIL"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "NONE inverts FAIL",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NONE",["FAIL"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "ANY tries the next alternative",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ANY",["FAIL"],["NUM"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "ALL fails after FAIL",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ALL",["NUM"],["FAIL"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Nested value failure is trapped as a match",
+          "input": {"x":null},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",{"x":["FAIL"]}],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "CASE condition tries the next branch",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASE",["FAIL"],"bad",1,"one","else"],["NODE"]]],
+          "output": "one"
+        },
+        {
+          "name": "Numeric FAIL in a negative probe",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NONE",[67]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "MATCH translates failure to NO_MATCH",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["MATCH",["FAIL"]]],
+          "errors": {"NO_MATCH":true}
+        },
+        {
+          "name": "IF selects its else action",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["IF",["FAIL"],["COPY","bad","result"],["COPY","else","result"]]],
+          "output": {"result":"else"}
+        },
+        {
+          "name": "IF can try a later condition",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["IF",["FAIL"],["COPY","bad","result"],["EXISTS"],["COPY","later","result"]]],
+          "output": {"result":"later"}
+        },
+        {
+          "name": "Array sequence term fails",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",[[["SEQ",["FAIL"]]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Array sequence alternative recovers",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",[[["SEQ",["ANY",["FAIL"],1]]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Regex term fails",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["FAIL"],["END"]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Regex alternative recovers",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["ANY",["FAIL"],"a"],["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "CAPTURE returns false",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["FAIL"]],["NODE"]]],
+          "output": false
+        }
+      ]
+    },
+    {
+      "name": "Lazy branches and scopes",
+      "desc": "Unselected valid FAIL expressions are not evaluated. Trapping a failure from a lexical scope must restore TEMP and NODE, and a later successful alternative keeps the normal current-node context.",
+      "tests": [
+        {
+          "name": "Unselected CASE result",
+          "input": 2,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASE",1,["FAIL"],2,"two",["FAIL"]],["NODE"]]],
+          "output": "two"
+        },
+        {
+          "name": "Unselected CASE else",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASE",1,"one",["FAIL"]],["NODE"]]],
+          "output": "one"
+        },
+        {
+          "name": "Later ANY branch is skipped",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ANY",["NUM"],["FAIL"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Later ALL branch is skipped",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ALL",["STR"],["FAIL"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LOCAL binding restored after trapped FAIL",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","x","outer",{"failed":["NONE",["LOCAL","x","inner",["FAIL"]]],"x":["TEMP","x"]}],["NODE"]]],
+          "output": {"failed":true,"x":"outer"}
+        },
+        {
+          "name": "LOCAL NODE restored after trapped FAIL",
+          "input": {"x":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",{"failed":["NONE",["LOCAL",null,2,["FAIL"]]],"node":["NODE"]}],["NODE"]]],
+          "output": {"failed":true,"node":{"x":1}}
+        },
+        {
+          "name": "WITH binding restored after trapped FAIL",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","x",1,["ALL",["NONE",["WITH","x",2,["FAIL"]]],["IS",["TEMP","x"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Common expression FAIL remains trappable",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1,"expr":["reject",["FAIL"]]},["COPY",["NONE",["EXPR","reject"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Common expression FAIL remains fatal as a value",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1,"expr":["reject",["FAIL"]]},["COPY",["EXPR","reject"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Earlier edits do not change FAIL semantics",
+          "input": {"source":{"x":1}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY","done","first",["FAIL"],"second"]],
+          "errors": {"INVALID_TARGET":true}
+        }
+      ]
+    },
+    {
+      "name": "Invalid syntax",
+      "desc": "FAIL has exactly zero operands. Additional operands are syntax errors even within match probes and even if the operand would itself fail. Unknown expression names remain INVALID_GRAFT.",
+      "tests": [
+        {
+          "name": "Extra operand: null",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FAIL",null],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Extra operand: number",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FAIL",1],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Extra operand: string",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FAIL","x"],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Extra operand: array",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FAIL",[[]]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Extra operand: object",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FAIL",{}],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Extra operand: FAIL",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FAIL",[["FAIL"]]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Multiple extra operands",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FAIL",1,2],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Numeric identifier with extra operand",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[67,1],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "NONE cannot trap malformed FAIL",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NONE",["FAIL",1]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "CASE condition cannot trap malformed FAIL",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASE",["FAIL",1],"bad","else"],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        }
+      ]
+    }
+  ]
+}

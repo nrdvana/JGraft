@@ -1,0 +1,351 @@
+{
+  "version": 1,
+  "name": "CURPROP",
+  "desc": "Covers CURPROP: root null, object property names, array indices including normalized negative aliases, virtual missing/end positions and regex codepoint positions, LOCAL rebinding, alternate targets, EXPR, lexical context restoration, and syntax. Iterator-specific CURPROP interactions are covered by the REDUCE, FILTER, and MAP collections; native Date virtual properties are also tested by implementations supporting native Dates.",
+  "tests": [
+    {
+      "name": "Roots and property names",
+      "desc": "A root has no containing property and returns null regardless of value type. Object property names are returned exactly, including numeric-looking and arbitrary keys.",
+      "tests": [
+        {
+          "name": "Root null",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CURPROP"],["NODE"]]],
+          "output": null
+        },
+        {
+          "name": "Root false",
+          "input": false,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CURPROP"],["NODE"]]],
+          "output": null
+        },
+        {
+          "name": "Root true",
+          "input": true,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CURPROP"],["NODE"]]],
+          "output": null
+        },
+        {
+          "name": "Root zero",
+          "input": 0,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CURPROP"],["NODE"]]],
+          "output": null
+        },
+        {
+          "name": "Root number",
+          "input": 3,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CURPROP"],["NODE"]]],
+          "output": null
+        },
+        {
+          "name": "Root fraction",
+          "input": 0.5,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CURPROP"],["NODE"]]],
+          "output": null
+        },
+        {
+          "name": "Root empty string",
+          "input": "",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CURPROP"],["NODE"]]],
+          "output": null
+        },
+        {
+          "name": "Root string",
+          "input": "abc",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CURPROP"],["NODE"]]],
+          "output": null
+        },
+        {
+          "name": "Root empty array",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CURPROP"],["NODE"]]],
+          "output": null
+        },
+        {
+          "name": "Root array",
+          "input": [1,[2]],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CURPROP"],["NODE"]]],
+          "output": null
+        },
+        {
+          "name": "Root empty object",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CURPROP"],["NODE"]]],
+          "output": null
+        },
+        {
+          "name": "Root object",
+          "input": {"x":[1]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CURPROP"],["NODE"]]],
+          "output": null
+        },
+        {
+          "name": "Object property \"\"",
+          "input": {"":3},
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",""],["COPY",["CURPROP"],["STASH","property"]]],["COPY",["STASH","property"],["NODE"]]],
+          "output": ""
+        },
+        {
+          "name": "Object property \"x\"",
+          "input": {"x":3},
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE","x"],["COPY",["CURPROP"],["STASH","property"]]],["COPY",["STASH","property"],["NODE"]]],
+          "output": "x"
+        },
+        {
+          "name": "Object property \"0\"",
+          "input": {"0":3},
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE","0"],["COPY",["CURPROP"],["STASH","property"]]],["COPY",["STASH","property"],["NODE"]]],
+          "output": "0"
+        },
+        {
+          "name": "Object property \"-1\"",
+          "input": {"-1":3},
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE","-1"],["COPY",["CURPROP"],["STASH","property"]]],["COPY",["STASH","property"],["NODE"]]],
+          "output": "-1"
+        },
+        {
+          "name": "Object property \"a.b\"",
+          "input": {"a.b":3},
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE","a.b"],["COPY",["CURPROP"],["STASH","property"]]],["COPY",["STASH","property"],["NODE"]]],
+          "output": "a.b"
+        },
+        {
+          "name": "Object property \"a/b\"",
+          "input": {"a/b":3},
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE","a/b"],["COPY",["CURPROP"],["STASH","property"]]],["COPY",["STASH","property"],["NODE"]]],
+          "output": "a/b"
+        },
+        {
+          "name": "Object property \"constructor\"",
+          "input": {"constructor":3},
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE","constructor"],["COPY",["CURPROP"],["STASH","property"]]],["COPY",["STASH","property"],["NODE"]]],
+          "output": "constructor"
+        },
+        {
+          "name": "Object property \"toString\"",
+          "input": {"toString":3},
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE","toString"],["COPY",["CURPROP"],["STASH","property"]]],["COPY",["STASH","property"],["NODE"]]],
+          "output": "toString"
+        },
+        {
+          "name": "Object property \"hasOwnProperty\"",
+          "input": {"hasOwnProperty":3},
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE","hasOwnProperty"],["COPY",["CURPROP"],["STASH","property"]]],["COPY",["STASH","property"],["NODE"]]],
+          "output": "hasOwnProperty"
+        },
+        {
+          "name": "Object property \"__proto__\"",
+          "input": {"__proto__":3},
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE","__proto__"],["COPY",["CURPROP"],["STASH","property"]]],["COPY",["STASH","property"],["NODE"]]],
+          "output": "__proto__",
+          "needProto": true
+        },
+        {
+          "name": "Object property \"é\"",
+          "input": {"é":3},
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE","é"],["COPY",["CURPROP"],["STASH","property"]]],["COPY",["STASH","property"],["NODE"]]],
+          "output": "é"
+        },
+        {
+          "name": "Object property \"🙂\"",
+          "input": {"🙂":3},
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE","🙂"],["COPY",["CURPROP"],["STASH","property"]]],["COPY",["STASH","property"],["NODE"]]],
+          "output": "🙂"
+        },
+        {
+          "name": "Object property \"\\ud800\"",
+          "input": {"\ud800":3},
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE","\ud800"],["COPY",["CURPROP"],["STASH","property"]]],["COPY",["STASH","property"],["NODE"]]],
+          "output": "\ud800",
+          "needLoneSurrogate": true
+        },
+        {
+          "name": "Nested property selects the immediate parent",
+          "input": {"a":{"b":3}},
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE","a","b"],["COPY",["CURPROP"],["STASH","property"]]],["COPY",["STASH","property"],["NODE"]]],
+          "output": "b"
+        },
+        {
+          "name": "Numeric expression identifier",
+          "input": {"a":3},
+          "jgraft": ["JGRAFT",{"v":1},["AT","a",["COPY",[56],["STASH","property"]]],["COPY",["STASH","property"],["NODE"]]],
+          "output": "a"
+        }
+      ]
+    },
+    {
+      "name": "Array positions",
+      "desc": "Array elements report numeric positions. Negative aliases resolve to nonnegative indices, and nested arrays report the immediate containing index. Missing end positions retain their location.",
+      "tests": [
+        {
+          "name": "Index 0",
+          "input": [10,20,30],
+          "jgraft": ["JGRAFT",{"v":1},["AT",0,["COPY",["CURPROP"],["STASH","index"]]],["COPY",["STASH","index"],["NODE"]]],
+          "output": 0
+        },
+        {
+          "name": "Index 1",
+          "input": [10,20,30],
+          "jgraft": ["JGRAFT",{"v":1},["AT",1,["COPY",["CURPROP"],["STASH","index"]]],["COPY",["STASH","index"],["NODE"]]],
+          "output": 1
+        },
+        {
+          "name": "Index 2",
+          "input": [10,20,30],
+          "jgraft": ["JGRAFT",{"v":1},["AT",2,["COPY",["CURPROP"],["STASH","index"]]],["COPY",["STASH","index"],["NODE"]]],
+          "output": 2
+        },
+        {
+          "name": "Index -1",
+          "input": [10,20,30],
+          "jgraft": ["JGRAFT",{"v":1},["AT",-1,["COPY",["CURPROP"],["STASH","index"]]],["COPY",["STASH","index"],["NODE"]]],
+          "output": 2
+        },
+        {
+          "name": "Index -2",
+          "input": [10,20,30],
+          "jgraft": ["JGRAFT",{"v":1},["AT",-2,["COPY",["CURPROP"],["STASH","index"]]],["COPY",["STASH","index"],["NODE"]]],
+          "output": 1
+        },
+        {
+          "name": "Index -3",
+          "input": [10,20,30],
+          "jgraft": ["JGRAFT",{"v":1},["AT",-3,["COPY",["CURPROP"],["STASH","index"]]],["COPY",["STASH","index"],["NODE"]]],
+          "output": 0
+        },
+        {
+          "name": "Nested array index",
+          "input": [[1,2],[3,4]],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",1,0],["COPY",["CURPROP"],["STASH","index"]]],["COPY",["STASH","index"],["NODE"]]],
+          "output": 0
+        },
+        {
+          "name": "Array indices are numbers rather than strings",
+          "input": [0],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",[[["SEQ",["IS",["CURPROP"],0],0,["END"]]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Array end reports its index",
+          "input": [3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",[[["SEQ",3,4,["IS",["CURPROP"],2],["END"]]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Empty array end reports zero",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",[[["SEQ",["IS",["CURPROP"],0],["END"]]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Missing object property reports its name",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",{"missing":["IS",["CURPROP"],"missing"]}],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Pending-deletion position retains its index",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["AT",0,["MOVE",["NODE"],["STASH","saved"],["STASH","saved"],["STASH",["CURPROP"]],null,["NODE"]]],["COPY",["STASH",0],["NODE"]]],
+          "output": 1
+        }
+      ]
+    },
+    {
+      "name": "Virtual strings and lexical roots",
+      "desc": "Regex positions count decoded codepoints rather than UTF-16 units and retain the end boundary. LOCAL and alternate-target comparisons establish new roots, so their CURPROP is null. Reading another reference does not move NODE.",
+      "tests": [
+        {
+          "name": "Regex ASCII positions",
+          "input": "ab",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["IS",["CURPROP"],0],"a",["IS",["CURPROP"],1],"b",["IS",["CURPROP"],2],["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Regex astral codepoint positions",
+          "input": "🙂a",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["IS",["CURPROP"],0],"🙂",["IS",["CURPROP"],1],"a",["IS",["CURPROP"],2],["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Regex empty end",
+          "input": "",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["IS",["CURPROP"],0],["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LOCAL root overrides an object property",
+          "input": {"a":{"x":1}},
+          "jgraft": ["JGRAFT",{"v":1},["AT","a",["COPY",["LOCAL",null,["NODE","x"],["CURPROP"]],["STASH","property"]]],["COPY",["STASH","property"],["NODE"]]],
+          "output": null
+        },
+        {
+          "name": "TEMP-only LOCAL retains the current property",
+          "input": {"a":3},
+          "jgraft": ["JGRAFT",{"v":1},["AT","a",["COPY",["LOCAL","x",1,["CURPROP"]],["STASH","property"]]],["COPY",["STASH","property"],["NODE"]]],
+          "output": "a"
+        },
+        {
+          "name": "Alternate target is a new root",
+          "input": {"a":3},
+          "jgraft": ["JGRAFT",{"v":1},["AT","a",["COPY",["IS",5,["IS",["CURPROP"],null]],["STASH","match"]]],["COPY",["STASH","match"],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Common expression uses invocation property",
+          "input": {"a":3},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["p",["CURPROP"]]},["AT","a",["COPY",["EXPR","p"],["STASH","property"]]],["COPY",["STASH","property"],["NODE"]]],
+          "output": "a"
+        },
+        {
+          "name": "Unrelated reference reads do not move NODE",
+          "input": {"a":{"child":1}},
+          "jgraft": ["JGRAFT",{"v":1},["AT","a",["COPY",{"value":["NODE","child"],"property":["CURPROP"]},["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": {"value":1,"property":"a"}
+        }
+      ]
+    },
+    {
+      "name": "Syntax",
+      "desc": "CURPROP accepts no operands and reports the current position independently of whether a value exists there. Extra arguments are INVALID_GRAFT even under match probes.",
+      "tests": [
+        {
+          "name": "Extra argument null",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CURPROP",null],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Extra argument 1",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CURPROP",1],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Extra argument \"x\"",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CURPROP","x"],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Extra argument {}",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CURPROP",{}],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Extra argument []",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CURPROP",[[]]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Malformed inside NONE",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NONE",["CURPROP",1]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        }
+      ]
+    }
+  ]
+}

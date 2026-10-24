@@ -1,0 +1,1753 @@
+{
+  "version": 1,
+  "name": "LESS and LESSEQ",
+  "desc": "Covers LESS and LESSEQ using the same comparison cases: booleans, numeric ordering, strings by Unicode codepoint, recursive lexicographic arrays, date/datetime/timestamp precision and timezone normalization, both operand forms, LOCAL and namespace contexts, match-versus-value behavior, invalid targets, error propagation, and limits. Arrays stop at the first unequal comparable pair or a length difference; unsupported visited values are errors. Only the inclusiveness of equality differs between these expressions.",
+  "tests": [
+    {
+      "name": "Booleans and numbers",
+      "desc": "False orders before true; numbers use native numeric order without coercing their type. Both comparisons accept equal values, with only LESSEQ returning true for equality. Numeric formatting and signs do not change the represented value.",
+      "tests": [
+        {
+          "name": "LESS false versus false",
+          "input": {"a":false,"b":false},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESSEQ false versus false",
+          "input": {"a":false,"b":false},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS false versus true",
+          "input": {"a":false,"b":true},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ false versus true",
+          "input": {"a":false,"b":true},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS true versus false",
+          "input": {"a":true,"b":false},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESSEQ true versus false",
+          "input": {"a":true,"b":false},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESS true versus true",
+          "input": {"a":true,"b":true},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESSEQ true versus true",
+          "input": {"a":true,"b":true},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS negative magnitude",
+          "input": {"a":-100,"b":-2},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ negative magnitude",
+          "input": {"a":-100,"b":-2},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS negative to zero",
+          "input": {"a":-1,"b":0},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ negative to zero",
+          "input": {"a":-1,"b":0},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS zero to positive",
+          "input": {"a":0,"b":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ zero to positive",
+          "input": {"a":0,"b":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS fractional values",
+          "input": {"a":0.125,"b":0.25},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ fractional values",
+          "input": {"a":0.125,"b":0.25},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS negative fractions",
+          "input": {"a":-0.25,"b":-0.125},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ negative fractions",
+          "input": {"a":-0.25,"b":-0.125},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS lexically misleading integers",
+          "input": {"a":2,"b":10},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ lexically misleading integers",
+          "input": {"a":2,"b":10},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS large integers",
+          "input": {"a":1000000000,"b":999999999},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESSEQ large integers",
+          "input": {"a":1000000000,"b":999999999},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESS small fractions",
+          "input": {"a":1e-20,"b":1e-19},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ small fractions",
+          "input": {"a":1e-20,"b":1e-19},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS large finite magnitudes",
+          "input": {"a":1e+100,"b":1e+99},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESSEQ large finite magnitudes",
+          "input": {"a":1e+100,"b":1e+99},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESS equal zero",
+          "input": {"a":0,"b":0},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESSEQ equal zero",
+          "input": {"a":0,"b":0},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS equal negative integer",
+          "input": {"a":-5,"b":-5},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESSEQ equal negative integer",
+          "input": {"a":-5,"b":-5},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS equal fraction",
+          "input": {"a":1.25,"b":1.25},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESSEQ equal fraction",
+          "input": {"a":1.25,"b":1.25},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS implicit current number",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",2],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS numeric identifier",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[72,1,2],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ implicit current number",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",2],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ numeric identifier",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[73,1,2],["NODE"]]],
+          "output": true
+        }
+      ]
+    },
+    {
+      "name": "Unicode string order",
+      "desc": "Strings compare codepoint-by-codepoint under the implementation character-decoding policy. A proper prefix is less, while empty strings compare equal. No numeric coercion, locale collation, case folding, or Unicode normalization occurs.",
+      "tests": [
+        {
+          "name": "LESS empty strings",
+          "input": {"a":"","b":""},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESSEQ empty strings",
+          "input": {"a":"","b":""},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS empty prefix",
+          "input": {"a":"","b":"a"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ empty prefix",
+          "input": {"a":"","b":"a"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS nonempty versus empty",
+          "input": {"a":"a","b":""},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESSEQ nonempty versus empty",
+          "input": {"a":"a","b":""},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESS equal ASCII",
+          "input": {"a":"abc","b":"abc"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESSEQ equal ASCII",
+          "input": {"a":"abc","b":"abc"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS first character differs",
+          "input": {"a":"abc","b":"bbc"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ first character differs",
+          "input": {"a":"abc","b":"bbc"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS last character differs",
+          "input": {"a":"abc","b":"abd"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ last character differs",
+          "input": {"a":"abc","b":"abd"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS proper prefix",
+          "input": {"a":"ab","b":"abc"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ proper prefix",
+          "input": {"a":"ab","b":"abc"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS proper suffix length",
+          "input": {"a":"abc","b":"ab"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESSEQ proper suffix length",
+          "input": {"a":"abc","b":"ab"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESS digit strings are lexical",
+          "input": {"a":"10","b":"2"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ digit strings are lexical",
+          "input": {"a":"10","b":"2"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS ASCII case",
+          "input": {"a":"Z","b":"a"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ ASCII case",
+          "input": {"a":"Z","b":"a"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS composed versus decomposed",
+          "input": {"a":"é","b":"é"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESSEQ composed versus decomposed",
+          "input": {"a":"é","b":"é"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESS NUL versus space",
+          "input": {"a":"\u0000","b":" "},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ NUL versus space",
+          "input": {"a":"\u0000","b":" "},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS newline versus carriage return",
+          "input": {"a":"\n","b":"\r"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ newline versus carriage return",
+          "input": {"a":"\n","b":"\r"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS BMP versus astral",
+          "input": {"a":"","b":"𐀀"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ BMP versus astral",
+          "input": {"a":"","b":"𐀀"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS astral versus BMP",
+          "input": {"a":"𐀀","b":"�"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESSEQ astral versus BMP",
+          "input": {"a":"𐀀","b":"�"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESS astral order",
+          "input": {"a":"🙂","b":"🙃"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ astral order",
+          "input": {"a":"🙂","b":"🙃"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS equal astral prefix",
+          "input": {"a":"🙂a","b":"🙂b"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ equal astral prefix",
+          "input": {"a":"🙂a","b":"🙂b"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS astral proper prefix",
+          "input": {"a":"🙂","b":"🙂a"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ astral proper prefix",
+          "input": {"a":"🙂","b":"🙂a"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS noncharacter BMP versus astral",
+          "input": {"a":"\uffff","b":"𐀀"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ noncharacter BMP versus astral",
+          "input": {"a":"\uffff","b":"𐀀"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS maximum Unicode",
+          "input": {"a":"\udbff\udfff","b":"\udbff\udffe"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESSEQ maximum Unicode",
+          "input": {"a":"\udbff\udfff","b":"\udbff\udffe"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESS lone high surrogate",
+          "input": {"a":"\ud800","b":""},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true,
+          "needLoneSurrogate": true
+        },
+        {
+          "name": "LESSEQ lone high surrogate",
+          "input": {"a":"\ud800","b":""},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true,
+          "needLoneSurrogate": true
+        },
+        {
+          "name": "LESS lone versus astral",
+          "input": {"a":"\udfff","b":"𐀀"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true,
+          "needLoneSurrogate": true
+        },
+        {
+          "name": "LESSEQ lone versus astral",
+          "input": {"a":"\udfff","b":"𐀀"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true,
+          "needLoneSurrogate": true
+        },
+        {
+          "name": "LESS paired versus lone",
+          "input": {"a":"🙂","b":"\udfff"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": false,
+          "needLoneSurrogate": true
+        },
+        {
+          "name": "LESSEQ paired versus lone",
+          "input": {"a":"🙂","b":"\udfff"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": false,
+          "needLoneSurrogate": true
+        },
+        {
+          "name": "LESS lone surrogate order",
+          "input": {"a":"\ud800","b":"\udfff"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true,
+          "needLoneSurrogate": true
+        },
+        {
+          "name": "LESSEQ lone surrogate order",
+          "input": {"a":"\ud800","b":"\udfff"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true,
+          "needLoneSurrogate": true
+        },
+        {
+          "name": "LESS equal lone surrogate",
+          "input": {"a":"\ud800","b":"\ud800"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": false,
+          "needLoneSurrogate": true
+        },
+        {
+          "name": "LESSEQ equal lone surrogate",
+          "input": {"a":"\ud800","b":"\ud800"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true,
+          "needLoneSurrogate": true
+        }
+      ]
+    },
+    {
+      "name": "Lexicographic arrays",
+      "desc": "Arrays recursively compare visited element pairs. Equal prefixes defer to later elements or length. An earlier unequal pair or exhausted shorter array ignores remaining elements, including otherwise unorderable values. Element types must match only at positions actually compared.",
+      "tests": [
+        {
+          "name": "LESS empty arrays",
+          "input": {"a":[],"b":[]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESSEQ empty arrays",
+          "input": {"a":[],"b":[]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS empty prefix",
+          "input": {"a":[],"b":[1]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ empty prefix",
+          "input": {"a":[],"b":[1]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS nonempty versus empty",
+          "input": {"a":[1],"b":[]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESSEQ nonempty versus empty",
+          "input": {"a":[1],"b":[]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESS equal scalar elements",
+          "input": {"a":[1,2],"b":[1,2]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESSEQ equal scalar elements",
+          "input": {"a":[1,2],"b":[1,2]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS first element wins",
+          "input": {"a":[1,100],"b":[2,0]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ first element wins",
+          "input": {"a":[1,100],"b":[2,0]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS later element wins",
+          "input": {"a":[1,3],"b":[1,2]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESSEQ later element wins",
+          "input": {"a":[1,3],"b":[1,2]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESS proper prefix",
+          "input": {"a":[1],"b":[1,0]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ proper prefix",
+          "input": {"a":[1],"b":[1,0]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS prefix length wins",
+          "input": {"a":[1,0],"b":[1]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESSEQ prefix length wins",
+          "input": {"a":[1,0],"b":[1]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESS nested empty arrays",
+          "input": {"a":[[]],"b":[[]]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESSEQ nested empty arrays",
+          "input": {"a":[[]],"b":[[]]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS nested prefix",
+          "input": {"a":[[]],"b":[[1]]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ nested prefix",
+          "input": {"a":[[]],"b":[[1]]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS nested later difference",
+          "input": {"a":[[1,[2]],3],"b":[[1,[2]],4]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ nested later difference",
+          "input": {"a":[[1,[2]],3],"b":[[1,[2]],4]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS nested earlier difference",
+          "input": {"a":[[1,2],9],"b":[[1,3],0]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ nested earlier difference",
+          "input": {"a":[[1,2],9],"b":[[1,3],0]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS mixed comparable types",
+          "input": {"a":[false,2,"a",[]],"b":[false,2,"b",[]]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ mixed comparable types",
+          "input": {"a":[false,2,"a",[]],"b":[false,2,"b",[]]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS equal mixed comparable types",
+          "input": {"a":[true,1,"a",[2]],"b":[true,1,"a",[2]]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESSEQ equal mixed comparable types",
+          "input": {"a":[true,1,"a",[2]],"b":[true,1,"a",[2]]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS string codepoint order",
+          "input": {"a":[""],"b":["𐀀"]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ string codepoint order",
+          "input": {"a":[""],"b":["𐀀"]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS earlier pair ignores incompatible types",
+          "input": {"a":[0,{}],"b":[1,null]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ earlier pair ignores incompatible types",
+          "input": {"a":[0,{}],"b":[1,null]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS earlier reverse ignores incompatible types",
+          "input": {"a":[1,null],"b":[0,{}]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESSEQ earlier reverse ignores incompatible types",
+          "input": {"a":[1,null],"b":[0,{}]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESS length ignores unsupported tail",
+          "input": {"a":[1],"b":[1,{}]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ length ignores unsupported tail",
+          "input": {"a":[1],"b":[1,{}]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS empty ignores unsupported first element",
+          "input": {"a":[],"b":[{}]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ empty ignores unsupported first element",
+          "input": {"a":[],"b":[{}]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS empty ignores null first element",
+          "input": {"a":[],"b":[null]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ empty ignores null first element",
+          "input": {"a":[],"b":[null]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS nested difference ignores outer unsupported tail",
+          "input": {"a":[[0],{}],"b":[[1],null]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ nested difference ignores outer unsupported tail",
+          "input": {"a":[[0],{}],"b":[[1],null]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        }
+      ]
+    },
+    {
+      "name": "Dates and logical instants",
+      "desc": "Calendar dates, datetimes, and timestamps compare only within their own precision type. Fields are compared from year through fractional/leap seconds. Timestamp offsets normalize year/month/day/hour/minute first; leap seconds remain distinguishable from the following minute. Strings are never parsed implicitly.",
+      "tests": [
+        {
+          "name": "LESS equal calendar date",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["CASTDATE","2024-01-01"],["CASTDATE","2024-01-01"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESSEQ equal calendar date",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["CASTDATE","2024-01-01"],["CASTDATE","2024-01-01"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS calendar year",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["CASTDATE","2023-12-31"],["CASTDATE","2024-01-01"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ calendar year",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["CASTDATE","2023-12-31"],["CASTDATE","2024-01-01"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS calendar month",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["CASTDATE","2024-01-31"],["CASTDATE","2024-02-01"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ calendar month",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["CASTDATE","2024-01-31"],["CASTDATE","2024-02-01"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS calendar day",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["CASTDATE","2024-02-28"],["CASTDATE","2024-02-29"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ calendar day",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["CASTDATE","2024-02-28"],["CASTDATE","2024-02-29"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS expanded years",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["CASTDATE","9999-12-31"],["CASTDATE","+010000-01-01"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ expanded years",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["CASTDATE","9999-12-31"],["CASTDATE","+010000-01-01"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS negative year",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["CASTDATE","-000001-12-31"],["CASTDATE","0000-01-01"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ negative year",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["CASTDATE","-000001-12-31"],["CASTDATE","0000-01-01"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS equal datetime",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["CASTDATE","2024-01-01T00:00:00"],["CASTDATE","2024-01-01 00:00:00"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESSEQ equal datetime",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["CASTDATE","2024-01-01T00:00:00"],["CASTDATE","2024-01-01 00:00:00"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS datetime hour",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["CASTDATE","2024-01-01T01:00:00"],["CASTDATE","2024-01-01T02:00:00"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ datetime hour",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["CASTDATE","2024-01-01T01:00:00"],["CASTDATE","2024-01-01T02:00:00"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS datetime minute",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["CASTDATE","2024-01-01T00:01:00"],["CASTDATE","2024-01-01T00:02:00"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ datetime minute",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["CASTDATE","2024-01-01T00:01:00"],["CASTDATE","2024-01-01T00:02:00"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS datetime second",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["CASTDATE","2024-01-01T00:00:01"],["CASTDATE","2024-01-01T00:00:02"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ datetime second",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["CASTDATE","2024-01-01T00:00:01"],["CASTDATE","2024-01-01T00:00:02"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS fractional seconds",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["CASTDATE","2024-01-01T00:00:01.001"],["CASTDATE","2024-01-01T00:00:01.002"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ fractional seconds",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["CASTDATE","2024-01-01T00:00:01.001"],["CASTDATE","2024-01-01T00:00:01.002"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS equal fractional spellings",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["CASTDATE","2024-01-01T00:00:01.1"],["CASTDATE","2024-01-01T00:00:01.100"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESSEQ equal fractional spellings",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["CASTDATE","2024-01-01T00:00:01.1"],["CASTDATE","2024-01-01T00:00:01.100"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS leap second",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["CASTDATE","2024-01-01T00:00:59.999"],["CASTDATE","2024-01-01T00:00:60"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ leap second",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["CASTDATE","2024-01-01T00:00:59.999"],["CASTDATE","2024-01-01T00:00:60"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS fractional leap second",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["CASTDATE","2024-01-01T00:00:60"],["CASTDATE","2024-01-01T00:00:60.5"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ fractional leap second",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["CASTDATE","2024-01-01T00:00:60"],["CASTDATE","2024-01-01T00:00:60.5"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS leap second before next minute",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["CASTDATE","2024-01-01T00:00:60.5"],["CASTDATE","2024-01-01T00:01:00"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ leap second before next minute",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["CASTDATE","2024-01-01T00:00:60.5"],["CASTDATE","2024-01-01T00:01:00"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS equal UTC timestamps",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["CASTDATE","2024-01-01T00:00:00Z"],["CASTDATE","2024-01-01T00:00:00+00"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESSEQ equal UTC timestamps",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["CASTDATE","2024-01-01T00:00:00Z"],["CASTDATE","2024-01-01T00:00:00+00"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS equal offset instant",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["CASTDATE","2024-01-01T02:30:00+0230"],["CASTDATE","2024-01-01T00:00:00Z"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESSEQ equal offset instant",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["CASTDATE","2024-01-01T02:30:00+0230"],["CASTDATE","2024-01-01T00:00:00Z"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS same local clock different offsets",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["CASTDATE","2024-01-01T00:00:00+01"],["CASTDATE","2024-01-01T00:00:00Z"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ same local clock different offsets",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["CASTDATE","2024-01-01T00:00:00+01"],["CASTDATE","2024-01-01T00:00:00Z"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS cross day equality",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["CASTDATE","2024-01-02T00:30:00+01"],["CASTDATE","2024-01-01T23:30:00Z"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESSEQ cross day equality",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["CASTDATE","2024-01-02T00:30:00+01"],["CASTDATE","2024-01-01T23:30:00Z"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS cross month equality",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["CASTDATE","2024-03-01T00:00:00+01"],["CASTDATE","2024-02-29T23:00:00Z"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESSEQ cross month equality",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["CASTDATE","2024-03-01T00:00:00+01"],["CASTDATE","2024-02-29T23:00:00Z"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS cross year equality",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["CASTDATE","2024-01-01T00:00:00+01"],["CASTDATE","2023-12-31T23:00:00Z"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESSEQ cross year equality",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["CASTDATE","2024-01-01T00:00:00+01"],["CASTDATE","2023-12-31T23:00:00Z"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS negative offset crossing year",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["CASTDATE","2023-12-31T23:00:00-02"],["CASTDATE","2024-01-01T01:00:00Z"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESSEQ negative offset crossing year",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["CASTDATE","2023-12-31T23:00:00-02"],["CASTDATE","2024-01-01T01:00:00Z"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS cross year order",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["CASTDATE","2024-01-01T00:00:00+01"],["CASTDATE","2023-12-31T23:30:00Z"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ cross year order",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["CASTDATE","2024-01-01T00:00:00+01"],["CASTDATE","2023-12-31T23:30:00Z"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS offset leap equality",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["CASTDATE","2024-01-01T01:00:60+01"],["CASTDATE","2024-01-01T00:00:60Z"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESSEQ offset leap equality",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["CASTDATE","2024-01-01T01:00:60+01"],["CASTDATE","2024-01-01T00:00:60Z"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS offset leap before next minute",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["CASTDATE","2024-01-01T01:00:60+01"],["CASTDATE","2024-01-01T00:01:00Z"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ offset leap before next minute",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["CASTDATE","2024-01-01T01:00:60+01"],["CASTDATE","2024-01-01T00:01:00Z"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS extreme positive offset",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["CASTDATE","2024-01-02T00:00:00+2359"],["CASTDATE","2024-01-01T00:01:00Z"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESSEQ extreme positive offset",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["CASTDATE","2024-01-02T00:00:00+2359"],["CASTDATE","2024-01-01T00:01:00Z"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS extreme negative offset",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["CASTDATE","2024-01-01T00:01:00-2359"],["CASTDATE","2024-01-02T00:00:00Z"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESSEQ extreme negative offset",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["CASTDATE","2024-01-01T00:01:00-2359"],["CASTDATE","2024-01-02T00:00:00Z"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS current parsed date via LOCAL",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",null,["CASTDATE","2024-01-01"],["LESS",["CASTDATE","2024-01-02"]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS dates nested in arrays",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",[[["CASTDATE","2024-01-01"]]],[[["CASTDATE","2024-01-02"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ current parsed date via LOCAL",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",null,["CASTDATE","2024-01-01"],["LESSEQ",["CASTDATE","2024-01-02"]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ dates nested in arrays",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",[[["CASTDATE","2024-01-01"]]],[[["CASTDATE","2024-01-02"]]]],["NODE"]]],
+          "output": true
+        }
+      ]
+    },
+    {
+      "name": "Contexts, operands, and namespaces",
+      "desc": "Both explicit operands evaluate in the same caller scope; the one-operand form borrows NODE. LOCAL supports convenient field comparisons, and CONST/STASH/TEMP/EXPR preserve their ordinary value semantics. These functions return booleans, so a function used as a match pattern compares that boolean literally rather than using it as a predicate.",
+      "tests": [
+        {
+          "name": "LESS LOCAL numeric discriminator",
+          "input": {"score":4},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",null,["NODE","score"],["LESS",5]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS computed field selectors",
+          "input": {"a":"left","left":1,"right":2},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE",["NODE","a"]],["NODE","right"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS both operands retain caller NODE",
+          "input": {"left":1,"right":2},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","left"],["NODE","right"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS namespaces",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1,"const":["a",1],"expr":["test",["LESS",["CONST","a"],["TEMP","b"]]]},["COPY",2,["STASH","b"]],["COPY",["LOCAL","b",["STASH","b"],["EXPR","test"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS numeric match does not treat the result as a predicate",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["LESS",2]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESS explicit result comparison",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["LESS",2],true],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS boolean matching sees the literal result",
+          "input": true,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["LESS",1,2]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS CASE condition uses an explicit boolean comparison",
+          "input": 2,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASE",["IS",["LESS",3],true],"small","other"],["NODE"]]],
+          "output": "small"
+        },
+        {
+          "name": "LESS direct CASE condition is a literal boolean match",
+          "input": 2,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASE",["LESS",3],"wrong","other"],["NODE"]]],
+          "output": "other"
+        },
+        {
+          "name": "LESS arrays construct embedded values",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",[[["NODE"]]],[[2]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS returned expression-looking data is not evaluated",
+          "input": {"a":["FAIL"],"b":["FAIL"]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESSEQ LOCAL numeric discriminator",
+          "input": {"score":4},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",null,["NODE","score"],["LESSEQ",5]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ computed field selectors",
+          "input": {"a":"left","left":1,"right":2},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE",["NODE","a"]],["NODE","right"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ both operands retain caller NODE",
+          "input": {"left":1,"right":2},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","left"],["NODE","right"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ namespaces",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1,"const":["a",1],"expr":["test",["LESSEQ",["CONST","a"],["TEMP","b"]]]},["COPY",2,["STASH","b"]],["COPY",["LOCAL","b",["STASH","b"],["EXPR","test"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ numeric match does not treat the result as a predicate",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["LESSEQ",2]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESSEQ explicit result comparison",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["LESSEQ",2],true],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ boolean matching sees the literal result",
+          "input": true,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["LESSEQ",1,2]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ CASE condition uses an explicit boolean comparison",
+          "input": 2,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASE",["IS",["LESSEQ",3],true],"small","other"],["NODE"]]],
+          "output": "small"
+        },
+        {
+          "name": "LESSEQ direct CASE condition is a literal boolean match",
+          "input": 2,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASE",["LESSEQ",3],"wrong","other"],["NODE"]]],
+          "output": "other"
+        },
+        {
+          "name": "LESSEQ arrays construct embedded values",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",[[["NODE"]]],[[2]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ returned expression-looking data is not evaluated",
+          "input": {"a":["FAIL"],"b":["FAIL"]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS implicit boolean",
+          "input": false,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",true],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS implicit string",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS","b"],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS implicit array",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",[[2]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS implicit equal array",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",[[1,2]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "LESSEQ implicit boolean",
+          "input": false,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",true],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ implicit string",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ","b"],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ implicit array",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",[[2]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ implicit equal array",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",[[1,2]]],["NODE"]]],
+          "output": true
+        }
+      ]
+    },
+    {
+      "name": "Invalid comparisons and visited values",
+      "desc": "Different types, null, objects, and mismatched date precision produce INVALID_TARGET. Unsupported visited array elements fail even if their JSON values look equal. Unvisited source tails are ignored, but constructing an operand still evaluates all expressions inside that operand before comparison.",
+      "tests": [
+        {
+          "name": "LESS nulls",
+          "input": {"a":null,"b":null},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESSEQ nulls",
+          "input": {"a":null,"b":null},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESS empty objects",
+          "input": {"a":{},"b":{}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESSEQ empty objects",
+          "input": {"a":{},"b":{}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESS different objects",
+          "input": {"a":{"x":1},"b":{"x":2}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESSEQ different objects",
+          "input": {"a":{"x":1},"b":{"x":2}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESS number and string",
+          "input": {"a":1,"b":"1"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESSEQ number and string",
+          "input": {"a":1,"b":"1"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESS string and number",
+          "input": {"a":"1","b":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESSEQ string and number",
+          "input": {"a":"1","b":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESS boolean and number",
+          "input": {"a":false,"b":0},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESSEQ boolean and number",
+          "input": {"a":false,"b":0},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESS number and boolean",
+          "input": {"a":0,"b":false},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESSEQ number and boolean",
+          "input": {"a":0,"b":false},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESS array and object",
+          "input": {"a":[],"b":{}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESSEQ array and object",
+          "input": {"a":[],"b":{}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESS array and string",
+          "input": {"a":[],"b":""},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESSEQ array and string",
+          "input": {"a":[],"b":""},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESS string and array",
+          "input": {"a":"","b":[]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESSEQ string and array",
+          "input": {"a":"","b":[]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESS nested incompatible types",
+          "input": {"a":[1,"2"],"b":[1,2]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESSEQ nested incompatible types",
+          "input": {"a":[1,"2"],"b":[1,2]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESS nested objects",
+          "input": {"a":[{}],"b":[{}]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESSEQ nested objects",
+          "input": {"a":[{}],"b":[{}]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESS nested nulls",
+          "input": {"a":[null],"b":[null]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESSEQ nested nulls",
+          "input": {"a":[null],"b":[null]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESS nested unsupported tail after equal prefix",
+          "input": {"a":[1,{}],"b":[1,{}]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESSEQ nested unsupported tail after equal prefix",
+          "input": {"a":[1,{}],"b":[1,{}]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESS date versus datetime",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["CASTDATE","2024-01-01"],["CASTDATE","2024-01-01T00:00:00"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESS datetime versus timestamp",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["CASTDATE","2024-01-01T00:00:00"],["CASTDATE","2024-01-01T00:00:00Z"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESS date versus timestamp",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["CASTDATE","2024-01-01"],["CASTDATE","2024-01-01T00:00:00Z"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESS date versus calendar string",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["CASTDATE","2024-01-01"],"2024-01-02"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESS unselected array element expression still evaluates",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",[[0,["FAIL"]]],[[1,2]]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESS match probe traps invalid types",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NONE",["LESS",null,null]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS alternative can recover from invalid types",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ANY",["LESS",{},{}],["NUM"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESS FAIL left operand",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["FAIL"],1],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESS FAIL right operand",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",1,["FAIL"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESS missing explicit operand",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["NODE","missing"],1],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESSEQ date versus datetime",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["CASTDATE","2024-01-01"],["CASTDATE","2024-01-01T00:00:00"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESSEQ datetime versus timestamp",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["CASTDATE","2024-01-01T00:00:00"],["CASTDATE","2024-01-01T00:00:00Z"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESSEQ date versus timestamp",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["CASTDATE","2024-01-01"],["CASTDATE","2024-01-01T00:00:00Z"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESSEQ date versus calendar string",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["CASTDATE","2024-01-01"],"2024-01-02"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESSEQ unselected array element expression still evaluates",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",[[0,["FAIL"]]],[[1,2]]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESSEQ match probe traps invalid types",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NONE",["LESSEQ",null,null]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ alternative can recover from invalid types",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ANY",["LESSEQ",{},{}],["NUM"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LESSEQ FAIL left operand",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["FAIL"],1],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESSEQ FAIL right operand",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",1,["FAIL"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESSEQ missing explicit operand",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["NODE","missing"],1],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESS implicit null",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",null],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESS implicit object",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",{}],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESS implicit failing right operand",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["FAIL"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESSEQ implicit null",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",null],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESSEQ implicit object",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",{}],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "LESSEQ implicit failing right operand",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["FAIL"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        }
+      ]
+    },
+    {
+      "name": "Syntax and fatal failures",
+      "desc": "Each expression accepts exactly one or two value operands. Invalid syntax remains INVALID_GRAFT, and RESOURCE_LIMIT or UNSUPPORTED_GRAFT errors cannot be trapped by matching probes. Recursive operand evaluation must be bounded.",
+      "tests": [
+        {
+          "name": "LESS no operands",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS"],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "LESS too many operands",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",1,2,3],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "LESS unknown nested expression",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",1,["UNKNOWN"]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "LESS unsupported operand",
+          "input": "1e9999",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESS",["CASTNUM"],1],["NODE"]]],
+          "errors": {"UNSUPPORTED_GRAFT":true}
+        },
+        {
+          "name": "LESS enclosing NONE cannot hide unsupported operands",
+          "input": "1e9999",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NONE",["LESS",["CASTNUM"],1]],["NODE"]]],
+          "errors": {"UNSUPPORTED_GRAFT":true}
+        },
+        {
+          "name": "LESS recursive operand",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1,"expr":["loop",["LESS",["EXPR","loop"],1]]},["COPY",["EXPR","loop"],["NODE"]]],
+          "errors": {"RESOURCE_LIMIT":true},
+          "limits": {"depth":24}
+        },
+        {
+          "name": "LESSEQ no operands",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ"],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "LESSEQ too many operands",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",1,2,3],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "LESSEQ unknown nested expression",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",1,["UNKNOWN"]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "LESSEQ unsupported operand",
+          "input": "1e9999",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LESSEQ",["CASTNUM"],1],["NODE"]]],
+          "errors": {"UNSUPPORTED_GRAFT":true}
+        },
+        {
+          "name": "LESSEQ enclosing NONE cannot hide unsupported operands",
+          "input": "1e9999",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NONE",["LESSEQ",["CASTNUM"],1]],["NODE"]]],
+          "errors": {"UNSUPPORTED_GRAFT":true}
+        },
+        {
+          "name": "LESSEQ recursive operand",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1,"expr":["loop",["LESSEQ",["EXPR","loop"],1]]},["COPY",["EXPR","loop"],["NODE"]]],
+          "errors": {"RESOURCE_LIMIT":true},
+          "limits": {"depth":24}
+        }
+      ]
+    }
+  ]
+}

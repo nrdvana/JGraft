@@ -1,0 +1,575 @@
+{
+  "version": 1,
+  "name": "REDUCE",
+  "desc": "Covers REDUCE: ordered iteration, caller-context initial/source values, a literal string/number TEMP accumulator name, arbitrary initial and returned value types, index-aware callbacks using CURPROP, nested lexical scopes, independent results, empty-array laziness, namespaces, metadata, validation, and failure propagation. Reduce callbacks are value expressions; source elements and the accumulator are read-only aliases during each callback.",
+  "tests": [
+    {
+      "name": "Initial values and empty iteration",
+      "desc": "Empty arrays return the initial value without evaluating the callback. Initial expressions are evaluated even for empty input; all JSON value types are supported.",
+      "tests": [
+        {
+          "name": "null",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["FAIL"],"acc",null],["NODE"]]],
+          "output": null
+        },
+        {
+          "name": "false",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["FAIL"],"acc",false],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "true",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["FAIL"],"acc",true],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "zero",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["FAIL"],"acc",0],["NODE"]]],
+          "output": 0
+        },
+        {
+          "name": "number",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["FAIL"],"acc",3],["NODE"]]],
+          "output": 3
+        },
+        {
+          "name": "fraction",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["FAIL"],"acc",0.5],["NODE"]]],
+          "output": 0.5
+        },
+        {
+          "name": "empty string",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["FAIL"],"acc",""],["NODE"]]],
+          "output": ""
+        },
+        {
+          "name": "string",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["FAIL"],"acc","abc"],["NODE"]]],
+          "output": "abc"
+        },
+        {
+          "name": "empty array",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["FAIL"],"acc",[[]]],["NODE"]]],
+          "output": []
+        },
+        {
+          "name": "array",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["FAIL"],"acc",[[1,[[2]]]]],["NODE"]]],
+          "output": [1,[2]]
+        },
+        {
+          "name": "empty object",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["FAIL"],"acc",{}],["NODE"]]],
+          "output": {}
+        },
+        {
+          "name": "object",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["FAIL"],"acc",{"x":[[1]]}],["NODE"]]],
+          "output": {"x":[1]}
+        },
+        {
+          "name": "Computed initial expression",
+          "input": {"items":[],"seed":3},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["FAIL"],"acc",["ADD",["NODE","seed"],1],["NODE","items"]],["NODE"]]],
+          "output": 4
+        },
+        {
+          "name": "Failing initial value is still evaluated",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["NODE"],"acc",["FAIL"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Unreached syntax may be diagnosed statically",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["UNKNOWN"],"acc",1],["NODE"]]],
+          "output": 1,
+          "errors": {"INVALID_GRAFT":true}
+        }
+      ]
+    },
+    {
+      "name": "Ordered accumulation",
+      "desc": "The callback sees each element as NODE and the previous accumulator under the chosen TEMP root. It returns the next accumulator. No associativity or commutativity is presumed.",
+      "tests": [
+        {
+          "name": "Sum",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["ADD",["TEMP","a"],["NODE"]],"a",0],["NODE"]]],
+          "output": 6
+        },
+        {
+          "name": "Seeded sum",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["ADD",["TEMP","a"],["NODE"]],"a",10],["NODE"]]],
+          "output": 16
+        },
+        {
+          "name": "Product",
+          "input": [2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["MUL",["TEMP","a"],["NODE"]],"a",1],["NODE"]]],
+          "output": 24
+        },
+        {
+          "name": "Noncommutative subtraction",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["SUB",["TEMP","a"],["NODE"]],"a",10],["NODE"]]],
+          "output": 4
+        },
+        {
+          "name": "String concatenation",
+          "input": ["a","b","c"],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["CONCAT",["TEMP","a"],["NODE"]],"a","start:"],["NODE"]]],
+          "output": "start:abc"
+        },
+        {
+          "name": "Last element replaces accumulator",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["NODE"],"a","initial"],["NODE"]]],
+          "output": 3
+        },
+        {
+          "name": "Return prior accumulator unchanged",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["TEMP","a"],"a",{"x":[[1]]}],["NODE"]]],
+          "output": {"x":[1]}
+        },
+        {
+          "name": "Construct an array accumulator",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["CONCAT",["TEMP","a"],[[["NODE"]]]],"a",[[]]],["NODE"]]],
+          "output": [1,2,3]
+        },
+        {
+          "name": "Construct object history",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",{"previous":["TEMP","a"],"value":["NODE"]},"a",null],["NODE"]]],
+          "output": {"previous":{"previous":null,"value":1},"value":2}
+        },
+        {
+          "name": "Accumulator type may change",
+          "input": [null,2,"last"],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["NODE"],"a",false],["NODE"]]],
+          "output": "last"
+        },
+        {
+          "name": "Numeric expression identifier",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[59,["ADD",["TEMP","a"],["NODE"]],"a",0],["NODE"]]],
+          "output": 3
+        }
+      ]
+    },
+    {
+      "name": "Accumulator names",
+      "desc": "The name is literal, never evaluated as an expression. Strings and numbers name one TEMP root, with numbers coerced to strings. Repeated iterations replace only that root and preserve other TEMP values.",
+      "tests": [
+        {
+          "name": "String \"\"",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["ADD",["TEMP",""],["NODE"]],"",0],["NODE"]]],
+          "output": 3
+        },
+        {
+          "name": "String \"x\"",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["ADD",["TEMP","x"],["NODE"]],"x",0],["NODE"]]],
+          "output": 3
+        },
+        {
+          "name": "String \"0\"",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["ADD",["TEMP","0"],["NODE"]],"0",0],["NODE"]]],
+          "output": 3
+        },
+        {
+          "name": "String \"-1\"",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["ADD",["TEMP","-1"],["NODE"]],"-1",0],["NODE"]]],
+          "output": 3
+        },
+        {
+          "name": "String \"a.b\"",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["ADD",["TEMP","a.b"],["NODE"]],"a.b",0],["NODE"]]],
+          "output": 3
+        },
+        {
+          "name": "String \"a/b\"",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["ADD",["TEMP","a/b"],["NODE"]],"a/b",0],["NODE"]]],
+          "output": 3
+        },
+        {
+          "name": "String \"constructor\"",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["ADD",["TEMP","constructor"],["NODE"]],"constructor",0],["NODE"]]],
+          "output": 3
+        },
+        {
+          "name": "String \"toString\"",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["ADD",["TEMP","toString"],["NODE"]],"toString",0],["NODE"]]],
+          "output": 3
+        },
+        {
+          "name": "String \"hasOwnProperty\"",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["ADD",["TEMP","hasOwnProperty"],["NODE"]],"hasOwnProperty",0],["NODE"]]],
+          "output": 3
+        },
+        {
+          "name": "String \"__proto__\"",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["ADD",["TEMP","__proto__"],["NODE"]],"__proto__",0],["NODE"]]],
+          "output": 3,
+          "needProto": true
+        },
+        {
+          "name": "String \"é\"",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["ADD",["TEMP","é"],["NODE"]],"é",0],["NODE"]]],
+          "output": 3
+        },
+        {
+          "name": "String \"🙂\"",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["ADD",["TEMP","🙂"],["NODE"]],"🙂",0],["NODE"]]],
+          "output": 3
+        },
+        {
+          "name": "String \"\\ud800\"",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["ADD",["TEMP","\ud800"],["NODE"]],"\ud800",0],["NODE"]]],
+          "output": 3,
+          "needLoneSurrogate": true
+        },
+        {
+          "name": "Number 0",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["ADD",["TEMP","0"],["NODE"]],0,0],["NODE"]]],
+          "output": 3
+        },
+        {
+          "name": "Number 1",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["ADD",["TEMP","1"],["NODE"]],1,0],["NODE"]]],
+          "output": 3
+        },
+        {
+          "name": "Number -1",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["ADD",["TEMP","-1"],["NODE"]],-1,0],["NODE"]]],
+          "output": 3
+        },
+        {
+          "name": "Number 1.5",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["ADD",["TEMP","1.5"],["NODE"]],1.5,0],["NODE"]]],
+          "output": 3
+        }
+      ]
+    },
+    {
+      "name": "Source context and CURPROP",
+      "desc": "Explicit arrays and initial values use caller scope, before the accumulator is installed. Callback NODE aliases each source element, preserving its array index. Nested iteration restores the outer element and accumulator.",
+      "tests": [
+        {
+          "name": "Explicit source",
+          "input": {"seed":10,"items":[1,2]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["ADD",["TEMP","a"],["NODE"]],"a",["NODE","seed"],["NODE","items"]],["NODE"]]],
+          "output": 13
+        },
+        {
+          "name": "Constructed array source",
+          "input": 3,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["ADD",["TEMP","a"],["NODE"]],"a",0,[[["NODE"],["ADD",["NODE"],1]]]],["NODE"]]],
+          "output": 7
+        },
+        {
+          "name": "Indices follow the input array",
+          "input": ["x","y","z"],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["CONCAT",["TEMP","a"],[[["CURPROP"]]]],"a",[[]]],["NODE"]]],
+          "output": [0,1,2]
+        },
+        {
+          "name": "Sliced source indices restart at zero",
+          "input": [10,20,30],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["CONCAT",["TEMP","a"],[[["CURPROP"]]]],"a",[[]],["SLICE",["NODE"],1]],["NODE"]]],
+          "output": [0,1]
+        },
+        {
+          "name": "Element fields retain their callback index",
+          "input": [{"x":1},{"x":2}],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["CONCAT",["TEMP","a"],[[{"value":["NODE","x"],"index":["CURPROP"]}]]],"a",[[]]],["NODE"]]],
+          "output": [{"value":1,"index":0},{"value":2,"index":1}]
+        },
+        {
+          "name": "LOCAL rebind makes callback NODE a new root",
+          "input": [{"x":2}],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["LOCAL",null,["NODE","x"],["CURPROP"]],"a",0],["NODE"]]],
+          "output": null
+        },
+        {
+          "name": "Nested reductions shadow the same accumulator",
+          "input": [[1,2],[3,4]],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["ADD",["TEMP","a"],["REDUCE",["ADD",["TEMP","a"],["NODE"]],"a",0]],"a",0],["NODE"]]],
+          "output": 10
+        },
+        {
+          "name": "Outer callback context survives nested REDUCE",
+          "input": [[1,2],[3]],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["CONCAT",["TEMP","a"],[[{"sum":["REDUCE",["ADD",["TEMP","a"],["NODE"]],"a",0],"index":["CURPROP"]}]]],"a",[[]]],["NODE"]]],
+          "output": [{"sum":3,"index":0},{"sum":3,"index":1}]
+        },
+        {
+          "name": "Outer TEMP supplies initial and source",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","a",10,{"result":["REDUCE",["ADD",["TEMP","a"],["NODE"]],"a",["TEMP","a"]],"outer":["TEMP","a"]}],["NODE"]]],
+          "output": {"result":13,"outer":10}
+        },
+        {
+          "name": "Outer TEMP supplies explicit source",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","a",[[1,2]],{"result":["REDUCE",["ADD",["TEMP","a"],["NODE"]],"a",0,["TEMP","a"]],"outer":["TEMP","a"]}],["NODE"]]],
+          "output": {"result":3,"outer":[1,2]}
+        },
+        {
+          "name": "Callback LOCAL shadowing is restored",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["ADD",["TEMP","a"],["LOCAL","a",10,["NODE"]]],"a",0],["NODE"]]],
+          "output": 3
+        }
+      ]
+    },
+    {
+      "name": "Namespaces and independent results",
+      "desc": "The callback retains caller CONST/STASH/TEMP/EXPR bindings, and no accumulator binding escapes. Returned structures are independent values. SPLIT metadata in an array accumulator survives when operations preserve it.",
+      "tests": [
+        {
+          "name": "All value namespaces",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1,"const":["bias",1],"expr":["step",["ADD",["TEMP","a"],["NODE"],["CONST","bias"],["STASH","bias"],["TEMP","bias"]]]},["COPY",1,["STASH","bias"]],["COPY",["LOCAL","bias",1,["REDUCE",["EXPR","step"],"a",0]],["NODE"]]],
+          "output": 9
+        },
+        {
+          "name": "New accumulator does not escape",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",{"result":["REDUCE",["NODE"],"a",0],"missing":["NONE",["IS",["TEMP","a"],["EXISTS"]]]}],["NODE"]]],
+          "output": {"result":1,"missing":true}
+        },
+        {
+          "name": "Editing result preserves source",
+          "input": {"items":[{"x":[1]}]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["NODE"],"a",null,["NODE","items"]],"result"],["COPY",2,["NODE","result","x",0]]],
+          "output": {"items":[{"x":[1]}],"result":{"x":[2]}}
+        },
+        {
+          "name": "Identity accumulator preserves SPLIT metadata",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":["ANY",":","|"],"default":"/"},["REDUCE",["FAIL"],"a",["SPLIT",{"sep":["ANY",":","|"],"default":"/","trim":" "}," a : b|c "]]],["NODE"]]],
+          "output": " a : b|c "
+        },
+        {
+          "name": "Accumulated direct elements preserve SPLIT metadata",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":["ANY",":","|"],"default":"/"},["REDUCE",["CONCAT",["TEMP","a"],[[["NODE"]]]],"a",[[]],["SPLIT",{"sep":["ANY",":","|"],"default":"/","trim":" "}," a : b|c "]]],["NODE"]]],
+          "output": " a : b|c "
+        },
+        {
+          "name": "Parsed dates retain virtual fields",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","date",["REDUCE",["TEMP","a"],"a",["CASTDATE","2024-01-01"]],["TEMP","date","year"]],["NODE"]]],
+          "output": 2024
+        }
+      ]
+    },
+    {
+      "name": "Validation and failures",
+      "desc": "Sources must be arrays. Invalid literal accumulator-name types are INVALID_OPERAND, with optional static INVALID_GRAFT diagnosis. Callback value failures abort the reduction; outer match probes may trap target/operand errors, but not syntax or resource failures.",
+      "tests": [
+        {
+          "name": "Non-array null",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["NODE"],"a",0],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Non-array false",
+          "input": false,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["NODE"],"a",0],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Non-array true",
+          "input": true,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["NODE"],"a",0],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Non-array zero",
+          "input": 0,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["NODE"],"a",0],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Non-array number",
+          "input": 3,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["NODE"],"a",0],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Non-array fraction",
+          "input": 0.5,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["NODE"],"a",0],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Non-array empty string",
+          "input": "",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["NODE"],"a",0],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Non-array string",
+          "input": "abc",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["NODE"],"a",0],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Non-array empty object",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["NODE"],"a",0],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Non-array object",
+          "input": {"x":[1]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["NODE"],"a",0],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Invalid name null",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["NODE"],null,0],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid name false",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["NODE"],false,0],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid name object",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["NODE"],{},0],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid name array",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["NODE"],[],0],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid name computed name",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["NODE"],["CASTSTR",1],0],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid name FAIL expression",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["NODE"],["FAIL"],0],["NODE"]]],
+          "errors": {"INVALID_OPERAND":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Reached callback FAIL",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["FAIL"],"a",0],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Later callback failure",
+          "input": [1,null,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["DIV",["TEMP","a"],["NODE"]],"a",4],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Missing explicit source",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["NODE"],"a",0,["NODE","missing"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Whole reduction can be a negative match probe",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NONE",["IS",["REDUCE",["FAIL"],"a",0],0]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Argument count 0",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE"],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Argument count 1",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Argument count 2",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["NODE"],"a"],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Argument count 5",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["NODE"],"a",0,[[]],1],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Unknown reached callback",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["UNKNOWN"],"a",0],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Explicit non-array source",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["NODE"],"a",0,3],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Explicit source failure is not a predicate failure",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["REDUCE",["NODE"],"a",0,["FAIL"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Recursive callback is fatal",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1,"expr":["loop",["EXPR","loop"]]},["COPY",["REDUCE",["EXPR","loop"],"a",0],["NODE"]]],
+          "errors": {"RESOURCE_LIMIT":true},
+          "limits": {"depth":24}
+        }
+      ]
+    }
+  ]
+}

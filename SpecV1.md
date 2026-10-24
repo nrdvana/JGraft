@@ -723,6 +723,24 @@ The inner `IS` compares two values instead of comparing one value to the
 current node, and the return value gets consumed as the match result because
 `IS` is a match expression.
 
+## Math
+
+For any operation that computes a new numeric value, if the value would
+overflow the host language's representation for numbers (or configured limits,
+which an application might want for portability) the operation fails with
+`UNSUPPORTED_GRAFT`.  Several math expressions are defined in terms of
+the host language math operators.  In some environments an overflow can return
+a special infinity value, though these cannot be serialized to JSON.
+Implementations may give the application the option of preserving infinity
+values in the output (and using them as input to other expressions where that
+makes sense) instead of failing with `UNSUPPORTED_GRAFT`.  However, division
+by exactly zero should always fail with `INVALID_TARGET` rather than returning
+an infinity value.
+
+Some environments also return a "not a number" value for nonsensical
+operations.  These values should always be converted to a `INVALID_TARGET`
+error.
+
 ## Errors
 
 Applying a JGraft to a target data structure may fail with:
@@ -1974,10 +1992,15 @@ based on the array cursor.
       "abcdef",            // 6 literal characters
       "a","z",             // a range of characters to be added
       "a",null,            // open-ended range
+      "a","",              // not a range, just the character 'a'
       48,57,               // unicode codepoint range
       [EXPR,name]          // reference a common CHARS expression
 
 Match when the current node is a character in the defined set.
+
+Outside of regex context, this means both integers representing unicode
+codepoints and one-character strings. ("one character" according to the
+implementation's construction of codepoint arrays from a JSON string)
 
 Boolean values switch between inclusion and exclusion.  The default is
 inclusion to an empty set.  If the first element is false, it instead becomes
@@ -1985,8 +2008,9 @@ exclusion from the complete set of Unicode.  Further boolean values affect
 the elements that follow but do not themselves modify the set.
 
 A string of more than one character is considered a list of characters to
-include.  A single character begins an inclusive range of characters if the
-following element is also one character.  `null` may be used as an alias for
+include.  The list may be empty.  A single character begins an inclusive range
+of characters if the following element is also one character.  Ranges must be
+specified in ascending codepoint order.  `null` may be used as an alias for
 the maximum Unicode character.  An integer is treated as a unicode codepoint
 value (and must fall within the valid unicode range).  Since integers and
 `null` represent single characters, they also begin or end ranges when
@@ -2510,8 +2534,10 @@ expressions.
 
 On arrays, this performs an element-by-element `LESS` test in the order of the
 elements, stopping at the first pair which are not equal and returning the
-result.  If it makes it to the end of one array before the other, that array
-is considered the lesser of the two.
+result.  If it encounters types without a defined comparison, it aborts with
+`INVALID_TARGET`, but such invalid elements are not encountered if a valid
+difference is found at an earlier element.  If it makes it to the end of one
+array before the other, that array is considered the lesser of the two.
 
 On dates and datetimes, the fields are compared most-significant to
 least-significant as if they were an array of those values.  On timestamps the
@@ -2536,15 +2562,14 @@ This is the same as `LESS` but also returns true if the values are equal.
     [ADD, value_expr1...]
     [ADD, array_expr]
 
-Add numbers.
+Add zero or more numbers.
 
 Arguments are described in value context.  All `value_expr` arguments must
-evaluate to numbers, though the numbers may also be provided as a single array
-argument.  Any other type of arguments is an `INVALID_TARGET`.
-The result is the host language's addition of those numbers, or `0` for an
-empty array.  If the implementation is not configured to allow `Inf` and
-`NaN` then a result of those value must cause the expression to fail with
-`INVALID_TARGET`.
+evaluate to numbers, unless provided as a single argument that evaluates to an
+array of numbers.  The list may be empty, resulting in the value `0`.
+Any other type of arguments fail with `INVALID_TARGET`.
+The result is the host language's addition of those numbers combined in element
+order, within the rules described in the [math section](#math).
 
 #### <span id="ex-sub">SUB</span>
 
@@ -2554,24 +2579,22 @@ Subtract numbers.
 
 Arguments are described in value context.  There must be exactly 2 arguments
 and they must evaluate to numbers.  Any other type results in `INVALID_TARGET`.
-The result is the host language's subtraction of the numbers, except if the
-implementation is not configured to allow `Inf` and `NaN` then a result of
-those value must cause the expression to fail with `INVALID_TARGET`.
+The result is the host language's subtraction of those numbers, within the rules
+described in the [math section](#math).
 
 #### <span id="ex-mul">MUL</span>
 
     [MUL, value_expr1...]
     [MUL, array_expr]
 
-Multiply numbers.
+Multiply zero or more numbers.
 
 Arguments are described in value context.  All `value_expr` arguments must
-evaluate to numbers, though the numbers may also be provided as a single array
-argument.  Any other type of arguments is an `INVALID_TARGET`.
-The result is the host language's multiplication of those numbers, or `1` for
-an empty array.  If the implementation is not configured to allow `Inf` and
-`NaN` then a result of those value must cause the expression to fail with
-`INVALID_TARGET`.
+evaluate to numbers, unless provided as a single argument that evaluates to an
+array of numbers.  The list may be empty, resulting in the value `1`.
+Any other type of arguments fail with `INVALID_TARGET`.
+The result is the host language's multiplication of those numbers combined in
+element order, within the rules described in the [math section](#math).
 
 #### <span id="ex-div">DIV</span>
 
@@ -2580,9 +2603,9 @@ an empty array.  If the implementation is not configured to allow `Inf` and
 Divide numbers.
 
 Arguments are described in value context and must evaluate to numbers.
-The result is the host language's division of those numbers, with
-division by zero triggering `INVALID_TARGET`, and a result of `Inf` or `NaN`
-when not configured to allow these must also fail with `INVALID_TARGET`.
+The result is the host language's mathematical division of those numbers (not
+integer division with rounding), within the rules described in the
+[math section](#math).
 
 #### <span id="ex-mod">MOD</span>
 

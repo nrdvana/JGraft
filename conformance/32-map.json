@@ -1,0 +1,467 @@
+{
+  "version": 1,
+  "name": "MAP",
+  "desc": "Covers MAP: deferred value-context transforms over implicit/explicit arrays, order and fixed element count, arbitrary/nested output values, CURPROP source indices, caller and nested lexical contexts, explicit captures and namespaces, independent results, source-assignment SPLIT metadata, empty-input laziness, validation, and failure propagation. MAP returns one element per input; it does not flatten output arrays.",
+  "tests": [
+    {
+      "name": "Values, order, and shape",
+      "desc": "Each transform evaluates as a value and contributes exactly one output element. Empty arrays return empty without evaluating the transform. Referenced expression-looking data remains data.",
+      "tests": [
+        {
+          "name": "Empty input",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["FAIL"]],["NODE"]]],
+          "output": []
+        },
+        {
+          "name": "Identity all JSON types",
+          "input": [null,false,true,0,3,0.5,"","abc",[],[1,[2]],{},{"x":[1]}],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["NODE"]],["NODE"]]],
+          "output": [null,false,true,0,3,0.5,"","abc",[],[1,[2]],{},{"x":[1]}]
+        },
+        {
+          "name": "Constant null",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",null],["NODE"]]],
+          "output": [null,null]
+        },
+        {
+          "name": "Constant false",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",false],["NODE"]]],
+          "output": [false,false]
+        },
+        {
+          "name": "Constant true",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",true],["NODE"]]],
+          "output": [true,true]
+        },
+        {
+          "name": "Constant zero",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",0],["NODE"]]],
+          "output": [0,0]
+        },
+        {
+          "name": "Constant number",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",3],["NODE"]]],
+          "output": [3,3]
+        },
+        {
+          "name": "Constant fraction",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",0.5],["NODE"]]],
+          "output": [0.5,0.5]
+        },
+        {
+          "name": "Constant empty string",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",""],["NODE"]]],
+          "output": ["",""]
+        },
+        {
+          "name": "Constant string",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP","abc"],["NODE"]]],
+          "output": ["abc","abc"]
+        },
+        {
+          "name": "Constant empty array",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",[[]]],["NODE"]]],
+          "output": [[],[]]
+        },
+        {
+          "name": "Constant array",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",[[1,[[2]]]]],["NODE"]]],
+          "output": [[1,[2]],[1,[2]]]
+        },
+        {
+          "name": "Constant empty object",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",{}],["NODE"]]],
+          "output": [{},{}]
+        },
+        {
+          "name": "Constant object",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",{"x":[[1]]}],["NODE"]]],
+          "output": [{"x":[1]},{"x":[1]}]
+        },
+        {
+          "name": "Arithmetic transform",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["ADD",["NODE"],1]],["NODE"]]],
+          "output": [2,3,4]
+        },
+        {
+          "name": "Match transforms return booleans",
+          "input": [1,"x",false],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["NUM"]],["NODE"]]],
+          "output": [true,false,false]
+        },
+        {
+          "name": "Bare structures construct values",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",{"value":["NODE"],"number":["NUM"]}],["NODE"]]],
+          "output": [{"value":1,"number":true},{"value":2,"number":true}]
+        },
+        {
+          "name": "Nested arrays are not flattened",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",[[["NODE"],["NODE"]]]],["NODE"]]],
+          "output": [[1,1],[2,2]]
+        },
+        {
+          "name": "Preserve expression-looking arrays",
+          "input": [["FAIL"],["NUM"]],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["NODE"]],["NODE"]]],
+          "output": [["FAIL"],["NUM"]]
+        },
+        {
+          "name": "Numeric expression identifier",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[61,["ADD",["NODE"],1]],["NODE"]]],
+          "output": [2,3]
+        }
+      ]
+    },
+    {
+      "name": "Sources and CURPROP",
+      "desc": "Source expressions evaluate in caller scope before per-element localization. CURPROP reports each source index, even when reading fields or constructing nested values. Rebinding NODE with LOCAL creates a root only inside that local scope.",
+      "tests": [
+        {
+          "name": "Explicit source",
+          "input": {"items":[1,2]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["ADD",["NODE"],1],["NODE","items"]],["NODE"]]],
+          "output": [2,3]
+        },
+        {
+          "name": "Constructed source",
+          "input": 2,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["ADD",["NODE"],1],[[["NODE"],["ADD",["NODE"],1]]]],["NODE"]]],
+          "output": [3,4]
+        },
+        {
+          "name": "Return source indices",
+          "input": ["a","b","c"],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["CURPROP"]],["NODE"]]],
+          "output": [0,1,2]
+        },
+        {
+          "name": "Indices after slicing",
+          "input": [10,20,30],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["CURPROP"],["SLICE",["NODE"],1]],["NODE"]]],
+          "output": [0,1]
+        },
+        {
+          "name": "Read fields without moving NODE",
+          "input": [{"x":1},{"x":2}],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",{"value":["NODE","x"],"index":["CURPROP"]}],["NODE"]]],
+          "output": [{"value":1,"index":0},{"value":2,"index":1}]
+        },
+        {
+          "name": "LOCAL rebinding hides element position",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["LOCAL",null,["NODE"],["CURPROP"]]],["NODE"]]],
+          "output": [null,null]
+        },
+        {
+          "name": "LOCAL TEMP binding retains element position",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["LOCAL","x",["NODE"],["CURPROP"]]],["NODE"]]],
+          "output": [0,1]
+        },
+        {
+          "name": "Nested map indices are local",
+          "input": [[1,2],[3]],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",{"outer":["CURPROP"],"inner":["MAP",["CURPROP"]]}],["NODE"]]],
+          "output": [{"outer":0,"inner":[0,1]},{"outer":1,"inner":[0]}]
+        },
+        {
+          "name": "Parallel lookup by source index",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","parallel",[["x","y"]],["MAP",["TEMP","parallel",["CURPROP"]],[[10,20]]]],["NODE"]]],
+          "output": ["x","y"]
+        },
+        {
+          "name": "Unreached syntax may be diagnosed statically",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["UNKNOWN"]],["NODE"]]],
+          "output": [],
+          "errors": {"INVALID_GRAFT":true}
+        }
+      ]
+    },
+    {
+      "name": "Lexical context and other iterators",
+      "desc": "Outer TEMP/CONST/STASH/EXPR bindings remain visible. Callback-local bindings and nested reductions/filters do not escape or change the outer element. Each transform is a value expression, regardless of surrounding matching mode.",
+      "tests": [
+        {
+          "name": "Outer TEMP bias",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","bias",3,["MAP",["ADD",["NODE"],["TEMP","bias"]]]],["NODE"]]],
+          "output": [4,5]
+        },
+        {
+          "name": "Common transform sees invocation TEMP",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1,"expr":["transform",["ADD",["NODE"],["TEMP","bias"]]]},["COPY",["LOCAL","bias",3,["MAP",["EXPR","transform"]]],["NODE"]]],
+          "output": [4,5]
+        },
+        {
+          "name": "CONST and STASH available",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1,"const":["a",1]},["COPY",2,["STASH","b"]],["COPY",["MAP",["ADD",["NODE"],["CONST","a"],["STASH","b"]]],["NODE"]]],
+          "output": [4,5]
+        },
+        {
+          "name": "Nested REDUCE restores MAP index",
+          "input": [[1,2],[3,4]],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",{"sum":["REDUCE",["ADD",["TEMP","a"],["NODE"]],"a",0],"index":["CURPROP"]}],["NODE"]]],
+          "output": [{"sum":3,"index":0},{"sum":7,"index":1}]
+        },
+        {
+          "name": "Nested FILTER produces one array per input",
+          "input": [[1,"x"],[2,3]],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["FILTER",["NUM"]]],["NODE"]]],
+          "output": [[1],[2,3]]
+        },
+        {
+          "name": "Callback LOCAL does not leak",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","x","outer",{"mapped":["MAP",["LOCAL","x","inner",["TEMP","x"]]],"outer":["TEMP","x"]}],["NODE"]]],
+          "output": {"mapped":["inner","inner"],"outer":"outer"}
+        },
+        {
+          "name": "Each element starts with the same outer TEMP",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","x",3,["MAP",["LOCAL","x",["ADD",["TEMP","x"],["NODE"]],["TEMP","x"]]]],["NODE"]]],
+          "output": [4,5]
+        },
+        {
+          "name": "Explicit CAPTURE in transform",
+          "input": [[1],[1,1]],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["CAPTURE",[[["SEQMAX","whole",["REP",0,-1,1]]]]]],["NODE"]]],
+          "output": [{"whole":{"path":[],"ofs":0,"len":1,"lim":1}},{"whole":{"path":[],"ofs":0,"len":2,"lim":2}}]
+        },
+        {
+          "name": "Outer IS does not change value construction",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["MAP",{"number":["NUM"]},[[1]]],[[{"number":true}]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "CURPROP can supply per-element capture names",
+          "input": [[1],[1,1]],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["CAPTURE",["WITH","index",["CURPROP"],[[["SEQMAX",["TEMP","index"],["REP",0,-1,1]]]]]]],["NODE"]]],
+          "output": [{"0":{"path":[],"ofs":0,"len":1,"lim":1}},{"1":{"path":[],"ofs":0,"len":2,"lim":2}}]
+        }
+      ]
+    },
+    {
+      "name": "Assignment metadata and ownership",
+      "desc": "MAP retains the source array metadata at each output index, as an assignment would. Metadata carried by a returned reference does not replace source separator/trimming. Returned containers are independent of source and sibling values.",
+      "tests": [
+        {
+          "name": "Identity round trip",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":["ANY",":","|"],"default":"/"},["MAP",["NODE"],["SPLIT",{"sep":["ANY",":","|"],"default":"/","trim":" "}," a : b|c "]]],["NODE"]]],
+          "output": " a : b|c "
+        },
+        {
+          "name": "Constant values keep original index metadata",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":["ANY",":","|"],"default":"/"},["MAP","x",["SPLIT",{"sep":["ANY",":","|"],"default":"/","trim":" "}," a : b|c "]]],["NODE"]]],
+          "output": " x : x|x "
+        },
+        {
+          "name": "Computed values keep source metadata",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":["ANY",":","|"],"default":"/"},["MAP",["CASE","a","A","b","B","C"],["SPLIT",{"sep":["ANY",":","|"],"default":"/","trim":" "}," a : b|c "]]],["NODE"]]],
+          "output": " A : B|C "
+        },
+        {
+          "name": "Direct element references do not transfer metadata",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1,"const":["s",["SPLIT",{"sep":["ANY",":","|"],"default":"/","trim":" "}," a : b|c "]]},["COPY",["JOIN",{"sep":["ANY",":","|"],"default":"/"},["MAP",["CONST","s",2],["CONST","s"]]],["NODE"]]],
+          "output": " c : c|c "
+        },
+        {
+          "name": "Editing identity result preserves source",
+          "input": {"items":[{"x":[1]},{"x":[2]}]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["NODE"],["NODE","items"]],"result"],["COPY",3,["NODE","result",0,"x",0]]],
+          "output": {"items":[{"x":[1]},{"x":[2]}],"result":[{"x":[3]},{"x":[2]}]}
+        },
+        {
+          "name": "Constant object results are independent",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1,"const":["obj",{"x":[[1]]}]},["COPY",["MAP",["CONST","obj"],[[0,1]]],["NODE"]],["COPY",2,["NODE",0,"x",0]]],
+          "output": [{"x":[2]},{"x":[1]}]
+        },
+        {
+          "name": "Parsed dates export only when written",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["CASTDATE"],[["2024-01-01","2024-01-02"]]],["NODE"]]],
+          "output": ["2024-01-01","2024-01-02"]
+        },
+        {
+          "name": "Lone surrogate values remain data",
+          "input": ["\ud800","x"],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["NODE"]],["NODE"]]],
+          "output": ["\ud800","x"],
+          "needLoneSurrogate": true
+        },
+        {
+          "name": "Arbitrary keys remain own properties",
+          "input": [{"__proto__":1}],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["NODE"]],["NODE"]]],
+          "output": [{"__proto__":1}],
+          "needProto": true
+        },
+        {
+          "name": "Plain source does not import transform element metadata",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1,"const":["s",["SPLIT",{"sep":["ANY",":","|"],"default":"/","trim":" "}," a : b|c "]]},["COPY",["JOIN",{"sep":["ANY",":","|"],"default":"/"},["MAP",["CONST","s",1],[[0,1]]]],["NODE"]]],
+          "output": "b/b"
+        }
+      ]
+    },
+    {
+      "name": "Validation and failure propagation",
+      "desc": "Non-array sources are INVALID_TARGET. A transform error aborts MAP rather than skipping that element. Literal and referenced arrays are value expressions before iteration; unknown syntax remains fatal when reached.",
+      "tests": [
+        {
+          "name": "Non-array null",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Non-array false",
+          "input": false,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Non-array true",
+          "input": true,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Non-array zero",
+          "input": 0,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Non-array number",
+          "input": 3,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Non-array fraction",
+          "input": 0.5,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Non-array empty string",
+          "input": "",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Non-array string",
+          "input": "abc",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Non-array empty object",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Non-array object",
+          "input": {"x":[1]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Reached FAIL",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["FAIL"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Later transform failure",
+          "input": [1,null,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["DIV",2,["NODE"]]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Missing element field",
+          "input": [{"x":1},{}],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["NODE","x"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Missing explicit source",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["NODE"],["NODE","missing"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Outer match can trap whole MAP failure",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NONE",["IS",["MAP",["FAIL"]],[[]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Argument count 0",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP"],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Argument count 3",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["NODE"],[[]],1],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Unknown reached transform",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["UNKNOWN"]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Explicit non-array source",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["NODE"],3],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Explicit source failure is not a predicate failure",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["NODE"],["FAIL"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Recursive callback is fatal",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1,"expr":["loop",["EXPR","loop"]]},["COPY",["MAP",["EXPR","loop"]],["NODE"]]],
+          "errors": {"RESOURCE_LIMIT":true},
+          "limits": {"depth":24}
+        }
+      ]
+    }
+  ]
+}

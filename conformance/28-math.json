@@ -1,0 +1,2034 @@
+{
+  "version": 1,
+  "name": "Math",
+  "desc": "Covers ADD, SUB, MUL, DIV, and MOD: portable exact arithmetic, ADD/MUL variadic and array forms and empty identities, strict numeric operands, divisor-sign modulus, value/namespace/LOCAL contexts, eager operand evaluation, error trapping, syntax, and fatal failures. Numeric expectations use small integers and exactly representable binary fractions, without depending on host overflow thresholds, accumulation precision, or rounding. Signed zero, underflow, overflow rejection, and nonfinite extensions belong to implementation-specific tests.",
+  "tests": [
+    {
+      "name": "Exact addition",
+      "desc": "ADD accepts individual numeric operands or one array-valued operand. No operands and an empty array both return zero. Values are chosen so every partial sum is a small integer or exact binary fraction.",
+      "tests": [
+        {
+          "name": "No operands",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD"],["NODE"]]],
+          "output": 0
+        },
+        {
+          "name": "Empty array literal",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",[[]]],["NODE"]]],
+          "output": 0
+        },
+        {
+          "name": "Empty array reference",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["NODE"]],["NODE"]]],
+          "output": 0
+        },
+        {
+          "name": "Variadic single zero",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",0],["NODE"]]],
+          "output": 0
+        },
+        {
+          "name": "Array single zero",
+          "input": [0],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["NODE"]],["NODE"]]],
+          "output": 0
+        },
+        {
+          "name": "Variadic single positive",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",3],["NODE"]]],
+          "output": 3
+        },
+        {
+          "name": "Array single positive",
+          "input": [3],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["NODE"]],["NODE"]]],
+          "output": 3
+        },
+        {
+          "name": "Variadic single negative",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",-3],["NODE"]]],
+          "output": -3
+        },
+        {
+          "name": "Array single negative",
+          "input": [-3],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["NODE"]],["NODE"]]],
+          "output": -3
+        },
+        {
+          "name": "Variadic two positives",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",2,3],["NODE"]]],
+          "output": 5
+        },
+        {
+          "name": "Array two positives",
+          "input": [2,3],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["NODE"]],["NODE"]]],
+          "output": 5
+        },
+        {
+          "name": "Variadic two negatives",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",-2,-3],["NODE"]]],
+          "output": -5
+        },
+        {
+          "name": "Array two negatives",
+          "input": [-2,-3],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["NODE"]],["NODE"]]],
+          "output": -5
+        },
+        {
+          "name": "Variadic opposite signs",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",7,-3],["NODE"]]],
+          "output": 4
+        },
+        {
+          "name": "Array opposite signs",
+          "input": [7,-3],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["NODE"]],["NODE"]]],
+          "output": 4
+        },
+        {
+          "name": "Variadic cancel to zero",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",4,-4],["NODE"]]],
+          "output": 0
+        },
+        {
+          "name": "Array cancel to zero",
+          "input": [4,-4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["NODE"]],["NODE"]]],
+          "output": 0
+        },
+        {
+          "name": "Variadic many operands",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",1,2,3,4,5],["NODE"]]],
+          "output": 15
+        },
+        {
+          "name": "Array many operands",
+          "input": [1,2,3,4,5],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["NODE"]],["NODE"]]],
+          "output": 15
+        },
+        {
+          "name": "Variadic mixed signs",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",5,-3,7,-2],["NODE"]]],
+          "output": 7
+        },
+        {
+          "name": "Array mixed signs",
+          "input": [5,-3,7,-2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["NODE"]],["NODE"]]],
+          "output": 7
+        },
+        {
+          "name": "Variadic zeros between values",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",0,2,0,3,0],["NODE"]]],
+          "output": 5
+        },
+        {
+          "name": "Array zeros between values",
+          "input": [0,2,0,3,0],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["NODE"]],["NODE"]]],
+          "output": 5
+        },
+        {
+          "name": "Variadic exact fractions",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",0.25,0.5],["NODE"]]],
+          "output": 0.75
+        },
+        {
+          "name": "Array exact fractions",
+          "input": [0.25,0.5],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["NODE"]],["NODE"]]],
+          "output": 0.75
+        },
+        {
+          "name": "Variadic negative fractions",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",-0.25,-0.5],["NODE"]]],
+          "output": -0.75
+        },
+        {
+          "name": "Array negative fractions",
+          "input": [-0.25,-0.5],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["NODE"]],["NODE"]]],
+          "output": -0.75
+        },
+        {
+          "name": "Variadic fractional cancellation",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",0.5,-0.25,0.125],["NODE"]]],
+          "output": 0.375
+        },
+        {
+          "name": "Array fractional cancellation",
+          "input": [0.5,-0.25,0.125],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["NODE"]],["NODE"]]],
+          "output": 0.375
+        }
+      ]
+    },
+    {
+      "name": "Exact subtraction",
+      "desc": "SUB requires exactly two numbers and preserves operand order. There is no unary negation form, implicit NODE operand, or array-of-operands form.",
+      "tests": [
+        {
+          "name": "positive result",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SUB",7,3],["NODE"]]],
+          "output": 4
+        },
+        {
+          "name": "negative result",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SUB",3,7],["NODE"]]],
+          "output": -4
+        },
+        {
+          "name": "equal values",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SUB",4,4],["NODE"]]],
+          "output": 0
+        },
+        {
+          "name": "zero left",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SUB",0,3],["NODE"]]],
+          "output": -3
+        },
+        {
+          "name": "zero right",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SUB",3,0],["NODE"]]],
+          "output": 3
+        },
+        {
+          "name": "negative left",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SUB",-3,4],["NODE"]]],
+          "output": -7
+        },
+        {
+          "name": "negative right",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SUB",3,-4],["NODE"]]],
+          "output": 7
+        },
+        {
+          "name": "both negative",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SUB",-3,-4],["NODE"]]],
+          "output": 1
+        },
+        {
+          "name": "exact fraction",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SUB",0.75,0.25],["NODE"]]],
+          "output": 0.5
+        },
+        {
+          "name": "negative fraction",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SUB",-0.75,0.25],["NODE"]]],
+          "output": -1
+        }
+      ]
+    },
+    {
+      "name": "Exact multiplication",
+      "desc": "MUL accepts individual numeric operands or one array-valued operand. No operands and an empty array both return one. A zero factor does not waive numeric validation or evaluation of other operands.",
+      "tests": [
+        {
+          "name": "No operands",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL"],["NODE"]]],
+          "output": 1
+        },
+        {
+          "name": "Empty array literal",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",[[]]],["NODE"]]],
+          "output": 1
+        },
+        {
+          "name": "Empty array reference",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["NODE"]],["NODE"]]],
+          "output": 1
+        },
+        {
+          "name": "Variadic single zero",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",0],["NODE"]]],
+          "output": 0
+        },
+        {
+          "name": "Array single zero",
+          "input": [0],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["NODE"]],["NODE"]]],
+          "output": 0
+        },
+        {
+          "name": "Variadic single positive",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",3],["NODE"]]],
+          "output": 3
+        },
+        {
+          "name": "Array single positive",
+          "input": [3],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["NODE"]],["NODE"]]],
+          "output": 3
+        },
+        {
+          "name": "Variadic single negative",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",-3],["NODE"]]],
+          "output": -3
+        },
+        {
+          "name": "Array single negative",
+          "input": [-3],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["NODE"]],["NODE"]]],
+          "output": -3
+        },
+        {
+          "name": "Variadic two positives",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",2,3],["NODE"]]],
+          "output": 6
+        },
+        {
+          "name": "Array two positives",
+          "input": [2,3],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["NODE"]],["NODE"]]],
+          "output": 6
+        },
+        {
+          "name": "Variadic opposite signs",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",-2,3],["NODE"]]],
+          "output": -6
+        },
+        {
+          "name": "Array opposite signs",
+          "input": [-2,3],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["NODE"]],["NODE"]]],
+          "output": -6
+        },
+        {
+          "name": "Variadic two negatives",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",-2,-3],["NODE"]]],
+          "output": 6
+        },
+        {
+          "name": "Array two negatives",
+          "input": [-2,-3],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["NODE"]],["NODE"]]],
+          "output": 6
+        },
+        {
+          "name": "Variadic three negatives",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",-2,-3,-4],["NODE"]]],
+          "output": -24
+        },
+        {
+          "name": "Array three negatives",
+          "input": [-2,-3,-4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["NODE"]],["NODE"]]],
+          "output": -24
+        },
+        {
+          "name": "Variadic many operands",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",1,2,3,4],["NODE"]]],
+          "output": 24
+        },
+        {
+          "name": "Array many operands",
+          "input": [1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["NODE"]],["NODE"]]],
+          "output": 24
+        },
+        {
+          "name": "Variadic middle zero",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",2,0,3],["NODE"]]],
+          "output": 0
+        },
+        {
+          "name": "Array middle zero",
+          "input": [2,0,3],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["NODE"]],["NODE"]]],
+          "output": 0
+        },
+        {
+          "name": "Variadic multiplicative identity",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",1,7,1],["NODE"]]],
+          "output": 7
+        },
+        {
+          "name": "Array multiplicative identity",
+          "input": [1,7,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["NODE"]],["NODE"]]],
+          "output": 7
+        },
+        {
+          "name": "Variadic exact fractions",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",0.5,0.25],["NODE"]]],
+          "output": 0.125
+        },
+        {
+          "name": "Array exact fractions",
+          "input": [0.5,0.25],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["NODE"]],["NODE"]]],
+          "output": 0.125
+        },
+        {
+          "name": "Variadic negative fraction",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",-0.5,0.25],["NODE"]]],
+          "output": -0.125
+        },
+        {
+          "name": "Array negative fraction",
+          "input": [-0.5,0.25],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["NODE"]],["NODE"]]],
+          "output": -0.125
+        },
+        {
+          "name": "Variadic fraction and integer",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",0.5,4],["NODE"]]],
+          "output": 2
+        },
+        {
+          "name": "Array fraction and integer",
+          "input": [0.5,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["NODE"]],["NODE"]]],
+          "output": 2
+        }
+      ]
+    },
+    {
+      "name": "Exact division",
+      "desc": "DIV requires two numbers and rejects zero divisors. Integer pairs have exact integer quotients; fractional examples include an explicitly fractional operand and have exactly representable binary results. No integer-rounding policy is presumed.",
+      "tests": [
+        {
+          "name": "integer quotient",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",6,2],["NODE"]]],
+          "output": 3
+        },
+        {
+          "name": "negative numerator",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",-6,2],["NODE"]]],
+          "output": -3
+        },
+        {
+          "name": "negative divisor",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",6,-2],["NODE"]]],
+          "output": -3
+        },
+        {
+          "name": "both negative",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",-6,-2],["NODE"]]],
+          "output": 3
+        },
+        {
+          "name": "zero numerator",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",0,3],["NODE"]]],
+          "output": 0
+        },
+        {
+          "name": "identity divisor",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",7,1],["NODE"]]],
+          "output": 7
+        },
+        {
+          "name": "negative identity divisor",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",7,-1],["NODE"]]],
+          "output": -7
+        },
+        {
+          "name": "equal operands",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",7,7],["NODE"]]],
+          "output": 1
+        },
+        {
+          "name": "fractional numerator",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",0.5,2],["NODE"]]],
+          "output": 0.25
+        },
+        {
+          "name": "fractional divisor",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",3,0.5],["NODE"]]],
+          "output": 6
+        },
+        {
+          "name": "both fractions",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",0.75,0.25],["NODE"]]],
+          "output": 3
+        },
+        {
+          "name": "fractional quotient",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",1.5,2],["NODE"]]],
+          "output": 0.75
+        },
+        {
+          "name": "negative fractional quotient",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",-1.5,2],["NODE"]]],
+          "output": -0.75
+        }
+      ]
+    },
+    {
+      "name": "Modulus and signs",
+      "desc": "MOD returns a result in [0, divisor) for positive divisors and (divisor, 0] for negative divisors. Sign combinations distinguish it from a native remainder operator. All examples have exact integer or binary-fraction results.",
+      "tests": [
+        {
+          "name": "positive signs",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",7,3],["NODE"]]],
+          "output": 1
+        },
+        {
+          "name": "negative numerator",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",-7,3],["NODE"]]],
+          "output": 2
+        },
+        {
+          "name": "negative divisor",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",7,-3],["NODE"]]],
+          "output": -2
+        },
+        {
+          "name": "both negative",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",-7,-3],["NODE"]]],
+          "output": -1
+        },
+        {
+          "name": "positive exact multiple",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",6,3],["NODE"]]],
+          "output": 0
+        },
+        {
+          "name": "negative exact multiple",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",-6,3],["NODE"]]],
+          "output": 0
+        },
+        {
+          "name": "negative divisor exact multiple",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",6,-3],["NODE"]]],
+          "output": 0
+        },
+        {
+          "name": "both negative exact multiple",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",-6,-3],["NODE"]]],
+          "output": 0
+        },
+        {
+          "name": "zero numerator",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",0,3],["NODE"]]],
+          "output": 0
+        },
+        {
+          "name": "zero with negative divisor",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",0,-3],["NODE"]]],
+          "output": 0
+        },
+        {
+          "name": "smaller positive numerator",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",1,3],["NODE"]]],
+          "output": 1
+        },
+        {
+          "name": "smaller negative numerator",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",-1,3],["NODE"]]],
+          "output": 2
+        },
+        {
+          "name": "smaller numerator negative divisor",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",1,-3],["NODE"]]],
+          "output": -2
+        },
+        {
+          "name": "smaller both negative",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",-1,-3],["NODE"]]],
+          "output": -1
+        },
+        {
+          "name": "unit divisor",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",7,1],["NODE"]]],
+          "output": 0
+        },
+        {
+          "name": "negative unit divisor",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",7,-1],["NODE"]]],
+          "output": 0
+        },
+        {
+          "name": "fractional numerator",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",5.5,2],["NODE"]]],
+          "output": 1.5
+        },
+        {
+          "name": "negative fractional numerator",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",-5.5,2],["NODE"]]],
+          "output": 0.5
+        },
+        {
+          "name": "negative divisor fractional numerator",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",5.5,-2],["NODE"]]],
+          "output": -0.5
+        },
+        {
+          "name": "both negative fractional numerator",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",-5.5,-2],["NODE"]]],
+          "output": -1.5
+        },
+        {
+          "name": "fractional divisor",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",1.25,0.5],["NODE"]]],
+          "output": 0.25
+        },
+        {
+          "name": "negative fractional divisor",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",1.25,-0.5],["NODE"]]],
+          "output": -0.25
+        }
+      ]
+    },
+    {
+      "name": "Operand forms and contexts",
+      "desc": "All operands are evaluated in value context using the same caller NODE. ADD/MUL recognize an array only when it is the sole evaluated operand; its entries are numeric data and are not executed as expressions. Other operators require two explicit operands. Namespace references, common expressions, construction, and LOCAL retain their normal semantics.",
+      "tests": [
+        {
+          "name": "ADD numeric identifier",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[74,2,3],["NODE"]]],
+          "output": 5
+        },
+        {
+          "name": "ADD reference operands",
+          "input": {"a":2,"b":3},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": 5
+        },
+        {
+          "name": "ADD localized current operand",
+          "input": {"value":2},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",null,["NODE","value"],["ADD",["NODE"],3]],["NODE"]]],
+          "output": 5
+        },
+        {
+          "name": "ADD embedded value",
+          "input": 2,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",{"result":["ADD",["NODE"],3]},["NODE"]]],
+          "output": {"result":5}
+        },
+        {
+          "name": "ADD literal function result in match context",
+          "input": 5,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["ADD",2,3]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "ADD explicit result comparison",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["ADD",2,3],5],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "ADD CONST STASH TEMP and EXPR",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1,"const":["a",2],"expr":["calc",["ADD",["CONST","a"],["TEMP","b"]]]},["COPY",3,["STASH","b"]],["COPY",["LOCAL","b",["STASH","b"],["EXPR","calc"]],["NODE"]]],
+          "output": 5
+        },
+        {
+          "name": "ADD nested math operands",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["ADD",2,0],["MUL",3,1]],["NODE"]]],
+          "output": 5
+        },
+        {
+          "name": "SUB numeric identifier",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[75,6,2],["NODE"]]],
+          "output": 4
+        },
+        {
+          "name": "SUB reference operands",
+          "input": {"a":6,"b":2},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SUB",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": 4
+        },
+        {
+          "name": "SUB localized current operand",
+          "input": {"value":6},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",null,["NODE","value"],["SUB",["NODE"],2]],["NODE"]]],
+          "output": 4
+        },
+        {
+          "name": "SUB embedded value",
+          "input": 6,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",{"result":["SUB",["NODE"],2]},["NODE"]]],
+          "output": {"result":4}
+        },
+        {
+          "name": "SUB literal function result in match context",
+          "input": 4,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["SUB",6,2]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "SUB explicit result comparison",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["SUB",6,2],4],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "SUB CONST STASH TEMP and EXPR",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1,"const":["a",6],"expr":["calc",["SUB",["CONST","a"],["TEMP","b"]]]},["COPY",2,["STASH","b"]],["COPY",["LOCAL","b",["STASH","b"],["EXPR","calc"]],["NODE"]]],
+          "output": 4
+        },
+        {
+          "name": "SUB nested math operands",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SUB",["ADD",6,0],["MUL",2,1]],["NODE"]]],
+          "output": 4
+        },
+        {
+          "name": "MUL numeric identifier",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[76,2,3],["NODE"]]],
+          "output": 6
+        },
+        {
+          "name": "MUL reference operands",
+          "input": {"a":2,"b":3},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": 6
+        },
+        {
+          "name": "MUL localized current operand",
+          "input": {"value":2},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",null,["NODE","value"],["MUL",["NODE"],3]],["NODE"]]],
+          "output": 6
+        },
+        {
+          "name": "MUL embedded value",
+          "input": 2,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",{"result":["MUL",["NODE"],3]},["NODE"]]],
+          "output": {"result":6}
+        },
+        {
+          "name": "MUL literal function result in match context",
+          "input": 6,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["MUL",2,3]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "MUL explicit result comparison",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["MUL",2,3],6],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "MUL CONST STASH TEMP and EXPR",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1,"const":["a",2],"expr":["calc",["MUL",["CONST","a"],["TEMP","b"]]]},["COPY",3,["STASH","b"]],["COPY",["LOCAL","b",["STASH","b"],["EXPR","calc"]],["NODE"]]],
+          "output": 6
+        },
+        {
+          "name": "MUL nested math operands",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["ADD",2,0],["MUL",3,1]],["NODE"]]],
+          "output": 6
+        },
+        {
+          "name": "DIV numeric identifier",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[77,6,2],["NODE"]]],
+          "output": 3
+        },
+        {
+          "name": "DIV reference operands",
+          "input": {"a":6,"b":2},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": 3
+        },
+        {
+          "name": "DIV localized current operand",
+          "input": {"value":6},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",null,["NODE","value"],["DIV",["NODE"],2]],["NODE"]]],
+          "output": 3
+        },
+        {
+          "name": "DIV embedded value",
+          "input": 6,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",{"result":["DIV",["NODE"],2]},["NODE"]]],
+          "output": {"result":3}
+        },
+        {
+          "name": "DIV literal function result in match context",
+          "input": 3,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["DIV",6,2]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "DIV explicit result comparison",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["DIV",6,2],3],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "DIV CONST STASH TEMP and EXPR",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1,"const":["a",6],"expr":["calc",["DIV",["CONST","a"],["TEMP","b"]]]},["COPY",2,["STASH","b"]],["COPY",["LOCAL","b",["STASH","b"],["EXPR","calc"]],["NODE"]]],
+          "output": 3
+        },
+        {
+          "name": "DIV nested math operands",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",["ADD",6,0],["MUL",2,1]],["NODE"]]],
+          "output": 3
+        },
+        {
+          "name": "MOD numeric identifier",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[78,-7,3],["NODE"]]],
+          "output": 2
+        },
+        {
+          "name": "MOD reference operands",
+          "input": {"a":-7,"b":3},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",["NODE","a"],["NODE","b"]],["NODE"]]],
+          "output": 2
+        },
+        {
+          "name": "MOD localized current operand",
+          "input": {"value":-7},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",null,["NODE","value"],["MOD",["NODE"],3]],["NODE"]]],
+          "output": 2
+        },
+        {
+          "name": "MOD embedded value",
+          "input": -7,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",{"result":["MOD",["NODE"],3]},["NODE"]]],
+          "output": {"result":2}
+        },
+        {
+          "name": "MOD literal function result in match context",
+          "input": 2,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["MOD",-7,3]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "MOD explicit result comparison",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["MOD",-7,3],2],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "MOD CONST STASH TEMP and EXPR",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1,"const":["a",-7],"expr":["calc",["MOD",["CONST","a"],["TEMP","b"]]]},["COPY",3,["STASH","b"]],["COPY",["LOCAL","b",["STASH","b"],["EXPR","calc"]],["NODE"]]],
+          "output": 2
+        },
+        {
+          "name": "MOD nested math operands",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",["ADD",-7,0],["MUL",3,1]],["NODE"]]],
+          "output": 2
+        },
+        {
+          "name": "ADD constructed array evaluates entries",
+          "input": {"a":2,"b":3},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",[[["NODE","a"],["NODE","b"]]]],["NODE"]]],
+          "output": 5
+        },
+        {
+          "name": "ADD array returned by CONCAT",
+          "input": {"a":[2],"b":[3]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["CONCAT",["NODE","a"],["NODE","b"]]],["NODE"]]],
+          "output": 5
+        },
+        {
+          "name": "ADD common expression returns an array",
+          "input": [2,3],
+          "jgraft": ["JGRAFT",{"v":1,"expr":["values",["NODE"]]},["COPY",["ADD",["EXPR","values"]],["NODE"]]],
+          "output": 5
+        },
+        {
+          "name": "ADD returned expression-looking array entry is data",
+          "input": [["ADD",1,2]],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "ADD scalar reference is a single number",
+          "input": 2,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["NODE"]],["NODE"]]],
+          "output": 2
+        },
+        {
+          "name": "MUL constructed array evaluates entries",
+          "input": {"a":2,"b":3},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",[[["NODE","a"],["NODE","b"]]]],["NODE"]]],
+          "output": 6
+        },
+        {
+          "name": "MUL array returned by CONCAT",
+          "input": {"a":[2],"b":[3]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["CONCAT",["NODE","a"],["NODE","b"]]],["NODE"]]],
+          "output": 6
+        },
+        {
+          "name": "MUL common expression returns an array",
+          "input": [2,3],
+          "jgraft": ["JGRAFT",{"v":1,"expr":["values",["NODE"]]},["COPY",["MUL",["EXPR","values"]],["NODE"]]],
+          "output": 6
+        },
+        {
+          "name": "MUL returned expression-looking array entry is data",
+          "input": [["ADD",1,2]],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MUL scalar reference is a single number",
+          "input": 2,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["NODE"]],["NODE"]]],
+          "output": 2
+        },
+        {
+          "name": "Math result can select an array element",
+          "input": [10,20,30],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NODE",["SUB",2,1]],["NODE"]]],
+          "output": 20
+        },
+        {
+          "name": "LOCAL CASE uses a portable computed discriminator",
+          "input": {"a":2,"b":3},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",null,["ADD",["NODE","a"],["NODE","b"]],["CASE",5,"five","other"]],["NODE"]]],
+          "output": "five"
+        },
+        {
+          "name": "ADD explicit string casts supply numeric operands",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["CASTNUM","2"],["CASTNUM","3"]],["NODE"]]],
+          "output": 5
+        },
+        {
+          "name": "SUB explicit string casts supply numeric operands",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SUB",["CASTNUM","6"],["CASTNUM","2"]],["NODE"]]],
+          "output": 4
+        },
+        {
+          "name": "MUL explicit string casts supply numeric operands",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["CASTNUM","2"],["CASTNUM","3"]],["NODE"]]],
+          "output": 6
+        },
+        {
+          "name": "DIV explicit string casts supply numeric operands",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",["CASTNUM","6"],["CASTNUM","2"]],["NODE"]]],
+          "output": 3
+        },
+        {
+          "name": "MOD explicit string casts supply numeric operands",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",["CASTNUM","-7"],["CASTNUM","3"]],["NODE"]]],
+          "output": 2
+        }
+      ]
+    },
+    {
+      "name": "Strict numeric types",
+      "desc": "Strings, booleans, null, objects, dates, and nested arrays are not implicitly coerced to numbers. ADD/MUL array forms validate every element, including after a zero product. Invalid numeric operands produce INVALID_TARGET rather than INVALID_OPERAND.",
+      "tests": [
+        {
+          "name": "ADD left null",
+          "input": {"bad":null},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["NODE","bad"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "ADD right null",
+          "input": {"bad":null},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",2,["NODE","bad"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "ADD left false",
+          "input": {"bad":false},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["NODE","bad"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "ADD right false",
+          "input": {"bad":false},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",2,["NODE","bad"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "ADD left true",
+          "input": {"bad":true},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["NODE","bad"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "ADD right true",
+          "input": {"bad":true},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",2,["NODE","bad"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "ADD left numeric string",
+          "input": {"bad":"2"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["NODE","bad"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "ADD right numeric string",
+          "input": {"bad":"2"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",2,["NODE","bad"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "ADD left empty string",
+          "input": {"bad":""},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["NODE","bad"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "ADD right empty string",
+          "input": {"bad":""},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",2,["NODE","bad"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "ADD left object",
+          "input": {"bad":{}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["NODE","bad"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "ADD right object",
+          "input": {"bad":{}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",2,["NODE","bad"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "SUB left null",
+          "input": {"bad":null},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SUB",["NODE","bad"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "SUB right null",
+          "input": {"bad":null},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SUB",2,["NODE","bad"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "SUB left false",
+          "input": {"bad":false},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SUB",["NODE","bad"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "SUB right false",
+          "input": {"bad":false},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SUB",2,["NODE","bad"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "SUB left true",
+          "input": {"bad":true},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SUB",["NODE","bad"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "SUB right true",
+          "input": {"bad":true},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SUB",2,["NODE","bad"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "SUB left numeric string",
+          "input": {"bad":"2"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SUB",["NODE","bad"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "SUB right numeric string",
+          "input": {"bad":"2"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SUB",2,["NODE","bad"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "SUB left empty string",
+          "input": {"bad":""},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SUB",["NODE","bad"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "SUB right empty string",
+          "input": {"bad":""},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SUB",2,["NODE","bad"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "SUB left object",
+          "input": {"bad":{}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SUB",["NODE","bad"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "SUB right object",
+          "input": {"bad":{}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SUB",2,["NODE","bad"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MUL left null",
+          "input": {"bad":null},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["NODE","bad"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MUL right null",
+          "input": {"bad":null},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",2,["NODE","bad"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MUL left false",
+          "input": {"bad":false},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["NODE","bad"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MUL right false",
+          "input": {"bad":false},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",2,["NODE","bad"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MUL left true",
+          "input": {"bad":true},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["NODE","bad"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MUL right true",
+          "input": {"bad":true},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",2,["NODE","bad"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MUL left numeric string",
+          "input": {"bad":"2"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["NODE","bad"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MUL right numeric string",
+          "input": {"bad":"2"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",2,["NODE","bad"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MUL left empty string",
+          "input": {"bad":""},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["NODE","bad"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MUL right empty string",
+          "input": {"bad":""},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",2,["NODE","bad"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MUL left object",
+          "input": {"bad":{}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["NODE","bad"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MUL right object",
+          "input": {"bad":{}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",2,["NODE","bad"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "DIV left null",
+          "input": {"bad":null},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",["NODE","bad"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "DIV right null",
+          "input": {"bad":null},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",2,["NODE","bad"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "DIV left false",
+          "input": {"bad":false},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",["NODE","bad"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "DIV right false",
+          "input": {"bad":false},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",2,["NODE","bad"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "DIV left true",
+          "input": {"bad":true},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",["NODE","bad"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "DIV right true",
+          "input": {"bad":true},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",2,["NODE","bad"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "DIV left numeric string",
+          "input": {"bad":"2"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",["NODE","bad"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "DIV right numeric string",
+          "input": {"bad":"2"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",2,["NODE","bad"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "DIV left empty string",
+          "input": {"bad":""},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",["NODE","bad"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "DIV right empty string",
+          "input": {"bad":""},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",2,["NODE","bad"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "DIV left object",
+          "input": {"bad":{}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",["NODE","bad"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "DIV right object",
+          "input": {"bad":{}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",2,["NODE","bad"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MOD left null",
+          "input": {"bad":null},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",["NODE","bad"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MOD right null",
+          "input": {"bad":null},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",2,["NODE","bad"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MOD left false",
+          "input": {"bad":false},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",["NODE","bad"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MOD right false",
+          "input": {"bad":false},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",2,["NODE","bad"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MOD left true",
+          "input": {"bad":true},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",["NODE","bad"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MOD right true",
+          "input": {"bad":true},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",2,["NODE","bad"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MOD left numeric string",
+          "input": {"bad":"2"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",["NODE","bad"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MOD right numeric string",
+          "input": {"bad":"2"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",2,["NODE","bad"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MOD left empty string",
+          "input": {"bad":""},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",["NODE","bad"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MOD right empty string",
+          "input": {"bad":""},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",2,["NODE","bad"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MOD left object",
+          "input": {"bad":{}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",["NODE","bad"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MOD right object",
+          "input": {"bad":{}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",2,["NODE","bad"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "ADD sole null",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "ADD array member null",
+          "input": [1,null,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "ADD sole false",
+          "input": false,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "ADD array member false",
+          "input": [1,false,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "ADD sole true",
+          "input": true,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "ADD array member true",
+          "input": [1,true,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "ADD sole numeric string",
+          "input": "2",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "ADD array member numeric string",
+          "input": [1,"2",2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "ADD sole empty string",
+          "input": "",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "ADD array member empty string",
+          "input": [1,"",2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "ADD sole object",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "ADD array member object",
+          "input": [1,{},2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "ADD nested array member",
+          "input": [[2]],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "ADD array among multiple operands",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",[[1,2]],3],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "ADD array as later operand",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",1,[[2,3]]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "ADD parsed date operand",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["CASTDATE","2024-01-01"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MUL sole null",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MUL array member null",
+          "input": [1,null,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MUL sole false",
+          "input": false,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MUL array member false",
+          "input": [1,false,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MUL sole true",
+          "input": true,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MUL array member true",
+          "input": [1,true,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MUL sole numeric string",
+          "input": "2",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MUL array member numeric string",
+          "input": [1,"2",2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MUL sole empty string",
+          "input": "",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MUL array member empty string",
+          "input": [1,"",2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MUL sole object",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MUL array member object",
+          "input": [1,{},2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MUL nested array member",
+          "input": [[2]],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MUL array among multiple operands",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",[[1,2]],3],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MUL array as later operand",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",1,[[2,3]]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MUL parsed date operand",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["CASTDATE","2024-01-01"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "SUB array left operand",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SUB",[[1]],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "SUB array right operand",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SUB",2,[[1]]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "SUB parsed date operand",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SUB",["CASTDATE","2024-01-01"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "DIV array left operand",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",[[1]],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "DIV array right operand",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",2,[[1]]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "DIV parsed date operand",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",["CASTDATE","2024-01-01"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MOD array left operand",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",[[1]],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MOD array right operand",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",2,[[1]]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MOD parsed date operand",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",["CASTDATE","2024-01-01"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MUL zero does not mask invalid later scalar",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",0,"not a number"],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MUL zero does not mask invalid array member",
+          "input": [0,"not a number"],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "ADD two arrays are not flattened",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",[[1]],[[2]]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MUL two arrays are not flattened",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",[[1]],[[2]]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        }
+      ]
+    },
+    {
+      "name": "Evaluation, zero divisors, and failure recovery",
+      "desc": "Every operand expression needed by an operator is evaluated; arithmetic is not a short-circuiting boolean operation. Missing references and explicit FAIL propagate in value context. Match probes may trap INVALID_TARGET, while syntax, resource, and unsupported-host failures remain fatal.",
+      "tests": [
+        {
+          "name": "ADD missing left reference",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["NODE","missing"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "ADD missing right reference",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",2,["NODE","missing"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "ADD left FAIL",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",["FAIL"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "ADD right FAIL",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",2,["FAIL"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "ADD negative match probe",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NONE",["IS",["ADD",null,2],0]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "ADD ANY can recover",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ANY",["IS",["ADD",null,2],0],["IS",null]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "SUB missing left reference",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SUB",["NODE","missing"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "SUB missing right reference",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SUB",2,["NODE","missing"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "SUB left FAIL",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SUB",["FAIL"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "SUB right FAIL",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SUB",2,["FAIL"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "SUB negative match probe",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NONE",["IS",["SUB",null,2],0]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "SUB ANY can recover",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ANY",["IS",["SUB",null,2],0],["IS",null]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "MUL missing left reference",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["NODE","missing"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MUL missing right reference",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",2,["NODE","missing"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MUL left FAIL",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",["FAIL"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MUL right FAIL",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",2,["FAIL"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MUL negative match probe",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NONE",["IS",["MUL",null,2],0]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "MUL ANY can recover",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ANY",["IS",["MUL",null,2],0],["IS",null]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "DIV missing left reference",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",["NODE","missing"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "DIV missing right reference",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",2,["NODE","missing"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "DIV left FAIL",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",["FAIL"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "DIV right FAIL",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",2,["FAIL"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "DIV negative match probe",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NONE",["IS",["DIV",null,2],0]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "DIV ANY can recover",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ANY",["IS",["DIV",null,2],0],["IS",null]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "MOD missing left reference",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",["NODE","missing"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MOD missing right reference",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",2,["NODE","missing"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MOD left FAIL",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",["FAIL"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MOD right FAIL",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",2,["FAIL"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MOD negative match probe",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NONE",["IS",["MOD",null,2],0]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "MOD ANY can recover",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ANY",["IS",["MOD",null,2],0],["IS",null]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "DIV zero divisor with numerator -3",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",-3,0],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "DIV zero divisor with numerator 0",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",0,0],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "DIV zero divisor with numerator 3",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",3,0],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MOD zero divisor with numerator -3",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",-3,0],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MOD zero divisor with numerator 0",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",0,0],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MOD zero divisor with numerator 3",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",3,0],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MUL zero still evaluates FAIL",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",0,["FAIL"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "MUL array constructor still evaluates FAIL",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",[[0,["FAIL"]]]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "ADD array constructor evaluates all entries",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",[[1,["FAIL"]]]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "CASE can guard division by zero",
+          "input": 0,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASE",0,"zero",["DIV",6,["NODE"]]],["NODE"]]],
+          "output": "zero"
+        },
+        {
+          "name": "CASE can guard modulus by zero",
+          "input": 0,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASE",0,"zero",["MOD",6,["NODE"]]],["NODE"]]],
+          "output": "zero"
+        }
+      ]
+    },
+    {
+      "name": "Syntax and fatal failures",
+      "desc": "ADD/MUL accept any operand count, including none. SUB/DIV/MOD require exactly two operands and have no one-argument NODE shorthand or array-of-operands overload. Unknown expression syntax and recursive resource failures remain fatal.",
+      "tests": [
+        {
+          "name": "SUB operand count 0",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SUB"],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "SUB operand count 1",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SUB",1],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "SUB operand count 3",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SUB",1,2,3],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "DIV operand count 0",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV"],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "DIV operand count 1",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",1],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "DIV operand count 3",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",1,2,3],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "MOD operand count 0",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD"],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "MOD operand count 1",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",1],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "MOD operand count 3",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",1,2,3],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "ADD unknown operand expression",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["ADD",1,["UNKNOWN"]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "ADD recursive operand",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1,"expr":["loop",["ADD",1,["EXPR","loop"]]]},["COPY",["EXPR","loop"],["NODE"]]],
+          "errors": {"RESOURCE_LIMIT":true},
+          "limits": {"depth":24}
+        },
+        {
+          "name": "SUB unknown operand expression",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SUB",1,["UNKNOWN"]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "SUB recursive operand",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1,"expr":["loop",["SUB",1,["EXPR","loop"]]]},["COPY",["EXPR","loop"],["NODE"]]],
+          "errors": {"RESOURCE_LIMIT":true},
+          "limits": {"depth":24}
+        },
+        {
+          "name": "MUL unknown operand expression",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MUL",1,["UNKNOWN"]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "MUL recursive operand",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1,"expr":["loop",["MUL",1,["EXPR","loop"]]]},["COPY",["EXPR","loop"],["NODE"]]],
+          "errors": {"RESOURCE_LIMIT":true},
+          "limits": {"depth":24}
+        },
+        {
+          "name": "DIV unknown operand expression",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",1,["UNKNOWN"]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "DIV recursive operand",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1,"expr":["loop",["DIV",1,["EXPR","loop"]]]},["COPY",["EXPR","loop"],["NODE"]]],
+          "errors": {"RESOURCE_LIMIT":true},
+          "limits": {"depth":24}
+        },
+        {
+          "name": "MOD unknown operand expression",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",1,["UNKNOWN"]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "MOD recursive operand",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1,"expr":["loop",["MOD",1,["EXPR","loop"]]]},["COPY",["EXPR","loop"],["NODE"]]],
+          "errors": {"RESOURCE_LIMIT":true},
+          "limits": {"depth":24}
+        },
+        {
+          "name": "SUB single array is not an operand-pair overload",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SUB",[[6,2]]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "DIV single array is not an operand-pair overload",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",[[6,2]]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "MOD single array is not an operand-pair overload",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MOD",[[6,2]]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        }
+      ]
+    }
+  ]
+}

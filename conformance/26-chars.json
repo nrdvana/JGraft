@@ -1,0 +1,2706 @@
+{
+  "version": 1,
+  "name": "CHARS",
+  "desc": "Covers CHARS: Unicode codepoint sets, inclusive integer/string/null ranges, character lists including empty lists, ordered inclusion/exclusion, initial complement semantics, nested common CHARS expressions, numeric and one-codepoint string targets, regex and array-sequence consumption, lexical scopes, captures, SPLIT/JOIN integration, operand validation, and resource failures. Expected memberships are defined independently of representation. Surrogate-dependent cases carry explicit compatibility flags.",
+  "tests": [
+    {
+      "name": "Lists and initial state",
+      "desc": "The default set is empty. Only a false operand in the first position starts from all Unicode; later booleans change the operation without changing existing members. One-codepoint strings and integers are equivalent endpoints, while multi-codepoint strings are unordered character lists.",
+      "tests": [
+        {
+          "name": "Empty class",
+          "tests": [
+            {
+              "name": "U+0",
+              "input": "\u0000",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+A",
+              "input": "\n",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+20",
+              "input": " ",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+30",
+              "input": "0",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+41",
+              "input": "A",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+61",
+              "input": "a",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+62",
+              "input": "b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+63",
+              "input": "c",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+64",
+              "input": "d",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+7A",
+              "input": "z",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+1F642",
+              "input": "🙂",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+10FFFF",
+              "input": "\udbff\udfff",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS"],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Explicit inclusion only",
+          "tests": [
+            {
+              "name": "U+0",
+              "input": "\u0000",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",true],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+A",
+              "input": "\n",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",true],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+20",
+              "input": " ",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",true],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+30",
+              "input": "0",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",true],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+41",
+              "input": "A",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",true],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+61",
+              "input": "a",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",true],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+62",
+              "input": "b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",true],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+63",
+              "input": "c",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",true],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+64",
+              "input": "d",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",true],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+7A",
+              "input": "z",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",true],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+1F642",
+              "input": "🙂",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",true],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+10FFFF",
+              "input": "\udbff\udfff",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",true],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",true],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Initial exclusion only",
+          "tests": [
+            {
+              "name": "U+0",
+              "input": "\u0000",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+A",
+              "input": "\n",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+20",
+              "input": " ",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+30",
+              "input": "0",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+41",
+              "input": "A",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+61",
+              "input": "a",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+62",
+              "input": "b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+63",
+              "input": "c",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+64",
+              "input": "d",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+7A",
+              "input": "z",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+1F642",
+              "input": "🙂",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+10FFFF",
+              "input": "\udbff\udfff",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Later false does not complement",
+          "tests": [
+            {
+              "name": "U+0",
+              "input": "\u0000",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",true,false],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+A",
+              "input": "\n",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",true,false],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+20",
+              "input": " ",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",true,false],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+30",
+              "input": "0",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",true,false],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+41",
+              "input": "A",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",true,false],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+61",
+              "input": "a",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",true,false],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+62",
+              "input": "b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",true,false],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+63",
+              "input": "c",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",true,false],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+64",
+              "input": "d",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",true,false],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+7A",
+              "input": "z",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",true,false],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+1F642",
+              "input": "🙂",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",true,false],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+10FFFF",
+              "input": "\udbff\udfff",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",true,false],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",true,false],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Later true preserves the initial universe",
+          "tests": [
+            {
+              "name": "U+0",
+              "input": "\u0000",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,true],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+A",
+              "input": "\n",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,true],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+20",
+              "input": " ",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,true],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+30",
+              "input": "0",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,true],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+41",
+              "input": "A",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,true],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+61",
+              "input": "a",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,true],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+62",
+              "input": "b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,true],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+63",
+              "input": "c",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,true],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+64",
+              "input": "d",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,true],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+7A",
+              "input": "z",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,true],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+1F642",
+              "input": "🙂",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,true],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+10FFFF",
+              "input": "\udbff\udfff",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,true],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,true],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Empty list adds nothing",
+          "tests": [
+            {
+              "name": "U+0",
+              "input": "\u0000",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",""],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+61",
+              "input": "a",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",""],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+10FFFF",
+              "input": "\udbff\udfff",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",""],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",""],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Empty list preserves excluded universe",
+          "tests": [
+            {
+              "name": "U+0",
+              "input": "\u0000",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,""],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+61",
+              "input": "a",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,""],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+10FFFF",
+              "input": "\udbff\udfff",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,""],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,""],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Empty operand before false prevents initial complement",
+          "tests": [
+            {
+              "name": "U+0",
+              "input": "\u0000",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","",false,"a"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+61",
+              "input": "a",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","",false,"a"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+62",
+              "input": "b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","",false,"a"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+10FFFF",
+              "input": "\udbff\udfff",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","",false,"a"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","",false,"a"],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Three literal characters",
+          "tests": [
+            {
+              "name": "U+60",
+              "input": "`",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","abc"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+61",
+              "input": "a",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","abc"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+62",
+              "input": "b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","abc"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+63",
+              "input": "c",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","abc"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+64",
+              "input": "d",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","abc"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","abc"],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Repeated literals",
+          "tests": [
+            {
+              "name": "U+60",
+              "input": "`",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","aaaa"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+61",
+              "input": "a",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","aaaa"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+62",
+              "input": "b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","aaaa"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","aaaa"],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Literal whitespace and controls",
+          "tests": [
+            {
+              "name": "U+0",
+              "input": "\u0000",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","\u0000\t\n "],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+9",
+              "input": "\t",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","\u0000\t\n "],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+A",
+              "input": "\n",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","\u0000\t\n "],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+D",
+              "input": "\r",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","\u0000\t\n "],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+20",
+              "input": " ",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","\u0000\t\n "],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+21",
+              "input": "!",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","\u0000\t\n "],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","\u0000\t\n "],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Non-normalized Unicode list",
+          "tests": [
+            {
+              "name": "U+65",
+              "input": "e",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","éé"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+E9",
+              "input": "é",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","éé"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+301",
+              "input": "́",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","éé"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+EA",
+              "input": "ê",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","éé"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","éé"],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Supplementary character list",
+          "tests": [
+            {
+              "name": "U+61",
+              "input": "a",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","🙂a𝄞"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+62",
+              "input": "b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","🙂a𝄞"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+1D11E",
+              "input": "𝄞",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","🙂a𝄞"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+1F641",
+              "input": "🙁",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","🙂a𝄞"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+1F642",
+              "input": "🙂",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","🙂a𝄞"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+1F643",
+              "input": "🙃",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","🙂a𝄞"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","🙂a𝄞"],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Boolean separates singleton endpoints",
+          "tests": [
+            {
+              "name": "U+60",
+              "input": "`",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","z",true,"a"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+61",
+              "input": "a",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","z",true,"a"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+62",
+              "input": "b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","z",true,"a"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+79",
+              "input": "y",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","z",true,"a"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+7A",
+              "input": "z",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","z",true,"a"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+7B",
+              "input": "{",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","z",true,"a"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","z",true,"a"],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Empty string separates singleton endpoints",
+          "tests": [
+            {
+              "name": "U+61",
+              "input": "a",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","","z"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+62",
+              "input": "b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","","z"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+79",
+              "input": "y",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","","z"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+7A",
+              "input": "z",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","","z"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","","z"],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Numeric expression identifier",
+          "input": "b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],[19,"abc"],["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "A class consumes one character only",
+          "input": "ab",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","ab"],["END"]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Trailing exclusion does not alter existing members",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a",false],["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Trailing exclusion does not create other members",
+          "input": "b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a",false],["END"]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Empty lists around a singleton",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","","a",""],["END"]]]],["NODE"]]],
+          "output": true
+        }
+      ]
+    },
+    {
+      "name": "Inclusive ranges and Unicode boundaries",
+      "desc": "Adjacent singleton operands pair greedily into inclusive ranges. Null denotes U+10FFFF, including as a lower endpoint. Surrogate codepoint values are legal members; string matching depends on the host exposing lone surrogates.",
+      "tests": [
+        {
+          "name": "String endpoints",
+          "tests": [
+            {
+              "name": "U+60",
+              "input": "`",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","c"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+61",
+              "input": "a",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","c"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+62",
+              "input": "b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","c"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+63",
+              "input": "c",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","c"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+64",
+              "input": "d",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","c"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","c"],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Integer endpoints",
+          "tests": [
+            {
+              "name": "U+60",
+              "input": "`",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",97,99],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+61",
+              "input": "a",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",97,99],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+62",
+              "input": "b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",97,99],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+63",
+              "input": "c",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",97,99],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+64",
+              "input": "d",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",97,99],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",97,99],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "String then integer",
+          "tests": [
+            {
+              "name": "U+60",
+              "input": "`",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a",99],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+61",
+              "input": "a",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a",99],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+62",
+              "input": "b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a",99],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+63",
+              "input": "c",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a",99],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+64",
+              "input": "d",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a",99],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a",99],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Integer then string",
+          "tests": [
+            {
+              "name": "U+60",
+              "input": "`",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",97,"c"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+61",
+              "input": "a",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",97,"c"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+62",
+              "input": "b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",97,"c"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+63",
+              "input": "c",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",97,"c"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+64",
+              "input": "d",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",97,"c"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",97,"c"],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Greedy range followed by singleton",
+          "tests": [
+            {
+              "name": "U+61",
+              "input": "a",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","c","x"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+62",
+              "input": "b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","c","x"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+63",
+              "input": "c",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","c","x"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+64",
+              "input": "d",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","c","x"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+77",
+              "input": "w",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","c","x"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+78",
+              "input": "x",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","c","x"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+79",
+              "input": "y",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","c","x"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","c","x"],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Two adjacent ranges",
+          "tests": [
+            {
+              "name": "U+60",
+              "input": "`",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","c","x","z"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+61",
+              "input": "a",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","c","x","z"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+62",
+              "input": "b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","c","x","z"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+63",
+              "input": "c",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","c","x","z"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+64",
+              "input": "d",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","c","x","z"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+77",
+              "input": "w",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","c","x","z"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+78",
+              "input": "x",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","c","x","z"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+79",
+              "input": "y",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","c","x","z"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+7A",
+              "input": "z",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","c","x","z"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+7B",
+              "input": "{",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","c","x","z"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","c","x","z"],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Equal endpoints",
+          "tests": [
+            {
+              "name": "U+60",
+              "input": "`",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","a"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+61",
+              "input": "a",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","a"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+62",
+              "input": "b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","a"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","a"],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Zero endpoint",
+          "tests": [
+            {
+              "name": "U+0",
+              "input": "\u0000",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",0,2],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+1",
+              "input": "\u0001",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",0,2],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+2",
+              "input": "\u0002",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",0,2],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+3",
+              "input": "\u0003",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",0,2],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",0,2],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Maximum singleton",
+          "tests": [
+            {
+              "name": "U+0",
+              "input": "\u0000",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",null],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+10FFFE",
+              "input": "\udbff\udffe",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",null],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+10FFFF",
+              "input": "\udbff\udfff",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",null],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",null],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Maximum pair",
+          "tests": [
+            {
+              "name": "U+10FFFE",
+              "input": "\udbff\udffe",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",null,null],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+10FFFF",
+              "input": "\udbff\udfff",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",null,null],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",null,null],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Open range",
+          "tests": [
+            {
+              "name": "U+77",
+              "input": "w",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","x",null],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+78",
+              "input": "x",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","x",null],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+79",
+              "input": "y",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","x",null],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+FFFF",
+              "input": "\uffff",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","x",null],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+10000",
+              "input": "𐀀",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","x",null],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+10FFFF",
+              "input": "\udbff\udfff",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","x",null],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","x",null],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Full range",
+          "tests": [
+            {
+              "name": "U+0",
+              "input": "\u0000",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",0,null],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+1",
+              "input": "\u0001",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",0,null],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+D7FF",
+              "input": "퟿",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",0,null],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+D800",
+              "input": "\ud800",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",0,null],["END"]]]],["NODE"]]],
+              "output": true,
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "U+DFFF",
+              "input": "\udfff",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",0,null],["END"]]]],["NODE"]]],
+              "output": true,
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "U+E000",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",0,null],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+FFFF",
+              "input": "\uffff",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",0,null],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+10000",
+              "input": "𐀀",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",0,null],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+10FFFF",
+              "input": "\udbff\udfff",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",0,null],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",0,null],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "BMP to astral boundary",
+          "tests": [
+            {
+              "name": "U+FFFD",
+              "input": "�",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",65534,65537],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+FFFE",
+              "input": "\ufffe",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",65534,65537],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+FFFF",
+              "input": "\uffff",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",65534,65537],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+10000",
+              "input": "𐀀",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",65534,65537],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+10001",
+              "input": "𐀁",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",65534,65537],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+10002",
+              "input": "𐀂",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",65534,65537],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",65534,65537],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Astral string endpoints",
+          "tests": [
+            {
+              "name": "U+1F641",
+              "input": "🙁",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","🙂","🙃"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+1F642",
+              "input": "🙂",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","🙂","🙃"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+1F643",
+              "input": "🙃",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","🙂","🙃"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+1F644",
+              "input": "🙄",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","🙂","🙃"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","🙂","🙃"],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Surrogate interval",
+          "tests": [
+            {
+              "name": "U+D7FF",
+              "input": "퟿",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",55296,57343],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+D800",
+              "input": "\ud800",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",55296,57343],["END"]]]],["NODE"]]],
+              "output": true,
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "U+DBFF",
+              "input": "\udbff",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",55296,57343],["END"]]]],["NODE"]]],
+              "output": true,
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "U+DC00",
+              "input": "\udc00",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",55296,57343],["END"]]]],["NODE"]]],
+              "output": true,
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "U+DFFF",
+              "input": "\udfff",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",55296,57343],["END"]]]],["NODE"]]],
+              "output": true,
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "U+E000",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",55296,57343],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",55296,57343],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Lone surrogate string endpoints",
+          "tests": [
+            {
+              "name": "U+D7FF",
+              "input": "퟿",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","\ud800","\udfff"],["END"]]]],["NODE"]]],
+              "output": false,
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "U+D800",
+              "input": "\ud800",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","\ud800","\udfff"],["END"]]]],["NODE"]]],
+              "output": true,
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "U+DC00",
+              "input": "\udc00",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","\ud800","\udfff"],["END"]]]],["NODE"]]],
+              "output": true,
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "U+DFFF",
+              "input": "\udfff",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","\ud800","\udfff"],["END"]]]],["NODE"]]],
+              "output": true,
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "U+E000",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","\ud800","\udfff"],["END"]]]],["NODE"]]],
+              "output": false,
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","\ud800","\udfff"],["END"]]]],["NODE"]]],
+              "output": false,
+              "needLoneSurrogate": true
+            }
+          ]
+        },
+        {
+          "name": "Surrogate members do not split valid pairs",
+          "input": "🙂",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",55296,57343],["END"]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "BMP noncharacter is a legal member",
+          "input": "\ufdd0",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",64976],["END"]]]],["NODE"]]],
+          "output": true
+        }
+      ]
+    },
+    {
+      "name": "Ordered inclusion and exclusion",
+      "desc": "Each range/list/class is applied in order. Exclusion subtracts from the existing set, inclusion can restore removed members, and repeated or adjacent spans remain ordinary sets. Mode changes alone do not invert existing members.",
+      "tests": [
+        {
+          "name": "Dot without newline",
+          "tests": [
+            {
+              "name": "U+0",
+              "input": "\u0000",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,"\n"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+9",
+              "input": "\t",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,"\n"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+A",
+              "input": "\n",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,"\n"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+D",
+              "input": "\r",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,"\n"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+61",
+              "input": "a",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,"\n"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+10FFFF",
+              "input": "\udbff\udfff",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,"\n"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,"\n"],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Exclude from empty",
+          "tests": [
+            {
+              "name": "U+60",
+              "input": "`",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a",false,"a"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+61",
+              "input": "a",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a",false,"a"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+62",
+              "input": "b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a",false,"a"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a",false,"a"],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Split a range then restore one point",
+          "tests": [
+            {
+              "name": "U+0",
+              "input": "\u0000",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",0,10,false,3,7,true,5],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+2",
+              "input": "\u0002",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",0,10,false,3,7,true,5],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+3",
+              "input": "\u0003",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",0,10,false,3,7,true,5],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+4",
+              "input": "\u0004",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",0,10,false,3,7,true,5],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+5",
+              "input": "\u0005",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",0,10,false,3,7,true,5],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+6",
+              "input": "\u0006",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",0,10,false,3,7,true,5],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+7",
+              "input": "\u0007",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",0,10,false,3,7,true,5],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+8",
+              "input": "\b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",0,10,false,3,7,true,5],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+A",
+              "input": "\n",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",0,10,false,3,7,true,5],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+B",
+              "input": "\u000b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",0,10,false,3,7,true,5],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",0,10,false,3,7,true,5],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Remove both edges",
+          "tests": [
+            {
+              "name": "U+9",
+              "input": "\t",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",10,20,false,10,12,18,20],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+A",
+              "input": "\n",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",10,20,false,10,12,18,20],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+C",
+              "input": "\f",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",10,20,false,10,12,18,20],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+D",
+              "input": "\r",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",10,20,false,10,12,18,20],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+11",
+              "input": "\u0011",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",10,20,false,10,12,18,20],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+12",
+              "input": "\u0012",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",10,20,false,10,12,18,20],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+14",
+              "input": "\u0014",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",10,20,false,10,12,18,20],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+15",
+              "input": "\u0015",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",10,20,false,10,12,18,20],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",10,20,false,10,12,18,20],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Reinclude a larger span",
+          "tests": [
+            {
+              "name": "U+4",
+              "input": "\u0004",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",10,20,false,12,18,true,5,25],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+5",
+              "input": "\u0005",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",10,20,false,12,18,true,5,25],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+A",
+              "input": "\n",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",10,20,false,12,18,true,5,25],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+C",
+              "input": "\f",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",10,20,false,12,18,true,5,25],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+12",
+              "input": "\u0012",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",10,20,false,12,18,true,5,25],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+14",
+              "input": "\u0014",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",10,20,false,12,18,true,5,25],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+19",
+              "input": "\u0019",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",10,20,false,12,18,true,5,25],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+1A",
+              "input": "\u001a",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",10,20,false,12,18,true,5,25],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",10,20,false,12,18,true,5,25],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Overlapping includes",
+          "tests": [
+            {
+              "name": "U+9",
+              "input": "\t",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",10,20,15,25],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+A",
+              "input": "\n",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",10,20,15,25],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+F",
+              "input": "\u000f",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",10,20,15,25],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+14",
+              "input": "\u0014",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",10,20,15,25],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+19",
+              "input": "\u0019",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",10,20,15,25],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+1A",
+              "input": "\u001a",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",10,20,15,25],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",10,20,15,25],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Adjacent includes",
+          "tests": [
+            {
+              "name": "U+9",
+              "input": "\t",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",10,20,21,30],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+A",
+              "input": "\n",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",10,20,21,30],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+14",
+              "input": "\u0014",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",10,20,21,30],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+15",
+              "input": "\u0015",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",10,20,21,30],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+1E",
+              "input": "\u001e",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",10,20,21,30],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+1F",
+              "input": "\u001f",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",10,20,21,30],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",10,20,21,30],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Repeated exclusions",
+          "tests": [
+            {
+              "name": "U+60",
+              "input": "`",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,"abc",false,"bcd"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+61",
+              "input": "a",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,"abc",false,"bcd"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+62",
+              "input": "b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,"abc",false,"bcd"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+63",
+              "input": "c",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,"abc",false,"bcd"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+64",
+              "input": "d",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,"abc",false,"bcd"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+65",
+              "input": "e",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,"abc",false,"bcd"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,"abc",false,"bcd"],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Exclude all Unicode",
+          "tests": [
+            {
+              "name": "U+0",
+              "input": "\u0000",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,false,0,null],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+61",
+              "input": "a",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,false,0,null],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+10FFFF",
+              "input": "\udbff\udfff",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,false,0,null],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,false,0,null],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Restore maximum after full exclusion",
+          "tests": [
+            {
+              "name": "U+0",
+              "input": "\u0000",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,0,null,true,null],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+10FFFE",
+              "input": "\udbff\udffe",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,0,null,true,null],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+10FFFF",
+              "input": "\udbff\udfff",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,0,null,true,null],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,0,null,true,null],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Consonants and capital vowels",
+          "tests": [
+            {
+              "name": "U+41",
+              "input": "A",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","z",false,"aeiou",true,"AEIOU"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+42",
+              "input": "B",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","z",false,"aeiou",true,"AEIOU"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+45",
+              "input": "E",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","z",false,"aeiou",true,"AEIOU"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+61",
+              "input": "a",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","z",false,"aeiou",true,"AEIOU"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+62",
+              "input": "b",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","z",false,"aeiou",true,"AEIOU"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+65",
+              "input": "e",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","z",false,"aeiou",true,"AEIOU"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "U+7A",
+              "input": "z",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","z",false,"aeiou",true,"AEIOU"],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+7B",
+              "input": "{",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","z",false,"aeiou",true,"AEIOU"],["END"]]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a","z",false,"aeiou",true,"AEIOU"],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Surrogate exclusion",
+          "tests": [
+            {
+              "name": "U+D7FF",
+              "input": "퟿",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,55296,57343],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+D800",
+              "input": "\ud800",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,55296,57343],["END"]]]],["NODE"]]],
+              "output": false,
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "U+DFFF",
+              "input": "\udfff",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,55296,57343],["END"]]]],["NODE"]]],
+              "output": false,
+              "needLoneSurrogate": true
+            },
+            {
+              "name": "U+E000",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,55296,57343],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "U+10000",
+              "input": "𐀀",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,55296,57343],["END"]]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Missing end character",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,55296,57343],["END"]]]],["NODE"]]],
+              "output": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Ordinary targets",
+      "desc": "Outside regex context CHARS accepts a valid integer codepoint or a string of exactly one codepoint. Other target types, out-of-range numbers, empty strings, and multi-codepoint strings do not match. It performs no coercion and never consumes only a prefix of an ordinary string.",
+      "tests": [
+        {
+          "name": "numeric member",
+          "input": 97,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CHARS","a"],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "numeric nonmember",
+          "input": 98,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CHARS","a"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "string member",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CHARS","a"],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "string nonmember",
+          "input": "b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CHARS","a"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "empty string",
+          "input": "",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CHARS","a"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "two characters",
+          "input": "ab",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CHARS","a"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "null",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CHARS","a"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "false",
+          "input": false,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CHARS","a"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "true",
+          "input": true,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CHARS","a"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "fraction",
+          "input": 97.5,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CHARS","a"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "negative",
+          "input": -1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CHARS","a"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "too large",
+          "input": 1114112,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CHARS","a"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "array",
+          "input": [97],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CHARS","a"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "object",
+          "input": {"x":97},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CHARS","a"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Astral string is one codepoint",
+          "input": "🙂",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CHARS",128578],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Astral integer is one codepoint",
+          "input": 128578,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CHARS","🙂"],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Surrogate integers are valid targets",
+          "input": 55296,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CHARS",55296],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Lone surrogate strings are one codepoint",
+          "input": "\ud800",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CHARS",55296],["NODE"]]],
+          "output": true,
+          "needLoneSurrogate": true
+        },
+        {
+          "name": "Ordinary strings are not searched for members",
+          "input": "ba",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CHARS","a"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Alternate target changes back to ordinary matching",
+          "input": "x",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",97,["CHARS","a"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "LOCAL current-node override",
+          "input": {"value":"a"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",null,["NODE","value"],["CHARS","a"]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Missing current node does not match",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",{"missing":["CHARS",false]}],["NODE"]]],
+          "output": false
+        }
+      ]
+    },
+    {
+      "name": "Common CHARS expressions",
+      "desc": "Only EXPR operands may import another CHARS set. Their sets are unioned/subtracted using the current outer mode, retaining inner complement/exclusion semantics. Names resolve in lexical scope at invocation time, and computed names must not be cached as constants.",
+      "tests": [
+        {
+          "name": "Included class a",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1,"expr":["letters",["CHARS","a","z"],"vowels",["CHARS","aeiou"],"notVowels",["CHARS",false,"aeiou"],"alias",["EXPR","letters"],"empty",["CHARS"]]},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",["EXPR","letters"]],["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Included class m",
+          "input": "m",
+          "jgraft": ["JGRAFT",{"v":1,"expr":["letters",["CHARS","a","z"],"vowels",["CHARS","aeiou"],"notVowels",["CHARS",false,"aeiou"],"alias",["EXPR","letters"],"empty",["CHARS"]]},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",["EXPR","letters"]],["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Included class z",
+          "input": "z",
+          "jgraft": ["JGRAFT",{"v":1,"expr":["letters",["CHARS","a","z"],"vowels",["CHARS","aeiou"],"notVowels",["CHARS",false,"aeiou"],"alias",["EXPR","letters"],"empty",["CHARS"]]},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",["EXPR","letters"]],["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Included class A",
+          "input": "A",
+          "jgraft": ["JGRAFT",{"v":1,"expr":["letters",["CHARS","a","z"],"vowels",["CHARS","aeiou"],"notVowels",["CHARS",false,"aeiou"],"alias",["EXPR","letters"],"empty",["CHARS"]]},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",["EXPR","letters"]],["END"]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Subtract class a",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1,"expr":["letters",["CHARS","a","z"],"vowels",["CHARS","aeiou"],"notVowels",["CHARS",false,"aeiou"],"alias",["EXPR","letters"],"empty",["CHARS"]]},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",["EXPR","letters"],false,["EXPR","vowels"]],["END"]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Subtract class b",
+          "input": "b",
+          "jgraft": ["JGRAFT",{"v":1,"expr":["letters",["CHARS","a","z"],"vowels",["CHARS","aeiou"],"notVowels",["CHARS",false,"aeiou"],"alias",["EXPR","letters"],"empty",["CHARS"]]},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",["EXPR","letters"],false,["EXPR","vowels"]],["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Subtract class z",
+          "input": "z",
+          "jgraft": ["JGRAFT",{"v":1,"expr":["letters",["CHARS","a","z"],"vowels",["CHARS","aeiou"],"notVowels",["CHARS",false,"aeiou"],"alias",["EXPR","letters"],"empty",["CHARS"]]},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",["EXPR","letters"],false,["EXPR","vowels"]],["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Subtract class A",
+          "input": "A",
+          "jgraft": ["JGRAFT",{"v":1,"expr":["letters",["CHARS","a","z"],"vowels",["CHARS","aeiou"],"notVowels",["CHARS",false,"aeiou"],"alias",["EXPR","letters"],"empty",["CHARS"]]},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",["EXPR","letters"],false,["EXPR","vowels"]],["END"]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Alias chain resolves to CHARS",
+          "input": "b",
+          "jgraft": ["JGRAFT",{"v":1,"expr":["letters",["CHARS","a","z"],"vowels",["CHARS","aeiou"],"notVowels",["CHARS",false,"aeiou"],"alias",["EXPR","letters"],"empty",["CHARS"]]},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",["EXPR","alias"]],["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Complement child includes non-vowels",
+          "input": "b",
+          "jgraft": ["JGRAFT",{"v":1,"expr":["letters",["CHARS","a","z"],"vowels",["CHARS","aeiou"],"notVowels",["CHARS",false,"aeiou"],"alias",["EXPR","letters"],"empty",["CHARS"]]},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",["EXPR","notVowels"]],["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Complement child excludes vowels",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1,"expr":["letters",["CHARS","a","z"],"vowels",["CHARS","aeiou"],"notVowels",["CHARS",false,"aeiou"],"alias",["EXPR","letters"],"empty",["CHARS"]]},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",["EXPR","notVowels"]],["END"]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Subtract complemented child retains vowels",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1,"expr":["letters",["CHARS","a","z"],"vowels",["CHARS","aeiou"],"notVowels",["CHARS",false,"aeiou"],"alias",["EXPR","letters"],"empty",["CHARS"]]},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",["EXPR","letters"],false,["EXPR","notVowels"]],["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Subtract complemented child removes consonants",
+          "input": "b",
+          "jgraft": ["JGRAFT",{"v":1,"expr":["letters",["CHARS","a","z"],"vowels",["CHARS","aeiou"],"notVowels",["CHARS",false,"aeiou"],"alias",["EXPR","letters"],"empty",["CHARS"]]},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",["EXPR","letters"],false,["EXPR","notVowels"]],["END"]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Empty child has no members",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1,"expr":["letters",["CHARS","a","z"],"vowels",["CHARS","aeiou"],"notVowels",["CHARS",false,"aeiou"],"alias",["EXPR","letters"],"empty",["CHARS"]]},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",["EXPR","empty"]],["END"]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Child exclusion does not delete parent members",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1,"expr":["letters",["CHARS","a","z"],"vowels",["CHARS","aeiou"],"notVowels",["CHARS",false,"aeiou"],"alias",["EXPR","letters"],"empty",["CHARS"]]},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a",true,["EXPR","notVowels"]],["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Outer exclusion respects holes in child",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1,"expr":["letters",["CHARS","a","z"],"vowels",["CHARS","aeiou"],"notVowels",["CHARS",false,"aeiou"],"alias",["EXPR","letters"],"empty",["CHARS"]]},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",false,["EXPR","notVowels"]],["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Boolean modes stay local to child",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1,"expr":["letters",["CHARS","a","z"],"vowels",["CHARS","aeiou"],"notVowels",["CHARS",false,"aeiou"],"alias",["EXPR","letters"],"empty",["CHARS"]]},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",["EXPR","notVowels"],"a"],["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Forward definitions",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1,"expr":["first",["CHARS",["EXPR","later"]],"later",["CHARS","a"]]},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",["EXPR","first"]],["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Numeric common-expression name",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1,"expr":[7,["CHARS","a"]]},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",["EXPR",7]],["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Arbitrary common-expression name",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1,"expr":["__proto__",["CHARS","a"]]},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",["EXPR","__proto__"]],["END"]]]],["NODE"]]],
+          "output": true,
+          "needProto": true
+        },
+        {
+          "name": "Computed names depend on current character",
+          "input": "ab",
+          "jgraft": ["JGRAFT",{"v":1,"expr":["97",["CHARS","a"],"98",["CHARS","b"]]},["COPY",["IS",["STR",["SEQ",["START"],["REP",2,0,["CHARS",["EXPR",["CASTSTR"]]]],["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Computed name from LOCAL TEMP",
+          "input": "b",
+          "jgraft": ["JGRAFT",{"v":1,"expr":["letters",["CHARS","a","z"],"vowels",["CHARS","aeiou"],"notVowels",["CHARS",false,"aeiou"],"alias",["EXPR","letters"],"empty",["CHARS"]]},["COPY",["LOCAL","class","letters",["IS",["STR",["SEQ",["START"],["CHARS",["EXPR",["TEMP","class"]]],["END"]]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Shadowed definitions do not reuse parent sets",
+          "input": {"first":"a","second":"b"},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["c",["CHARS","a"],"test",["IS",["STR",["SEQ",["START"],["CHARS",["EXPR","c"]],["END"]]]]]},["COPY",["LOCAL",null,["NODE","first"],["EXPR","test"]],"outer"],["JGRAFT",{"expr":["c",["CHARS","b"]]},["COPY",["LOCAL",null,["NODE","second"],["EXPR","test"]],"inner"]]],
+          "output": {"first":"a","second":"b","outer":true,"inner":true}
+        },
+        {
+          "name": "Root EXPR CHARS retains regex semantics",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1,"expr":["c",["CHARS","a"]]},["COPY",["IS",["STR",["SEQ",["START"],["EXPR","c"],["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Numeric CHARS and EXPR identifiers",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1,"expr":[7,[19,"a"]]},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",[-5,7]],["END"]]]],["NODE"]]],
+          "output": true
+        }
+      ]
+    },
+    {
+      "name": "Composition and consumption",
+      "desc": "CHARS consumes exactly one character/element when it matches and none when it fails. Sequences, repetition, alternatives, assertions, captures, and SPLIT/JOIN use the same membership rules. Empty classes never match the end boundary.",
+      "tests": [
+        {
+          "name": "Regex search finds a member",
+          "input": "xx7yy",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["STR",["CHARS","0","9"]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Regex search without a member",
+          "input": "abc",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["STR",["CHARS","0","9"]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Repeated digits span the entire string",
+          "input": "0123456789",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["REP",1,-1,["CHARS",48,57]],["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Repeated digits reject an interior letter",
+          "input": "12a34",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["REP",1,-1,["CHARS",48,57]],["END"]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Zero repetitions allow the empty string",
+          "input": "",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["REP",0,-1,["CHARS","a"]],["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Complete class cannot consume the end",
+          "input": "",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["CHARS",false]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Following term starts at the next character",
+          "input": "ab",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a"],"b",["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "ANY recovers from a failed class",
+          "input": "b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["ANY",["CHARS","a"],["CHARS","b"]],["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "ALL tests the same character",
+          "input": "b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["ALL",["CHARS","a","z"],["CHARS",false,"aeiou"]],["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "NONE is zero-width in regex",
+          "input": "b",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["NONE",["CHARS","a"]],["CHARS","b"],["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Array sequence accepts strings and integers",
+          "input": ["a",98,"c"],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",[[["SEQ",["CHARS","a"],["CHARS","b"],["CHARS","c"]]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Array repetition consumes matching elements",
+          "input": [97,"b",99],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",[[["SEQ",["REP",3,0,["CHARS","a","c"]]]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Array class does not consume multi-character strings",
+          "input": ["ab"],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",[[["SEQ",["CHARS","ab"]]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "WITH wrapping a class",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["WITH","unused",0,["CHARS","a"]],["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "CASE can use an ordinary class predicate",
+          "input": {"value":"b"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",null,["NODE","value"],["CASE",["CHARS","a","z"],"letter","other"]],["NODE"]]],
+          "output": "letter"
+        },
+        {
+          "name": "Capture counts matched elements",
+          "input": ["🙂","a"],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQMAX","text",["REP",2,0,["CHARS","🙂a"]]]]]],["NODE"]]],
+          "output": {"text":{"path":[],"ofs":0,"len":2,"lim":2}}
+        },
+        {
+          "name": "SPLIT and JOIN use a class separator",
+          "input": "a1b2c",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN","|",["SPLIT",{"sep":["CHARS","0","9"],"default":"/"},["NODE"]]],["NODE"]]],
+          "output": "a|b|c"
+        },
+        {
+          "name": "Negated class as a separator",
+          "input": "12a34b56",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",":",["SPLIT",{"sep":["CHARS",false,"0","9"],"default":"/"},["NODE"]]],["NODE"]]],
+          "output": "12:34:56"
+        }
+      ]
+    },
+    {
+      "name": "Invalid operands and failures",
+      "desc": "Only booleans, strings, valid integer codepoints, null, and EXPR resolving to CHARS are operands. Descending ranges and other operand types are INVALID_OPERAND, normally trapped as a non-match; intrinsic errors may instead be diagnosed statically as INVALID_GRAFT. Malformed EXPR syntax and RESOURCE_LIMIT remain fatal.",
+      "tests": [
+        {
+          "name": "negative integer",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",-1],["END"]]]],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "too large",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",1114112],["END"]]]],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "fraction",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",1.5],["END"]]]],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "object",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",{}],["END"]]]],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "escaped array",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",[[]]],["END"]]]],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "direct CHARS",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",["CHARS","a"]],["END"]]]],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "function expression",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",["CASTSTR",97]],["END"]]]],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "NODE expression",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",["NODE"]],["END"]]]],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "descending strings",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","z","a"],["END"]]]],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "descending integers",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",100,1],["END"]]]],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "maximum then zero",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",null,0],["END"]]]],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "descending after inclusion",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","abc",false,"z","a"],["END"]]]],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Non-CHARS common expression",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1,"expr":["wrong",["STR","a"]]},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",["EXPR","wrong"]],["END"]]]],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Plain string common expression",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1,"expr":["wrong","a"]},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",["EXPR","wrong"]],["END"]]]],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Missing common expression",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1,"expr":["letters",["CHARS","a","z"],"vowels",["CHARS","aeiou"],"notVowels",["CHARS",false,"aeiou"],"alias",["EXPR","letters"],"empty",["CHARS"]]},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",["EXPR","missing"]],["END"]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Invalid computed EXPR name is a runtime mismatch",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","name",false,["IS",["STR",["SEQ",["START"],["CHARS",["EXPR",["TEMP","name"]]],["END"]]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Malformed EXPR with no name",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",["EXPR"]],["END"]]]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Malformed EXPR with extra name",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",["EXPR","a","b"]],["END"]]]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Recursive class reference",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1,"expr":["loop",["CHARS",["EXPR","loop"]]]},["COPY",["IS",["STR",["SEQ",["START"],["EXPR","loop"],["END"]]]],["NODE"]]],
+          "errors": {"RESOURCE_LIMIT":true},
+          "limits": {"depth":24}
+        },
+        {
+          "name": "Wrapped CHARS is not exactly CHARS",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1,"expr":["wrong",[[["CHARS","a"]]]]},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",["EXPR","wrong"]],["END"]]]],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Negative upper endpoint",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",97,-1],["END"]]]],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Out-of-range upper endpoint",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",97,1114112],["END"]]]],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Fractional upper endpoint",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS",97,98.5],["END"]]]],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid operand after a known member",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a",true,{}],["END"]]]],["NODE"]]],
+          "output": false,
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Missing imported class after a known member",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["CHARS","a",true,["EXPR","missing"]],["END"]]]],["NODE"]]],
+          "output": false
+        }
+      ]
+    }
+  ]
+}

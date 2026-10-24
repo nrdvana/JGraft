@@ -1,0 +1,389 @@
+{
+  "version": 1,
+  "name": "FILTER",
+  "desc": "Covers FILTER: deferred match-context predicates, ordered selection from implicit/explicit arrays, structural HAS matching, errors as predicate failures, CURPROP indices, lexical/namespace context, nested callbacks, fresh capture state, independent returned values, preserved SPLIT metadata, empty-input laziness, validation, and syntax.",
+  "tests": [
+    {
+      "name": "Selection and order",
+      "desc": "FILTER localizes NODE to each element, preserving relative order and duplicates. Its callback is match context, including literal/structural patterns, and defaults to HAS matching independently of outer contexts.",
+      "tests": [
+        {
+          "name": "Empty input",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",["FAIL"]],["NODE"]]],
+          "output": []
+        },
+        {
+          "name": "Keep all",
+          "input": [1,null,false,{"x":1},[2]],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",["EXISTS"]],["NODE"]]],
+          "output": [1,null,false,{"x":1},[2]]
+        },
+        {
+          "name": "Keep none",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",["FAIL"]],["NODE"]]],
+          "output": []
+        },
+        {
+          "name": "Numbers only",
+          "input": [1,"2",false,3,null],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",["NUM"]],["NODE"]]],
+          "output": [1,3]
+        },
+        {
+          "name": "Literal zero",
+          "input": [0,1,0,false],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",0],["NODE"]]],
+          "output": [0,0]
+        },
+        {
+          "name": "Literal false",
+          "input": [0,false,true,false],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",false],["NODE"]]],
+          "output": [false,false]
+        },
+        {
+          "name": "Literal null",
+          "input": [null,0,null],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",null],["NODE"]]],
+          "output": [null,null]
+        },
+        {
+          "name": "Duplicates retain order",
+          "input": [3,1,3,2,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",["NUM",1,2]],["NODE"]]],
+          "output": [1,2,1]
+        },
+        {
+          "name": "Partial object pattern",
+          "input": [{"x":1,"y":2},{"x":2},{"x":1}],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",{"x":1}],["NODE"]]],
+          "output": [{"x":1,"y":2},{"x":1}]
+        },
+        {
+          "name": "Exact object pattern",
+          "input": [{"x":1,"y":2},{"x":2},{"x":1}],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",["IS",{"x":1}]],["NODE"]]],
+          "output": [{"x":1}]
+        },
+        {
+          "name": "Nested structural match",
+          "input": [{"a":{"n":1}},{"a":{"n":"1"}},{}],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",{"a":{"n":["NUM"]}}],["NODE"]]],
+          "output": [{"a":{"n":1}}]
+        },
+        {
+          "name": "Array prefix pattern",
+          "input": [[1,2],[2],[1]],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",[[1]]],["NODE"]]],
+          "output": [[1,2],[1]]
+        },
+        {
+          "name": "Function result is a literal pattern",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",["LESS",2]],["NODE"]]],
+          "output": []
+        },
+        {
+          "name": "Explicit comparison predicate",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",["IS",["LESS",2],true]],["NODE"]]],
+          "output": [1]
+        },
+        {
+          "name": "Numeric expression identifier",
+          "input": [1,"x",2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[60,["NUM"]],["NODE"]]],
+          "output": [1,2]
+        }
+      ]
+    },
+    {
+      "name": "Sources and indices",
+      "desc": "One argument uses the caller NODE array; explicit arrays evaluate once in caller scope. Each predicate sees the original source index, not the output index, and sliced sources use their own reindexed positions.",
+      "tests": [
+        {
+          "name": "Explicit array source",
+          "input": {"items":[1,"x",2]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",["NUM"],["NODE","items"]],["NODE"]]],
+          "output": [1,2]
+        },
+        {
+          "name": "Constructed array source",
+          "input": 2,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",["NUM"],[[["NODE"],"x",["ADD",["NODE"],1]]]],["NODE"]]],
+          "output": [2,3]
+        },
+        {
+          "name": "Select by original index",
+          "input": ["a","b","c","d"],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",["IS",["CURPROP"],2]],["NODE"]]],
+          "output": ["c"]
+        },
+        {
+          "name": "Index-dependent alternate selection",
+          "input": [0,1,2,3,4],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",["IS",["MOD",["CURPROP"],2],0]],["NODE"]]],
+          "output": [0,2,4]
+        },
+        {
+          "name": "Sliced indices start at zero",
+          "input": [10,20,30],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",["IS",["CURPROP"],0],["SLICE",["NODE"],1]],["NODE"]]],
+          "output": [20]
+        },
+        {
+          "name": "Each predicate has its own element NODE",
+          "input": [{"x":1},{"x":2}],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",["IS",["NODE","x"],1]],["NODE"]]],
+          "output": [{"x":1}]
+        },
+        {
+          "name": "Empty source does not evaluate a valid failing predicate",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",["IS",["FAIL"],0]],["NODE"]]],
+          "output": []
+        },
+        {
+          "name": "Unreached syntax may be diagnosed statically",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",["UNKNOWN"]],["NODE"]]],
+          "output": [],
+          "errors": {"INVALID_GRAFT":true}
+        }
+      ]
+    },
+    {
+      "name": "Lexical context, nesting, and capture isolation",
+      "desc": "Predicates retain outer namespaces and start independent match states. Nested iteration and LOCAL restore the outer element/index. Captures are not published from boolean filtering; explicit CAPTURE remains a normal function.",
+      "tests": [
+        {
+          "name": "LOCAL threshold",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","limit",2,["FILTER",["NUM",null,["TEMP","limit"]]]],["NODE"]]],
+          "output": [1,2]
+        },
+        {
+          "name": "Common predicate uses invocation TEMP",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1,"expr":["keep",["NUM",null,["TEMP","limit"]]]},["COPY",["LOCAL","limit",2,["FILTER",["EXPR","keep"]]],["NODE"]]],
+          "output": [1,2]
+        },
+        {
+          "name": "CONST and STASH are available",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1,"const":["low",1]},["COPY",2,["STASH","high"]],["COPY",["FILTER",["NUM",["CONST","low"],["STASH","high"]]],["NODE"]]],
+          "output": [1,2]
+        },
+        {
+          "name": "Outer IS does not impose exact predicate mode",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["FILTER",{"x":1},[[{"x":1,"y":2}]]],[[{"x":1,"y":2}]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Nested FILTER does not change outer CURPROP",
+          "input": [[1],[2]],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",["ALL",["IS",["LENGTH",["FILTER",["NUM"]]],1],["IS",["CURPROP"],1]]],["NODE"]]],
+          "output": [[2]]
+        },
+        {
+          "name": "LOCAL predicate binding does not leak",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","x",2,["FILTER",["ALL",["IS",["LOCAL","x",1,["IS",1,1]],true],["IS",["TEMP","x"]]]]],["NODE"]]],
+          "output": [2]
+        },
+        {
+          "name": "Matching nested arrays can select elements",
+          "input": [[1,2],[3]],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",[[["SEQMAX","unobserved",1,2]]]],["NODE"]]],
+          "output": [[1,2]]
+        },
+        {
+          "name": "Outer captures stay visible",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["MATCH",[[["SEQMAX","whole",1,2]]],["COPY",["FILTER",["IS",["CAP","whole","len"],2]],["NODE"]]]],
+          "output": [1,2]
+        }
+      ]
+    },
+    {
+      "name": "Metadata and independent selected values",
+      "desc": "Selected elements retain their original SPLIT separator/trimming metadata. Source data remains independent of edits made to returned objects and arrays. Empty selections drop metadata.",
+      "tests": [
+        {
+          "name": "All fields round trip",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":["ANY",":","|"],"default":"/"},["FILTER",["EXISTS"],["SPLIT",{"sep":["ANY",":","|"],"default":"/","trim":" "}," a : b|c "]]],["NODE"]]],
+          "output": " a : b|c "
+        },
+        {
+          "name": "Selected fields retain metadata",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":["ANY",":","|"],"default":"/"},["FILTER",["ANY","a","c"],["SPLIT",{"sep":["ANY",":","|"],"default":"/","trim":" "}," a : b|c "]]],["NODE"]]],
+          "output": " a :c "
+        },
+        {
+          "name": "Middle field retains its left trim",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":["ANY",":","|"],"default":"/"},["FILTER","b",["SPLIT",{"sep":["ANY",":","|"],"default":"/","trim":" "}," a : b|c "]]],["NODE"]]],
+          "output": " b"
+        },
+        {
+          "name": "Empty selection joins empty",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["JOIN",{"sep":["ANY",":","|"],"default":"/"},["FILTER",["FAIL"],["SPLIT",{"sep":["ANY",":","|"],"default":"/","trim":" "}," a : b|c "]]],["NODE"]]],
+          "output": ""
+        },
+        {
+          "name": "Editing selected values preserves input",
+          "input": {"items":[{"x":[1]},{"x":[2]}]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",["EXISTS"],["NODE","items"]],"result"],["COPY",3,["NODE","result",0,"x",0]]],
+          "output": {"items":[{"x":[1]},{"x":[2]}],"result":[{"x":[3]},{"x":[2]}]}
+        },
+        {
+          "name": "Expression-looking values remain data",
+          "input": [["FAIL"],["NUM"]],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",["EXISTS"]],["NODE"]]],
+          "output": [["FAIL"],["NUM"]]
+        },
+        {
+          "name": "Arbitrary object properties are preserved",
+          "input": [{"__proto__":1}],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",["EXISTS"]],["NODE"]]],
+          "output": [{"__proto__":1}],
+          "needProto": true
+        },
+        {
+          "name": "Lone surrogate data is preserved",
+          "input": ["\ud800","x"],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",["EXISTS"]],["NODE"]]],
+          "output": ["\ud800","x"],
+          "needLoneSurrogate": true
+        }
+      ]
+    },
+    {
+      "name": "Validation and failures",
+      "desc": "Non-array sources are INVALID_TARGET. Runtime target/operand failures inside the predicate count as non-matches and permit later elements to be tested. Syntax errors remain fatal; FILTER never turns an unsupported source into an empty array.",
+      "tests": [
+        {
+          "name": "Non-array null",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",["EXISTS"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Non-array false",
+          "input": false,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",["EXISTS"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Non-array true",
+          "input": true,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",["EXISTS"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Non-array zero",
+          "input": 0,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",["EXISTS"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Non-array number",
+          "input": 3,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",["EXISTS"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Non-array fraction",
+          "input": 0.5,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",["EXISTS"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Non-array empty string",
+          "input": "",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",["EXISTS"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Non-array string",
+          "input": "abc",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",["EXISTS"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Non-array empty object",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",["EXISTS"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Non-array object",
+          "input": {"x":[1]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",["EXISTS"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Missing child references only reject their elements",
+          "input": [{"x":1},{"y":2},{"x":1}],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",["IS",["NODE","x"],1]],["NODE"]]],
+          "output": [{"x":1},{"x":1}]
+        },
+        {
+          "name": "Invalid per-element bounds are trapped",
+          "input": [{"max":1},{"max":"bad"},{"max":3}],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",["WITH","max",["NODE","max"],["IS",2,["NUM",0,["TEMP","max"]]]]],["NODE"]]],
+          "output": [{"max":3}]
+        },
+        {
+          "name": "Missing explicit source",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",["EXISTS"],["NODE","missing"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Argument count 0",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER"],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Argument count 3",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",["EXISTS"],[[]],1],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Unknown reached predicate",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",["UNKNOWN"]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Explicit non-array source",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",["NODE"],3],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Explicit source failure is not a predicate failure",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",["NODE"],["FAIL"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Recursive callback is fatal",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1,"expr":["loop",["EXPR","loop"]]},["COPY",["FILTER",["EXPR","loop"]],["NODE"]]],
+          "errors": {"RESOURCE_LIMIT":true},
+          "limits": {"depth":24}
+        }
+      ]
+    }
+  ]
+}
