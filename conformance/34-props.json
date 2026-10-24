@@ -1,0 +1,1051 @@
+{
+  "version": 1,
+  "name": "PROPS",
+  "desc": "Covers the PROPS expression: implicit and explicit object sources, names/pairs/parallel-array forms, Unicode codepoint ordering, arbitrary property names, data preservation, value-context evaluation and scopes, MKOBJ round trips, independent result trees, and validation/error propagation. Arrays and logical dates are distinct types and are not accepted as objects.",
+  "tests": [
+    {
+      "name": "Forms and data",
+      "desc": "Without options only names are returned; 1 returns pairs and 2 returns parallel arrays. Values retain their JSON types and expression-looking arrays/objects are copied as data. Empty objects have a distinct result shape in each form.",
+      "tests": [
+        {
+          "name": "Names from empty object",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS"],["NODE"]]],
+          "output": []
+        },
+        {
+          "name": "Names from singleton",
+          "input": {"only":42},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS"],["NODE"]]],
+          "output": ["only"]
+        },
+        {
+          "name": "Names preserve types",
+          "input": {"z":["FAIL"],"a":null,"b":false,"c":true,"d":0,"e":-3,"f":0.5,"g":"","h":"text","i":[],"j":[1,[2]],"k":{"nested":["NODE"]}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"]],["NODE"]]],
+          "output": ["a","b","c","d","e","f","g","h","i","j","k","z"]
+        },
+        {
+          "name": "Names from explicit nested source",
+          "input": {"decoy":1,"data":{"z":2,"a":1}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE","data"]],["NODE"]]],
+          "output": ["a","z"]
+        },
+        {
+          "name": "Names from literal object",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",{"z":[["FAIL"]],"a":{"v":2}}],["NODE"]]],
+          "output": ["a","z"]
+        },
+        {
+          "name": "Names numeric opcode",
+          "input": {"b":2,"a":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[64],["NODE"]]],
+          "output": ["a","b"]
+        },
+        {
+          "name": "Pairs from empty object",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],1],["NODE"]]],
+          "output": []
+        },
+        {
+          "name": "Pairs from singleton",
+          "input": {"only":42},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],1],["NODE"]]],
+          "output": [["only",42]]
+        },
+        {
+          "name": "Pairs preserve types",
+          "input": {"z":["FAIL"],"a":null,"b":false,"c":true,"d":0,"e":-3,"f":0.5,"g":"","h":"text","i":[],"j":[1,[2]],"k":{"nested":["NODE"]}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],1],["NODE"]]],
+          "output": [["a",null],["b",false],["c",true],["d",0],["e",-3],["f",0.5],["g",""],["h","text"],["i",[]],["j",[1,[2]]],["k",{"nested":["NODE"]}],["z",["FAIL"]]]
+        },
+        {
+          "name": "Pairs from explicit nested source",
+          "input": {"decoy":1,"data":{"z":2,"a":1}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE","data"],1],["NODE"]]],
+          "output": [["a",1],["z",2]]
+        },
+        {
+          "name": "Pairs from literal object",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",{"z":[["FAIL"]],"a":{"v":2}},1],["NODE"]]],
+          "output": [["a",{"v":2}],["z",["FAIL"]]]
+        },
+        {
+          "name": "Pairs numeric opcode",
+          "input": {"b":2,"a":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[64,["NODE"],1],["NODE"]]],
+          "output": [["a",1],["b",2]]
+        },
+        {
+          "name": "Parallel arrays from empty object",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],2],["NODE"]]],
+          "output": [[],[]]
+        },
+        {
+          "name": "Parallel arrays from singleton",
+          "input": {"only":42},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],2],["NODE"]]],
+          "output": [["only"],[42]]
+        },
+        {
+          "name": "Parallel arrays preserve types",
+          "input": {"z":["FAIL"],"a":null,"b":false,"c":true,"d":0,"e":-3,"f":0.5,"g":"","h":"text","i":[],"j":[1,[2]],"k":{"nested":["NODE"]}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],2],["NODE"]]],
+          "output": [["a","b","c","d","e","f","g","h","i","j","k","z"],[null,false,true,0,-3,0.5,"","text",[],[1,[2]],{"nested":["NODE"]},["FAIL"]]]
+        },
+        {
+          "name": "Parallel arrays from explicit nested source",
+          "input": {"decoy":1,"data":{"z":2,"a":1}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE","data"],2],["NODE"]]],
+          "output": [["a","z"],[1,2]]
+        },
+        {
+          "name": "Parallel arrays from literal object",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",{"z":[["FAIL"]],"a":{"v":2}},2],["NODE"]]],
+          "output": [["a","z"],[{"v":2},["FAIL"]]]
+        },
+        {
+          "name": "Parallel arrays numeric opcode",
+          "input": {"b":2,"a":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[64,["NODE"],2],["NODE"]]],
+          "output": [["a","b"],[1,2]]
+        }
+      ]
+    },
+    {
+      "name": "Deterministic property order",
+      "desc": "Names are ordered by Unicode codepoint sequence, with shorter prefixes first. Numeric-looking keys are not numerically sorted. No normalization, case folding, locale collation, or UTF-16 code-unit ordering is applied; values must stay aligned with the sorted names.",
+      "tests": [
+        {
+          "name": "Insertion order / Names",
+          "input": {"z":1,"c":2,"b":3,"a":4},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"]],["NODE"]]],
+          "output": ["a","b","c","z"]
+        },
+        {
+          "name": "Insertion order / Pairs",
+          "input": {"z":1,"c":2,"b":3,"a":4},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],1],["NODE"]]],
+          "output": [["a",4],["b",3],["c",2],["z",1]]
+        },
+        {
+          "name": "Insertion order / Parallel arrays",
+          "input": {"z":1,"c":2,"b":3,"a":4},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],2],["NODE"]]],
+          "output": [["a","b","c","z"],[4,3,2,1]]
+        },
+        {
+          "name": "Numeric-looking names / Names",
+          "input": {"0":5,"1":3,"2":1,"10":2,"4294967294":8,"01":4,"-1":6,"1.5":7,"4294967295":9},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"]],["NODE"]]],
+          "output": ["-1","0","01","1","1.5","10","2","4294967294","4294967295"]
+        },
+        {
+          "name": "Numeric-looking names / Pairs",
+          "input": {"0":5,"1":3,"2":1,"10":2,"4294967294":8,"01":4,"-1":6,"1.5":7,"4294967295":9},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],1],["NODE"]]],
+          "output": [["-1",6],["0",5],["01",4],["1",3],["1.5",7],["10",2],["2",1],["4294967294",8],["4294967295",9]]
+        },
+        {
+          "name": "Numeric-looking names / Parallel arrays",
+          "input": {"0":5,"1":3,"2":1,"10":2,"4294967294":8,"01":4,"-1":6,"1.5":7,"4294967295":9},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],2],["NODE"]]],
+          "output": [["-1","0","01","1","1.5","10","2","4294967294","4294967295"],[6,5,4,3,7,2,1,8,9]]
+        },
+        {
+          "name": "Empty and prefix names / Names",
+          "input": {"ab":1,"a\u0000":2,"a":3,"":4,"aa":5},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"]],["NODE"]]],
+          "output": ["","a","a\u0000","aa","ab"]
+        },
+        {
+          "name": "Empty and prefix names / Pairs",
+          "input": {"ab":1,"a\u0000":2,"a":3,"":4,"aa":5},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],1],["NODE"]]],
+          "output": [["",4],["a",3],["a\u0000",2],["aa",5],["ab",1]]
+        },
+        {
+          "name": "Empty and prefix names / Parallel arrays",
+          "input": {"ab":1,"a\u0000":2,"a":3,"":4,"aa":5},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],2],["NODE"]]],
+          "output": [["","a","a\u0000","aa","ab"],[4,3,2,5,1]]
+        },
+        {
+          "name": "Case and punctuation / Names",
+          "input": {"z":1,"a":2,"Z":3,"A":4,"_":5,"!":6," ":7},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"]],["NODE"]]],
+          "output": [" ","!","A","Z","_","a","z"]
+        },
+        {
+          "name": "Case and punctuation / Pairs",
+          "input": {"z":1,"a":2,"Z":3,"A":4,"_":5,"!":6," ":7},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],1],["NODE"]]],
+          "output": [[" ",7],["!",6],["A",4],["Z",3],["_",5],["a",2],["z",1]]
+        },
+        {
+          "name": "Case and punctuation / Parallel arrays",
+          "input": {"z":1,"a":2,"Z":3,"A":4,"_":5,"!":6," ":7},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],2],["NODE"]]],
+          "output": [[" ","!","A","Z","_","a","z"],[7,6,4,3,5,2,1]]
+        },
+        {
+          "name": "No normalization / Names",
+          "input": {"é":1,"é":2,"e":3,"É":4},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"]],["NODE"]]],
+          "output": ["e","é","É","é"]
+        },
+        {
+          "name": "No normalization / Pairs",
+          "input": {"é":1,"é":2,"e":3,"É":4},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],1],["NODE"]]],
+          "output": [["e",3],["é",2],["É",4],["é",1]]
+        },
+        {
+          "name": "No normalization / Parallel arrays",
+          "input": {"é":1,"é":2,"e":3,"É":4},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],2],["NODE"]]],
+          "output": [["e","é","É","é"],[3,2,4,1]]
+        },
+        {
+          "name": "Supplementary after BMP / Names",
+          "input": {"𐀀":1,"":2,"😀":3,"\uffff":4,"퟿":5},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"]],["NODE"]]],
+          "output": ["퟿","","\uffff","𐀀","😀"]
+        },
+        {
+          "name": "Supplementary after BMP / Pairs",
+          "input": {"𐀀":1,"":2,"😀":3,"\uffff":4,"퟿":5},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],1],["NODE"]]],
+          "output": [["퟿",5],["",2],["\uffff",4],["𐀀",1],["😀",3]]
+        },
+        {
+          "name": "Supplementary after BMP / Parallel arrays",
+          "input": {"𐀀":1,"":2,"😀":3,"\uffff":4,"퟿":5},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],2],["NODE"]]],
+          "output": [["퟿","","\uffff","𐀀","😀"],[5,2,4,1,3]]
+        },
+        {
+          "name": "Shared supplementary prefix / Names",
+          "input": {"😀z":1,"😀a":2,"😀":3,"😁":4},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"]],["NODE"]]],
+          "output": ["😀","😀a","😀z","😁"]
+        },
+        {
+          "name": "Shared supplementary prefix / Pairs",
+          "input": {"😀z":1,"😀a":2,"😀":3,"😁":4},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],1],["NODE"]]],
+          "output": [["😀",3],["😀a",2],["😀z",1],["😁",4]]
+        },
+        {
+          "name": "Shared supplementary prefix / Parallel arrays",
+          "input": {"😀z":1,"😀a":2,"😀":3,"😁":4},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],2],["NODE"]]],
+          "output": [["😀","😀a","😀z","😁"],[3,2,1,4]]
+        },
+        {
+          "name": "Controls and escapes / Names",
+          "input": {"\n":1,"\t":2,"\u0000":3,"\"":4,"\\":5},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"]],["NODE"]]],
+          "output": ["\u0000","\t","\n","\"","\\"]
+        },
+        {
+          "name": "Controls and escapes / Pairs",
+          "input": {"\n":1,"\t":2,"\u0000":3,"\"":4,"\\":5},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],1],["NODE"]]],
+          "output": [["\u0000",3],["\t",2],["\n",1],["\"",4],["\\",5]]
+        },
+        {
+          "name": "Controls and escapes / Parallel arrays",
+          "input": {"\n":1,"\t":2,"\u0000":3,"\"":4,"\\":5},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],2],["NODE"]]],
+          "output": [["\u0000","\t","\n","\"","\\"],[3,2,1,4,5]]
+        },
+        {
+          "name": "Lone surrogates / Names",
+          "input": {"":1,"\udc00":2,"\ud800":3,"𐀀":4},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"]],["NODE"]]],
+          "output": ["\ud800","\udc00","","𐀀"],
+          "needLoneSurrogate": true
+        },
+        {
+          "name": "Lone surrogates / Pairs",
+          "input": {"":1,"\udc00":2,"\ud800":3,"𐀀":4},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],1],["NODE"]]],
+          "output": [["\ud800",3],["\udc00",2],["",1],["𐀀",4]],
+          "needLoneSurrogate": true
+        },
+        {
+          "name": "Lone surrogates / Parallel arrays",
+          "input": {"":1,"\udc00":2,"\ud800":3,"𐀀":4},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],2],["NODE"]]],
+          "output": [["\ud800","\udc00","","𐀀"],[3,2,1,4]],
+          "needLoneSurrogate": true
+        }
+      ]
+    },
+    {
+      "name": "Arbitrary names",
+      "desc": "All own JSON properties are included, including names that shadow host object methods. __proto__ is an ordinary property where the configured host model supports it. A property named length does not make an object an array.",
+      "tests": [
+        {
+          "name": "Names include shadowing names",
+          "input": {"toString":0,"constructor":1,"hasOwnProperty":2,"valueOf":3,"propertyIsEnumerable":4,"isPrototypeOf":5,"toLocaleString":6,"__defineGetter__":7,"length":8,"prototype":9},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"]],["NODE"]]],
+          "output": ["__defineGetter__","constructor","hasOwnProperty","isPrototypeOf","length","propertyIsEnumerable","prototype","toLocaleString","toString","valueOf"]
+        },
+        {
+          "name": "Names include __proto__ as data",
+          "input": {"z":2,"__proto__":{"hidden":3},"a":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"]],["NODE"]]],
+          "output": ["__proto__","a","z"],
+          "needProto": true
+        },
+        {
+          "name": "Names do not invent inherited names",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"]],["NODE"]]],
+          "output": []
+        },
+        {
+          "name": "Pairs include shadowing names",
+          "input": {"toString":0,"constructor":1,"hasOwnProperty":2,"valueOf":3,"propertyIsEnumerable":4,"isPrototypeOf":5,"toLocaleString":6,"__defineGetter__":7,"length":8,"prototype":9},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],1],["NODE"]]],
+          "output": [["__defineGetter__",7],["constructor",1],["hasOwnProperty",2],["isPrototypeOf",5],["length",8],["propertyIsEnumerable",4],["prototype",9],["toLocaleString",6],["toString",0],["valueOf",3]]
+        },
+        {
+          "name": "Pairs include __proto__ as data",
+          "input": {"z":2,"__proto__":{"hidden":3},"a":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],1],["NODE"]]],
+          "output": [["__proto__",{"hidden":3}],["a",1],["z",2]],
+          "needProto": true
+        },
+        {
+          "name": "Pairs do not invent inherited names",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],1],["NODE"]]],
+          "output": []
+        },
+        {
+          "name": "Parallel arrays include shadowing names",
+          "input": {"toString":0,"constructor":1,"hasOwnProperty":2,"valueOf":3,"propertyIsEnumerable":4,"isPrototypeOf":5,"toLocaleString":6,"__defineGetter__":7,"length":8,"prototype":9},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],2],["NODE"]]],
+          "output": [["__defineGetter__","constructor","hasOwnProperty","isPrototypeOf","length","propertyIsEnumerable","prototype","toLocaleString","toString","valueOf"],[7,1,2,5,8,4,9,6,0,3]]
+        },
+        {
+          "name": "Parallel arrays include __proto__ as data",
+          "input": {"z":2,"__proto__":{"hidden":3},"a":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],2],["NODE"]]],
+          "output": [["__proto__","a","z"],[{"hidden":3},1,2]],
+          "needProto": true
+        },
+        {
+          "name": "Parallel arrays do not invent inherited names",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],2],["NODE"]]],
+          "output": [[],[]]
+        }
+      ]
+    },
+    {
+      "name": "Value context and composition",
+      "desc": "Explicit sources are evaluated once in the caller context. PROPS is a value function; match wrappers compare its result as data. LOCAL and EXPR supply value-context objects without treating data values as expression syntax. Both value-bearing forms can reconstruct the original object with MKOBJ.",
+      "tests": [
+        {
+          "name": "Names constructed source",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["MKOBJ","b",[[1,2]],"a",{"x":3}]],["NODE"]]],
+          "output": ["a","b"]
+        },
+        {
+          "name": "Names source from CONST",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1,"const":["o",{"b":[[1,2]],"a":{"x":3}}]},["COPY",["PROPS",["CONST","o"]],["NODE"]]],
+          "output": ["a","b"]
+        },
+        {
+          "name": "Names source from EXPR",
+          "input": {"b":[1,2],"a":{"x":3}},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["o",["NODE"]]},["COPY",["PROPS",["EXPR","o"]],["NODE"]]],
+          "output": ["a","b"]
+        },
+        {
+          "name": "Names enumerate CONST root",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1,"const":["b",[[1,2]],"a",{"x":3}]},["COPY",["PROPS",["CONST"]],["NODE"]]],
+          "output": ["a","b"]
+        },
+        {
+          "name": "Names enumerate capture records",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["CAPTURE",[[["SEQMAX","word",1,2]]]]],["NODE"]]],
+          "output": ["word"]
+        },
+        {
+          "name": "Names LOCAL current node",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",null,{"b":[[1,2]],"a":{"x":3}},["PROPS"]],["NODE"]]],
+          "output": ["a","b"]
+        },
+        {
+          "name": "Names LOCAL temporary source",
+          "input": {"b":[1,2],"a":{"x":3}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","source",["NODE"],["PROPS",["TEMP","source"]]],["NODE"]]],
+          "output": ["a","b"]
+        },
+        {
+          "name": "Names compare as literal data",
+          "input": {"b":[1,2],"a":{"x":3}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["PROPS",["NODE"]],[["a","b"]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Pairs constructed source",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["MKOBJ","b",[[1,2]],"a",{"x":3}],1],["NODE"]]],
+          "output": [["a",{"x":3}],["b",[1,2]]]
+        },
+        {
+          "name": "Pairs source from CONST",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1,"const":["o",{"b":[[1,2]],"a":{"x":3}}]},["COPY",["PROPS",["CONST","o"],1],["NODE"]]],
+          "output": [["a",{"x":3}],["b",[1,2]]]
+        },
+        {
+          "name": "Pairs source from EXPR",
+          "input": {"b":[1,2],"a":{"x":3}},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["o",["NODE"]]},["COPY",["PROPS",["EXPR","o"],1],["NODE"]]],
+          "output": [["a",{"x":3}],["b",[1,2]]]
+        },
+        {
+          "name": "Pairs enumerate CONST root",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1,"const":["b",[[1,2]],"a",{"x":3}]},["COPY",["PROPS",["CONST"],1],["NODE"]]],
+          "output": [["a",{"x":3}],["b",[1,2]]]
+        },
+        {
+          "name": "Pairs enumerate capture records",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["CAPTURE",[[["SEQMAX","word",1,2]]]],1],["NODE"]]],
+          "output": [["word",{"path":[],"ofs":0,"len":2,"lim":2}]]
+        },
+        {
+          "name": "Pairs LOCAL current node",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",null,{"b":[[1,2]],"a":{"x":3}},["PROPS",["NODE"],1]],["NODE"]]],
+          "output": [["a",{"x":3}],["b",[1,2]]]
+        },
+        {
+          "name": "Pairs LOCAL temporary source",
+          "input": {"b":[1,2],"a":{"x":3}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","source",["NODE"],["PROPS",["TEMP","source"],1]],["NODE"]]],
+          "output": [["a",{"x":3}],["b",[1,2]]]
+        },
+        {
+          "name": "Pairs compare as literal data",
+          "input": {"b":[1,2],"a":{"x":3}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["PROPS",["NODE"],1],[[[["a",{"x":3}]],[["b",[[1,2]]]]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Parallel arrays constructed source",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["MKOBJ","b",[[1,2]],"a",{"x":3}],2],["NODE"]]],
+          "output": [["a","b"],[{"x":3},[1,2]]]
+        },
+        {
+          "name": "Parallel arrays source from CONST",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1,"const":["o",{"b":[[1,2]],"a":{"x":3}}]},["COPY",["PROPS",["CONST","o"],2],["NODE"]]],
+          "output": [["a","b"],[{"x":3},[1,2]]]
+        },
+        {
+          "name": "Parallel arrays source from EXPR",
+          "input": {"b":[1,2],"a":{"x":3}},
+          "jgraft": ["JGRAFT",{"v":1,"expr":["o",["NODE"]]},["COPY",["PROPS",["EXPR","o"],2],["NODE"]]],
+          "output": [["a","b"],[{"x":3},[1,2]]]
+        },
+        {
+          "name": "Parallel arrays enumerate CONST root",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1,"const":["b",[[1,2]],"a",{"x":3}]},["COPY",["PROPS",["CONST"],2],["NODE"]]],
+          "output": [["a","b"],[{"x":3},[1,2]]]
+        },
+        {
+          "name": "Parallel arrays enumerate capture records",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["CAPTURE",[[["SEQMAX","word",1,2]]]],2],["NODE"]]],
+          "output": [["word"],[{"path":[],"ofs":0,"len":2,"lim":2}]]
+        },
+        {
+          "name": "Parallel arrays LOCAL current node",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",null,{"b":[[1,2]],"a":{"x":3}},["PROPS",["NODE"],2]],["NODE"]]],
+          "output": [["a","b"],[{"x":3},[1,2]]]
+        },
+        {
+          "name": "Parallel arrays LOCAL temporary source",
+          "input": {"b":[1,2],"a":{"x":3}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","source",["NODE"],["PROPS",["TEMP","source"],2]],["NODE"]]],
+          "output": [["a","b"],[{"x":3},[1,2]]]
+        },
+        {
+          "name": "Parallel arrays compare as literal data",
+          "input": {"b":[1,2],"a":{"x":3}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["PROPS",["NODE"],2],[[[["a","b"]],[[{"x":3},[[1,2]]]]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Pair form reconstructs object",
+          "input": {"z":["FAIL"],"a":null,"b":false,"c":true,"d":0,"e":-3,"f":0.5,"g":"","h":"text","i":[],"j":[1,[2]],"k":{"nested":["NODE"]}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MKOBJ",["PROPS",["NODE"],1]],["NODE"]]],
+          "output": {"z":["FAIL"],"a":null,"b":false,"c":true,"d":0,"e":-3,"f":0.5,"g":"","h":"text","i":[],"j":[1,[2]],"k":{"nested":["NODE"]}}
+        },
+        {
+          "name": "Parallel form reconstructs object",
+          "input": {"z":["FAIL"],"a":null,"b":false,"c":true,"d":0,"e":-3,"f":0.5,"g":"","h":"text","i":[],"j":[1,[2]],"k":{"nested":["NODE"]}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","p",["PROPS",["NODE"],2],["MKOBJ",["TEMP","p",0],["TEMP","p",1]]],["NODE"]]],
+          "output": {"z":["FAIL"],"a":null,"b":false,"c":true,"d":0,"e":-3,"f":0.5,"g":"","h":"text","i":[],"j":[1,[2]],"k":{"nested":["NODE"]}}
+        },
+        {
+          "name": "Names can be mapped to new values",
+          "input": {"b":2,"a":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["CONCAT","key:",["NODE"]],["PROPS"]],["NODE"]]],
+          "output": ["key:a","key:b"]
+        },
+        {
+          "name": "Nested object can be enumerated after AT",
+          "input": {"outer":{"b":2,"a":1}},
+          "jgraft": ["JGRAFT",{"v":1},["AT","outer",["COPY",["PROPS"],["NODE"]]]],
+          "output": {"outer":["a","b"]}
+        },
+        {
+          "name": "Stash source is visible",
+          "input": {"b":2,"a":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NODE"],["STASH","saved"]],["COPY",["PROPS",["STASH","saved"],1],["NODE"]]],
+          "output": [["a",1],["b",2]]
+        }
+      ]
+    },
+    {
+      "name": "Independent results",
+      "desc": "Value-bearing enumeration returns data independent of the source and of other occurrences of the same input subtree. Later edits to either side must not change the other. The source itself remains unchanged.",
+      "tests": [
+        {
+          "name": "Pairs output edit leaves source intact",
+          "input": {"source":{"a":{"x":1}}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE","source"],1],["NODE","result"]],["COPY",9,["NODE","result",0,1,"x"]]],
+          "output": {"source":{"a":{"x":1}},"result":[["a",{"x":9}]]}
+        },
+        {
+          "name": "Pairs source edit leaves result intact",
+          "input": {"source":{"a":{"x":1}}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE","source"],1],["NODE","result"]],["COPY",9,["NODE","source","a","x"]]],
+          "output": {"source":{"a":{"x":9}},"result":[["a",{"x":1}]]}
+        },
+        {
+          "name": "Parallel arrays output edit leaves source intact",
+          "input": {"source":{"a":{"x":1}}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE","source"],2],["NODE","result"]],["COPY",9,["NODE","result",1,0,"x"]]],
+          "output": {"source":{"a":{"x":1}},"result":[["a"],[{"x":9}]]}
+        },
+        {
+          "name": "Parallel arrays source edit leaves result intact",
+          "input": {"source":{"a":{"x":1}}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE","source"],2],["NODE","result"]],["COPY",9,["NODE","source","a","x"]]],
+          "output": {"source":{"a":{"x":9}},"result":[["a"],[{"x":1}]]}
+        }
+      ]
+    },
+    {
+      "name": "Targets and failures",
+      "desc": "Only objects are accepted, including for name-only enumeration. Runtime target failures are recoverable by a match wrapper. Missing references and FAIL propagate in value context. Invalid literal options and excess operands are syntax errors; an option is not evaluated as an expression.",
+      "tests": [
+        {
+          "name": "Null / Names",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Null is false in match / Names",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["PROPS",["NODE"]],null],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Null / Pairs",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],1],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Null is false in match / Pairs",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["PROPS",["NODE"],1],null],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Null / Parallel arrays",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Null is false in match / Parallel arrays",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["PROPS",["NODE"],2],null],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "False / Names",
+          "input": false,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "False is false in match / Names",
+          "input": false,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["PROPS",["NODE"]],null],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "False / Pairs",
+          "input": false,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],1],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "False is false in match / Pairs",
+          "input": false,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["PROPS",["NODE"],1],null],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "False / Parallel arrays",
+          "input": false,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "False is false in match / Parallel arrays",
+          "input": false,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["PROPS",["NODE"],2],null],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "True / Names",
+          "input": true,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "True is false in match / Names",
+          "input": true,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["PROPS",["NODE"]],null],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "True / Pairs",
+          "input": true,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],1],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "True is false in match / Pairs",
+          "input": true,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["PROPS",["NODE"],1],null],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "True / Parallel arrays",
+          "input": true,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "True is false in match / Parallel arrays",
+          "input": true,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["PROPS",["NODE"],2],null],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Zero / Names",
+          "input": 0,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Zero is false in match / Names",
+          "input": 0,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["PROPS",["NODE"]],null],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Zero / Pairs",
+          "input": 0,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],1],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Zero is false in match / Pairs",
+          "input": 0,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["PROPS",["NODE"],1],null],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Zero / Parallel arrays",
+          "input": 0,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Zero is false in match / Parallel arrays",
+          "input": 0,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["PROPS",["NODE"],2],null],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Number / Names",
+          "input": 2,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Number is false in match / Names",
+          "input": 2,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["PROPS",["NODE"]],null],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Number / Pairs",
+          "input": 2,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],1],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Number is false in match / Pairs",
+          "input": 2,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["PROPS",["NODE"],1],null],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Number / Parallel arrays",
+          "input": 2,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Number is false in match / Parallel arrays",
+          "input": 2,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["PROPS",["NODE"],2],null],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Empty string / Names",
+          "input": "",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Empty string is false in match / Names",
+          "input": "",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["PROPS",["NODE"]],null],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Empty string / Pairs",
+          "input": "",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],1],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Empty string is false in match / Pairs",
+          "input": "",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["PROPS",["NODE"],1],null],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Empty string / Parallel arrays",
+          "input": "",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Empty string is false in match / Parallel arrays",
+          "input": "",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["PROPS",["NODE"],2],null],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "String / Names",
+          "input": "abc",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "String is false in match / Names",
+          "input": "abc",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["PROPS",["NODE"]],null],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "String / Pairs",
+          "input": "abc",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],1],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "String is false in match / Pairs",
+          "input": "abc",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["PROPS",["NODE"],1],null],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "String / Parallel arrays",
+          "input": "abc",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "String is false in match / Parallel arrays",
+          "input": "abc",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["PROPS",["NODE"],2],null],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Empty array / Names",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Empty array is false in match / Names",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["PROPS",["NODE"]],null],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Empty array / Pairs",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],1],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Empty array is false in match / Pairs",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["PROPS",["NODE"],1],null],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Empty array / Parallel arrays",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Empty array is false in match / Parallel arrays",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["PROPS",["NODE"],2],null],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Array / Names",
+          "input": [{"a":1}],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Array is false in match / Names",
+          "input": [{"a":1}],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["PROPS",["NODE"]],null],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Array / Pairs",
+          "input": [{"a":1}],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],1],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Array is false in match / Pairs",
+          "input": [{"a":1}],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["PROPS",["NODE"],1],null],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Array / Parallel arrays",
+          "input": [{"a":1}],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Array is false in match / Parallel arrays",
+          "input": [{"a":1}],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["PROPS",["NODE"],2],null],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Missing source / Names",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE","missing"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "FAIL source / Names",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["FAIL"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Logical date / Names",
+          "input": "2000-01-01",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["CASTDATE"]],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Unknown source expression / Names",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["unknown"]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Missing source / Pairs",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE","missing"],1],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "FAIL source / Pairs",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["FAIL"],1],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Logical date / Pairs",
+          "input": "2000-01-01",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["CASTDATE"],1],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Unknown source expression / Pairs",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["unknown"],1],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Missing source / Parallel arrays",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE","missing"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "FAIL source / Parallel arrays",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["FAIL"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true}
+        },
+        {
+          "name": "Logical date / Parallel arrays",
+          "input": "2000-01-01",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["CASTDATE"],2],["NODE"]]],
+          "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Unknown source expression / Parallel arrays",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["unknown"],2],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Zero option",
+          "input": {"mode":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],0],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Negative option",
+          "input": {"mode":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],-1],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Unsupported integer option",
+          "input": {"mode":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],3],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Fraction option",
+          "input": {"mode":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],1.5],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Null option",
+          "input": {"mode":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],null],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "False option",
+          "input": {"mode":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],false],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "True option",
+          "input": {"mode":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],true],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "String option",
+          "input": {"mode":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],"1"],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Empty array option",
+          "input": {"mode":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],[]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Object option",
+          "input": {"mode":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],{}],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Expression option",
+          "input": {"mode":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],["NODE","mode"]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "FAIL expression option",
+          "input": {"mode":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],["FAIL"]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Extra operand",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["PROPS",["NODE"],1,2],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Invalid option remains fatal in match",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["PROPS",["NODE"],0],null],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        }
+      ]
+    }
+  ]
+}

@@ -1437,7 +1437,8 @@ An author of a JGraft might have more domain-specific information about why
 something wouldn't match, and can encode that with some `IF` actions in a way
 that the graft operation fails with a useful error message.
 
-The `level` argument is one of the following strings, or the corresponding ID:
+The `level` argument (literal non-expression) is one of the following strings,
+or the corresponding ID:
 
 String | ID | Meaning
 -------|----|----------------------------------------------------------------
@@ -1458,6 +1459,10 @@ If the data is not being consumed immediately, implementations should ensure
 that it remains stable, such as deep-cloning it or setting up copy-on-write.
 This is already handled if the standard operation of the engine is to
 shallow-clone the ancestors of each change.
+
+Errors in `level` or literal `message` fail with `INVALID_GRAFT`.
+If the `message` is an expresion returning an invalid value, the expression
+fails with `INVALID_TARGET` with the usual rules for upgrading the error.
 
 ## Expressions
 
@@ -1971,6 +1976,8 @@ Regex Notation | REP notation
 
 Match when the current node refers to the first element of an array.
 
+This also returns true when testing the nonexistent beyond-the-end element on
+an empty array.
 In [sequence context](#sequence-matching), this is a zero-width assertion
 based on the array cursor.
 

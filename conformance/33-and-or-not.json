@@ -1,0 +1,1801 @@
+{
+  "version": 1,
+  "name": "AND, OR, and NOT",
+  "desc": "Covers the boolean value functions AND, OR, and NOT (NOR): one or more strict boolean operands, ordered short-circuit evaluation, numeric identifiers, nested functions, value-context operands and namespaces, match-context function boundaries, syntax, and failure/resource propagation. These functions return booleans; they do not perform host truthiness coercion or act as match combinators. Every case is independent of implementation availability.",
+  "tests": [
+    {
+      "name": "NOT",
+      "desc": "NOT is NOR over one or more boolean values, returning true only when every evaluated operand is false. It stops at the first true.",
+      "tests": [
+        {
+          "name": "Truth tables",
+          "desc": "All one- through four-operand boolean combinations test the result, including falsey booleans and multiple-operand NOR rather than NAND.",
+          "tests": [
+            {
+              "name": "false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",false],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",true],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "false, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",false,false],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "true, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",true,false],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "false, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",false,true],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "true, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",true,true],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "false, false, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",false,false,false],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "true, false, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",true,false,false],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "false, true, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",false,true,false],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "true, true, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",true,true,false],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "false, false, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",false,false,true],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "true, false, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",true,false,true],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "false, true, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",false,true,true],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "true, true, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",true,true,true],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "false, false, false, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",false,false,false,false],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "true, false, false, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",true,false,false,false],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "false, true, false, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",false,true,false,false],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "true, true, false, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",true,true,false,false],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "false, false, true, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",false,false,true,false],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "true, false, true, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",true,false,true,false],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "false, true, true, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",false,true,true,false],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "true, true, true, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",true,true,true,false],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "false, false, false, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",false,false,false,true],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "true, false, false, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",true,false,false,true],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "false, true, false, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",false,true,false,true],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "true, true, false, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",true,true,false,true],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "false, false, true, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",false,false,true,true],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "true, false, true, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",true,false,true,true],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "false, true, true, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",false,true,true,true],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "true, true, true, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",true,true,true,true],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Numeric expression identifier",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",[52,false,true],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Strict operand types",
+          "desc": "Every reached operand must be boolean; numbers, strings, null, objects, arrays, and dates are not coerced. A valid early decision may skip operands of any type.",
+          "tests": [
+            {
+              "name": "Reached null",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Reached later null",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",false,["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Skipped null",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",true,["NODE"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Reached zero",
+              "input": 0,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Reached later zero",
+              "input": 0,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",false,["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Skipped zero",
+              "input": 0,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",true,["NODE"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Reached one",
+              "input": 1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Reached later one",
+              "input": 1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",false,["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Skipped one",
+              "input": 1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",true,["NODE"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Reached negative number",
+              "input": -1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Reached later negative number",
+              "input": -1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",false,["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Skipped negative number",
+              "input": -1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",true,["NODE"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Reached empty string",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Reached later empty string",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",false,["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Skipped empty string",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",true,["NODE"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Reached true string",
+              "input": "true",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Reached later true string",
+              "input": "true",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",false,["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Skipped true string",
+              "input": "true",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",true,["NODE"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Reached empty array",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Reached later empty array",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",false,["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Skipped empty array",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",true,["NODE"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Reached boolean array",
+              "input": [true],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Reached later boolean array",
+              "input": [true],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",false,["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Skipped boolean array",
+              "input": [true],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",true,["NODE"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Reached empty object",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Reached later empty object",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",false,["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Skipped empty object",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",true,["NODE"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Reached object",
+              "input": {"x":true},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Reached later object",
+              "input": {"x":true},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",false,["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Skipped object",
+              "input": {"x":true},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",true,["NODE"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Parsed date",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",["CASTDATE","2024-01-01"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            }
+          ]
+        },
+        {
+          "name": "Short-circuit evaluation",
+          "desc": "Operands are evaluated in order only until the first decisive boolean or error. Valid FAIL and missing-reference expressions must be skipped after a decision; reached errors propagate. Unreached syntax may still be rejected statically.",
+          "tests": [
+            {
+              "name": "Decisive first operand skips FAIL",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",true,["FAIL"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Decisive middle operand skips FAIL",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",false,true,["FAIL"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Decisive first operand skips missing reference",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",true,["NODE","missing"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Undecided prefix reaches FAIL",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",false,["FAIL"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Undecided prefix reaches missing reference",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",false,["NODE","missing"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "An earlier invalid operand is not rescued",
+              "input": 0,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",["NODE"],true],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Unreached syntax may be diagnosed statically",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",true,["UNKNOWN"]],["NODE"]]],
+              "output": false,
+              "errors": {"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Unreached recursion is skipped",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1,"expr":["loop",["EXPR","loop"]]},["COPY",["NOT",true,["EXPR","loop"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Reached recursion is fatal",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1,"expr":["loop",["EXPR","loop"]]},["COPY",["NOT",false,["EXPR","loop"]],["NODE"]]],
+              "errors": {"RESOURCE_LIMIT":true},
+              "limits": {"depth":24}
+            },
+            {
+              "name": "Negative probe cannot hide reached recursion",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1,"expr":["loop",["EXPR","loop"]]},["COPY",["NONE",["IS",["NOT",false,["EXPR","loop"]],true]],["NODE"]]],
+              "errors": {"RESOURCE_LIMIT":true},
+              "limits": {"depth":24}
+            }
+          ]
+        },
+        {
+          "name": "Value contexts and namespaces",
+          "desc": "Operands evaluate as values in the same caller scope. Match-expression operands produce booleans, while referenced arrays remain arrays. Nested lexical bindings and common expressions use invocation-time context.",
+          "tests": [
+            {
+              "name": "Current NODE boolean",
+              "input": true,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",["NODE"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Two field references",
+              "input": {"a":true,"b":false},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",["NODE","a"],["NODE","b"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Match expressions produce boolean operands",
+              "input": 1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",["NUM"],["BOOL"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Nested same function",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",["NOT",false,true],false],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Nested NOT",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",["NOT",false],["NOT",true]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "LOCAL supplies boolean operands",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","a",true,"b",false,["NOT",["TEMP","a"],["TEMP","b"]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "LOCAL current-node replacement",
+              "input": {"value":true},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",null,["NODE","value"],["NOT",["NODE"]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "CONST STASH TEMP and EXPR",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1,"const":["a",true],"expr":["calc",["NOT",["CONST","a"],["STASH","b"],["TEMP","c"]]]},["COPY",false,["STASH","b"]],["COPY",["LOCAL","c",true,["EXPR","calc"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Arbitrary constant name",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1,"const":["__proto__",true]},["COPY",["NOT",["CONST","__proto__"]],["NODE"]]],
+              "output": false,
+              "needProto": true
+            },
+            {
+              "name": "MAP receives boolean results",
+              "input": [true,false],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["NOT",["NODE"]]],["NODE"]]],
+              "output": [false,true]
+            },
+            {
+              "name": "A matched group does not publish captures",
+              "input": [1],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"value":["NOT",["IS",[[["SEQMAX","hidden",1]]]]],"missing":["NONE",["IS",["CAP","hidden"],["EXISTS"]]]},["NODE"]]],
+              "output": {"value":false,"missing":true}
+            }
+          ]
+        },
+        {
+          "name": "Function boundaries in matching",
+          "desc": "The returned boolean is literal data when used as a pattern. Inner match-expression operands retain their ordinary HAS default rather than inheriting an outer exact mode. Alternate-target function patterns evaluate against the original caller NODE.",
+          "tests": [
+            {
+              "name": "Returned boolean matches itself",
+              "input": false,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["NOT",true]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Returned boolean rejects its opposite",
+              "input": true,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["NOT",true]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "A boolean result does not match a number",
+              "input": 1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["NOT",true]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Inner match default is HAS",
+              "input": {"x":1,"y":2},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",false,["NOT",["ALL",{"x":1}]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Alternate-target pattern retains original NODE",
+              "input": {"flag":true},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",false,["NOT",["NODE","flag"]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Target errors are trappable",
+              "input": 0,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NONE",["IS",["NOT",["NODE"]],true]],["NODE"]]],
+              "output": true
+            }
+          ]
+        },
+        {
+          "name": "Syntax and fatal errors",
+          "desc": "Each function requires one or more operands. Empty argument lists and reached malformed expression syntax are INVALID_GRAFT, including inside negative matching probes.",
+          "tests": [
+            {
+              "name": "No operands",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT"],["NODE"]]],
+              "errors": {"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Reached malformed operand",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NOT",false,["NOT"]],["NODE"]]],
+              "errors": {"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Negative probe cannot hide malformed syntax",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NONE",["IS",["NOT",false,["NOT"]],true]],["NODE"]]],
+              "errors": {"INVALID_GRAFT":true}
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "AND",
+      "desc": "AND returns true only when every operand is true, stopping at the first false.",
+      "tests": [
+        {
+          "name": "Truth tables",
+          "desc": "All one- through four-operand boolean combinations test the result, including falsey booleans and multiple-operand NOR rather than NAND.",
+          "tests": [
+            {
+              "name": "false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",false],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",true],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "false, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",false,false],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "true, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",true,false],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "false, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",false,true],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "true, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",true,true],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "false, false, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",false,false,false],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "true, false, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",true,false,false],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "false, true, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",false,true,false],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "true, true, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",true,true,false],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "false, false, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",false,false,true],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "true, false, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",true,false,true],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "false, true, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",false,true,true],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "true, true, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",true,true,true],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "false, false, false, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",false,false,false,false],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "true, false, false, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",true,false,false,false],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "false, true, false, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",false,true,false,false],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "true, true, false, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",true,true,false,false],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "false, false, true, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",false,false,true,false],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "true, false, true, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",true,false,true,false],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "false, true, true, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",false,true,true,false],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "true, true, true, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",true,true,true,false],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "false, false, false, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",false,false,false,true],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "true, false, false, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",true,false,false,true],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "false, true, false, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",false,true,false,true],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "true, true, false, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",true,true,false,true],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "false, false, true, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",false,false,true,true],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "true, false, true, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",true,false,true,true],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "false, true, true, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",false,true,true,true],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "true, true, true, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",true,true,true,true],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Numeric expression identifier",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",[53,false,true],["NODE"]]],
+              "output": false
+            }
+          ]
+        },
+        {
+          "name": "Strict operand types",
+          "desc": "Every reached operand must be boolean; numbers, strings, null, objects, arrays, and dates are not coerced. A valid early decision may skip operands of any type.",
+          "tests": [
+            {
+              "name": "Reached null",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Reached later null",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",true,["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Skipped null",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",false,["NODE"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Reached zero",
+              "input": 0,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Reached later zero",
+              "input": 0,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",true,["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Skipped zero",
+              "input": 0,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",false,["NODE"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Reached one",
+              "input": 1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Reached later one",
+              "input": 1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",true,["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Skipped one",
+              "input": 1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",false,["NODE"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Reached negative number",
+              "input": -1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Reached later negative number",
+              "input": -1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",true,["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Skipped negative number",
+              "input": -1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",false,["NODE"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Reached empty string",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Reached later empty string",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",true,["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Skipped empty string",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",false,["NODE"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Reached true string",
+              "input": "true",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Reached later true string",
+              "input": "true",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",true,["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Skipped true string",
+              "input": "true",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",false,["NODE"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Reached empty array",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Reached later empty array",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",true,["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Skipped empty array",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",false,["NODE"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Reached boolean array",
+              "input": [true],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Reached later boolean array",
+              "input": [true],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",true,["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Skipped boolean array",
+              "input": [true],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",false,["NODE"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Reached empty object",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Reached later empty object",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",true,["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Skipped empty object",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",false,["NODE"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Reached object",
+              "input": {"x":true},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Reached later object",
+              "input": {"x":true},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",true,["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Skipped object",
+              "input": {"x":true},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",false,["NODE"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Parsed date",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",["CASTDATE","2024-01-01"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            }
+          ]
+        },
+        {
+          "name": "Short-circuit evaluation",
+          "desc": "Operands are evaluated in order only until the first decisive boolean or error. Valid FAIL and missing-reference expressions must be skipped after a decision; reached errors propagate. Unreached syntax may still be rejected statically.",
+          "tests": [
+            {
+              "name": "Decisive first operand skips FAIL",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",false,["FAIL"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Decisive middle operand skips FAIL",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",true,false,["FAIL"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Decisive first operand skips missing reference",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",false,["NODE","missing"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Undecided prefix reaches FAIL",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",true,["FAIL"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Undecided prefix reaches missing reference",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",true,["NODE","missing"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "An earlier invalid operand is not rescued",
+              "input": 0,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",["NODE"],false],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Unreached syntax may be diagnosed statically",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",false,["UNKNOWN"]],["NODE"]]],
+              "output": false,
+              "errors": {"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Unreached recursion is skipped",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1,"expr":["loop",["EXPR","loop"]]},["COPY",["AND",false,["EXPR","loop"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Reached recursion is fatal",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1,"expr":["loop",["EXPR","loop"]]},["COPY",["AND",true,["EXPR","loop"]],["NODE"]]],
+              "errors": {"RESOURCE_LIMIT":true},
+              "limits": {"depth":24}
+            },
+            {
+              "name": "Negative probe cannot hide reached recursion",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1,"expr":["loop",["EXPR","loop"]]},["COPY",["NONE",["IS",["AND",true,["EXPR","loop"]],true]],["NODE"]]],
+              "errors": {"RESOURCE_LIMIT":true},
+              "limits": {"depth":24}
+            }
+          ]
+        },
+        {
+          "name": "Value contexts and namespaces",
+          "desc": "Operands evaluate as values in the same caller scope. Match-expression operands produce booleans, while referenced arrays remain arrays. Nested lexical bindings and common expressions use invocation-time context.",
+          "tests": [
+            {
+              "name": "Current NODE boolean",
+              "input": true,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",["NODE"]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Two field references",
+              "input": {"a":true,"b":false},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",["NODE","a"],["NODE","b"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Match expressions produce boolean operands",
+              "input": 1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",["NUM"],["BOOL"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Nested same function",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",["AND",false,true],false],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Nested NOT",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",["NOT",false],["NOT",true]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "LOCAL supplies boolean operands",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","a",true,"b",false,["AND",["TEMP","a"],["TEMP","b"]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "LOCAL current-node replacement",
+              "input": {"value":true},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",null,["NODE","value"],["AND",["NODE"]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "CONST STASH TEMP and EXPR",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1,"const":["a",true],"expr":["calc",["AND",["CONST","a"],["STASH","b"],["TEMP","c"]]]},["COPY",false,["STASH","b"]],["COPY",["LOCAL","c",true,["EXPR","calc"]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Arbitrary constant name",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1,"const":["__proto__",true]},["COPY",["AND",["CONST","__proto__"]],["NODE"]]],
+              "output": true,
+              "needProto": true
+            },
+            {
+              "name": "MAP receives boolean results",
+              "input": [true,false],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["AND",["NODE"]]],["NODE"]]],
+              "output": [true,false]
+            },
+            {
+              "name": "A matched group does not publish captures",
+              "input": [1],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"value":["AND",["IS",[[["SEQMAX","hidden",1]]]]],"missing":["NONE",["IS",["CAP","hidden"],["EXISTS"]]]},["NODE"]]],
+              "output": {"value":true,"missing":true}
+            }
+          ]
+        },
+        {
+          "name": "Function boundaries in matching",
+          "desc": "The returned boolean is literal data when used as a pattern. Inner match-expression operands retain their ordinary HAS default rather than inheriting an outer exact mode. Alternate-target function patterns evaluate against the original caller NODE.",
+          "tests": [
+            {
+              "name": "Returned boolean matches itself",
+              "input": true,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["AND",true]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Returned boolean rejects its opposite",
+              "input": false,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["AND",true]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "A boolean result does not match a number",
+              "input": 1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["AND",true]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Inner match default is HAS",
+              "input": {"x":1,"y":2},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",true,["AND",["ALL",{"x":1}]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Alternate-target pattern retains original NODE",
+              "input": {"flag":true},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",false,["AND",["NODE","flag"]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Target errors are trappable",
+              "input": 0,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NONE",["IS",["AND",["NODE"]],true]],["NODE"]]],
+              "output": true
+            }
+          ]
+        },
+        {
+          "name": "Syntax and fatal errors",
+          "desc": "Each function requires one or more operands. Empty argument lists and reached malformed expression syntax are INVALID_GRAFT, including inside negative matching probes.",
+          "tests": [
+            {
+              "name": "No operands",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND"],["NODE"]]],
+              "errors": {"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Reached malformed operand",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["AND",true,["NOT"]],["NODE"]]],
+              "errors": {"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Negative probe cannot hide malformed syntax",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NONE",["IS",["AND",true,["NOT"]],true]],["NODE"]]],
+              "errors": {"INVALID_GRAFT":true}
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "OR",
+      "desc": "OR returns true when any operand is true, stopping at the first true.",
+      "tests": [
+        {
+          "name": "Truth tables",
+          "desc": "All one- through four-operand boolean combinations test the result, including falsey booleans and multiple-operand NOR rather than NAND.",
+          "tests": [
+            {
+              "name": "false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",false],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",true],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "false, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",false,false],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "true, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",true,false],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "false, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",false,true],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "true, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",true,true],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "false, false, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",false,false,false],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "true, false, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",true,false,false],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "false, true, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",false,true,false],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "true, true, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",true,true,false],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "false, false, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",false,false,true],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "true, false, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",true,false,true],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "false, true, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",false,true,true],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "true, true, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",true,true,true],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "false, false, false, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",false,false,false,false],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "true, false, false, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",true,false,false,false],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "false, true, false, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",false,true,false,false],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "true, true, false, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",true,true,false,false],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "false, false, true, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",false,false,true,false],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "true, false, true, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",true,false,true,false],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "false, true, true, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",false,true,true,false],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "true, true, true, false",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",true,true,true,false],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "false, false, false, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",false,false,false,true],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "true, false, false, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",true,false,false,true],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "false, true, false, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",false,true,false,true],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "true, true, false, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",true,true,false,true],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "false, false, true, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",false,false,true,true],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "true, false, true, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",true,false,true,true],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "false, true, true, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",false,true,true,true],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "true, true, true, true",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",true,true,true,true],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Numeric expression identifier",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",[54,false,true],["NODE"]]],
+              "output": true
+            }
+          ]
+        },
+        {
+          "name": "Strict operand types",
+          "desc": "Every reached operand must be boolean; numbers, strings, null, objects, arrays, and dates are not coerced. A valid early decision may skip operands of any type.",
+          "tests": [
+            {
+              "name": "Reached null",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Reached later null",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",false,["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Skipped null",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",true,["NODE"]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Reached zero",
+              "input": 0,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Reached later zero",
+              "input": 0,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",false,["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Skipped zero",
+              "input": 0,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",true,["NODE"]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Reached one",
+              "input": 1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Reached later one",
+              "input": 1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",false,["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Skipped one",
+              "input": 1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",true,["NODE"]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Reached negative number",
+              "input": -1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Reached later negative number",
+              "input": -1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",false,["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Skipped negative number",
+              "input": -1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",true,["NODE"]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Reached empty string",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Reached later empty string",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",false,["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Skipped empty string",
+              "input": "",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",true,["NODE"]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Reached true string",
+              "input": "true",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Reached later true string",
+              "input": "true",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",false,["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Skipped true string",
+              "input": "true",
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",true,["NODE"]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Reached empty array",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Reached later empty array",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",false,["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Skipped empty array",
+              "input": [],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",true,["NODE"]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Reached boolean array",
+              "input": [true],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Reached later boolean array",
+              "input": [true],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",false,["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Skipped boolean array",
+              "input": [true],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",true,["NODE"]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Reached empty object",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Reached later empty object",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",false,["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Skipped empty object",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",true,["NODE"]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Reached object",
+              "input": {"x":true},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Reached later object",
+              "input": {"x":true},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",false,["NODE"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Skipped object",
+              "input": {"x":true},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",true,["NODE"]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Parsed date",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",["CASTDATE","2024-01-01"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true,"INVALID_GRAFT":true}
+            }
+          ]
+        },
+        {
+          "name": "Short-circuit evaluation",
+          "desc": "Operands are evaluated in order only until the first decisive boolean or error. Valid FAIL and missing-reference expressions must be skipped after a decision; reached errors propagate. Unreached syntax may still be rejected statically.",
+          "tests": [
+            {
+              "name": "Decisive first operand skips FAIL",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",true,["FAIL"]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Decisive middle operand skips FAIL",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",false,true,["FAIL"]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Decisive first operand skips missing reference",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",true,["NODE","missing"]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Undecided prefix reaches FAIL",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",false,["FAIL"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Undecided prefix reaches missing reference",
+              "input": {},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",false,["NODE","missing"]],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "An earlier invalid operand is not rescued",
+              "input": 0,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",["NODE"],true],["NODE"]]],
+              "errors": {"INVALID_TARGET":true}
+            },
+            {
+              "name": "Unreached syntax may be diagnosed statically",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",true,["UNKNOWN"]],["NODE"]]],
+              "output": true,
+              "errors": {"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Unreached recursion is skipped",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1,"expr":["loop",["EXPR","loop"]]},["COPY",["OR",true,["EXPR","loop"]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Reached recursion is fatal",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1,"expr":["loop",["EXPR","loop"]]},["COPY",["OR",false,["EXPR","loop"]],["NODE"]]],
+              "errors": {"RESOURCE_LIMIT":true},
+              "limits": {"depth":24}
+            },
+            {
+              "name": "Negative probe cannot hide reached recursion",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1,"expr":["loop",["EXPR","loop"]]},["COPY",["NONE",["IS",["OR",false,["EXPR","loop"]],true]],["NODE"]]],
+              "errors": {"RESOURCE_LIMIT":true},
+              "limits": {"depth":24}
+            }
+          ]
+        },
+        {
+          "name": "Value contexts and namespaces",
+          "desc": "Operands evaluate as values in the same caller scope. Match-expression operands produce booleans, while referenced arrays remain arrays. Nested lexical bindings and common expressions use invocation-time context.",
+          "tests": [
+            {
+              "name": "Current NODE boolean",
+              "input": true,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",["NODE"]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Two field references",
+              "input": {"a":true,"b":false},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",["NODE","a"],["NODE","b"]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Match expressions produce boolean operands",
+              "input": 1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",["NUM"],["BOOL"]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Nested same function",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",["OR",false,true],false],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Nested NOT",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",["NOT",false],["NOT",true]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "LOCAL supplies boolean operands",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL","a",true,"b",false,["OR",["TEMP","a"],["TEMP","b"]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "LOCAL current-node replacement",
+              "input": {"value":true},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",null,["NODE","value"],["OR",["NODE"]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "CONST STASH TEMP and EXPR",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1,"const":["a",true],"expr":["calc",["OR",["CONST","a"],["STASH","b"],["TEMP","c"]]]},["COPY",false,["STASH","b"]],["COPY",["LOCAL","c",true,["EXPR","calc"]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Arbitrary constant name",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1,"const":["__proto__",true]},["COPY",["OR",["CONST","__proto__"]],["NODE"]]],
+              "output": true,
+              "needProto": true
+            },
+            {
+              "name": "MAP receives boolean results",
+              "input": [true,false],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["OR",["NODE"]]],["NODE"]]],
+              "output": [true,false]
+            },
+            {
+              "name": "A matched group does not publish captures",
+              "input": [1],
+              "jgraft": ["JGRAFT",{"v":1},["COPY",{"value":["OR",["IS",[[["SEQMAX","hidden",1]]]]],"missing":["NONE",["IS",["CAP","hidden"],["EXISTS"]]]},["NODE"]]],
+              "output": {"value":true,"missing":true}
+            }
+          ]
+        },
+        {
+          "name": "Function boundaries in matching",
+          "desc": "The returned boolean is literal data when used as a pattern. Inner match-expression operands retain their ordinary HAS default rather than inheriting an outer exact mode. Alternate-target function patterns evaluate against the original caller NODE.",
+          "tests": [
+            {
+              "name": "Returned boolean matches itself",
+              "input": true,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["OR",true]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Returned boolean rejects its opposite",
+              "input": false,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["OR",true]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "A boolean result does not match a number",
+              "input": 1,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",["OR",true]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Inner match default is HAS",
+              "input": {"x":1,"y":2},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",true,["OR",["ALL",{"x":1}]]],["NODE"]]],
+              "output": true
+            },
+            {
+              "name": "Alternate-target pattern retains original NODE",
+              "input": {"flag":true},
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",false,["OR",["NODE","flag"]]],["NODE"]]],
+              "output": false
+            },
+            {
+              "name": "Target errors are trappable",
+              "input": 0,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NONE",["IS",["OR",["NODE"]],true]],["NODE"]]],
+              "output": true
+            }
+          ]
+        },
+        {
+          "name": "Syntax and fatal errors",
+          "desc": "Each function requires one or more operands. Empty argument lists and reached malformed expression syntax are INVALID_GRAFT, including inside negative matching probes.",
+          "tests": [
+            {
+              "name": "No operands",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR"],["NODE"]]],
+              "errors": {"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Reached malformed operand",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["OR",false,["NOT"]],["NODE"]]],
+              "errors": {"INVALID_GRAFT":true}
+            },
+            {
+              "name": "Negative probe cannot hide malformed syntax",
+              "input": null,
+              "jgraft": ["JGRAFT",{"v":1},["COPY",["NONE",["IS",["OR",false,["NOT"]],true]],["NODE"]]],
+              "errors": {"INVALID_GRAFT":true}
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

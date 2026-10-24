@@ -431,7 +431,7 @@
     },
     {
       "name": "Exact division",
-      "desc": "DIV requires two numbers and rejects zero divisors. Integer pairs have exact integer quotients; fractional examples include an explicitly fractional operand and have exactly representable binary results. No integer-rounding policy is presumed.",
+      "desc": "DIV requires two numbers and rejects zero divisors. Division is mathematical rather than rounded integer division: integer operands may produce fractional results. All examples have exact binary results, independent of floating-point roundoff policy.",
       "tests": [
         {
           "name": "integer quotient",
@@ -510,6 +510,54 @@
           "input": null,
           "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",-1.5,2],["NODE"]]],
           "output": -0.75
+        },
+        {
+          "name": "integer operands give a half",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",1,2],["NODE"]]],
+          "output": 0.5
+        },
+        {
+          "name": "integer operands give one and a half",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",3,2],["NODE"]]],
+          "output": 1.5
+        },
+        {
+          "name": "negative integer numerator gives a half",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",-1,2],["NODE"]]],
+          "output": -0.5
+        },
+        {
+          "name": "negative integer numerator gives one and a half",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",-3,2],["NODE"]]],
+          "output": -1.5
+        },
+        {
+          "name": "negative integer divisor gives a half",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",1,-2],["NODE"]]],
+          "output": -0.5
+        },
+        {
+          "name": "two negative integers give a fraction",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",-3,-2],["NODE"]]],
+          "output": 1.5
+        },
+        {
+          "name": "integer operands give a quarter",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",1,4],["NODE"]]],
+          "output": 0.25
+        },
+        {
+          "name": "integer operands give seven eighths",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DIV",7,8],["NODE"]]],
+          "output": 0.875
         }
       ]
     },

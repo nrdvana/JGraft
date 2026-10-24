@@ -1,0 +1,1090 @@
+{
+  "version": 1,
+  "name": "CAPTURE and capture boundaries",
+  "desc": "Covers CAPTURE and the observable boundaries of SEQMIN/SEQMAX: false versus empty successful results, exact/partial matching, group length preferences before start preferences, substructure placement, unnamed groups, empty spans, capture names, paths, namespaces, failure isolation, and integration with CAP and SLICE. Includes an independently enumerated 80-case split matrix.",
+  "tests": [
+    {
+      "name": "Group boundaries and preferences",
+      "desc": "Group preferences are resolved only among complete successful matches. Compare all preferred lengths in specification order before any preferred starts. Unnamed groups keep their preference, and inner-array preferences do not rank parent placements.",
+      "tests": [
+        {
+          "name": "Partial captures prefer shortest groups independently of total consumption",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQMIN","a",["REP",0,-1,["EXISTS"]]],["SEQMIN","b",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"a":{"path":[],"ofs":0,"len":0,"lim":0},"b":{"path":[],"ofs":0,"len":0,"lim":0}}
+        },
+        {
+          "name": "Capture preferences resolve after the entire exact match",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQMIN","a",["REP",0,-1,["EXISTS"]]],["SEQMIN","b",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"a":{"path":[],"ofs":0,"len":0,"lim":0},"b":{"path":[],"ofs":0,"len":3,"lim":3}}
+        },
+        {
+          "name": "Earlier group length preferences take priority",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQMAX","a",["REP",0,-1,["EXISTS"]]],["SEQMAX","b",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"a":{"path":[],"ofs":0,"len":3,"lim":3},"b":{"path":[],"ofs":3,"len":0,"lim":3}}
+        },
+        {
+          "name": "Unnamed groups retain their length preference",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQMAX",null,["REP",0,-1,["EXISTS"]]],["SEQMAX","b",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"b":{"path":[],"ofs":3,"len":0,"lim":3}}
+        },
+        {
+          "name": "Equal capture lengths prefer the earliest start",
+          "input": [1,1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","a",1]]]],["NODE"]]],
+          "output": {"a":{"path":[],"ofs":0,"len":1,"lim":1}}
+        },
+        {
+          "name": "Partial captures can select a later endpoint",
+          "input": [1,2,3],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQMAX","a",["REP",0,-1,["EXISTS"]]],["SEQMIN","b",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"a":{"path":[],"ofs":0,"len":3,"lim":3},"b":{"path":[],"ofs":3,"len":0,"lim":3}}
+        },
+        {
+          "name": "Common expressions expose root named sequences",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1,"expr":["group",[14,"a",["REP",0,-1,["EXISTS"]]]]},["COPY",["CAPTURE",[[["EXPR","group"]]]],["NODE"]]],
+          "output": {"a":{"path":[],"ofs":0,"len":2,"lim":2}}
+        },
+        {
+          "name": "Substructure captures select earliest placements in specification order",
+          "input": [{"a":[1],"b":[2]},{"a":[3],"b":[4]},{"a":[5],"b":[6]}],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]],{"a":[[["SEQMAX","a",["REP",0,-1,["EXISTS"]]]]]},["REP",0,-1,["EXISTS"]],{"b":[[["SEQMAX","b",["REP",0,-1,["EXISTS"]]]]]},["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"a":{"path":[0,"a"],"ofs":0,"len":1,"lim":1},"b":{"path":[1,"b"],"ofs":0,"len":1,"lim":1}}
+        },
+        {
+          "name": "Empty unnamed groups do not create a capture",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQMIN",null],["SEQMAX","a",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"a":{"path":[],"ofs":0,"len":1,"lim":1}}
+        },
+        {
+          "name": "Failed CAPTURE returns false",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQMAX","a",2]]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Root substructure placement is independent of frontier order",
+          "input": [{"x":[1]},{"x":[2]},{"x":[3]}],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQ",["ANY",["REP",2,0,["EXISTS"]],["SEQ"],["EXISTS"]]],{"x":[[["SEQMAX","a",["EXISTS"]]]]},["SEQ",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"a":{"path":[0,"x"],"ofs":0,"len":1,"lim":1}}
+        },
+        {
+          "name": "Later group length preference outranks an earlier group start",
+          "input": [1,2,1,2,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","a",1],["SEQMAX","b",["REP",0,-1,2]],["SEQ",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"a":{"path":[],"ofs":2,"len":1,"lim":3},"b":{"path":[],"ofs":3,"len":2,"lim":5}}
+        },
+        {
+          "name": "Earlier group start takes priority over a later group start",
+          "input": [1,2,1,3,3,3],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","a",1],["SEQ",["ANY",["SEQ",2,1,3],["SEQ"]]],["SEQMIN","b",3],["SEQ",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"a":{"path":[],"ofs":0,"len":1,"lim":1},"b":{"path":[],"ofs":4,"len":1,"lim":5}}
+        },
+        {
+          "name": "Mixed preferences resolve in specification order",
+          "input": [1,1,1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQMIN","a",["REP",1,-1,1]],["SEQMAX","b",["REP",0,-1,["EXISTS"]]],["SEQMAX","c",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"a":{"path":[],"ofs":0,"len":1,"lim":1},"b":{"path":[],"ofs":1,"len":3,"lim":4},"c":{"path":[],"ofs":4,"len":0,"lim":4}}
+        },
+        {
+          "name": "Unnamed shortest groups retain their preference",
+          "input": [1,1,1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQMIN",null,["REP",1,-1,1]],["SEQMAX","b",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"b":{"path":[],"ofs":1,"len":3,"lim":4}}
+        },
+        {
+          "name": "Inner capture length does not favor a later parent substructure",
+          "input": [{"x":[1]},{"x":[1,2,3]}],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]],{"x":[[["SEQMAX","inner",["REP",0,-1,["EXISTS"]]]]]},["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"inner":{"path":[0,"x"],"ofs":0,"len":1,"lim":1}}
+        },
+        {
+          "name": "Root length preference outranks earliest substructure placement",
+          "input": [{"x":[1]},{"x":[2]}],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQMAX",null,["REP",0,-1,["EXISTS"]]],{"x":[[["SEQMAX","inner",["EXISTS"]]]]},["SEQ",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"inner":{"path":[1,"x"],"ofs":0,"len":1,"lim":1}}
+        },
+        {
+          "name": "Successful unnamed captures return an empty object",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQMAX",null,1]]]],["NODE"]]],
+          "output": {}
+        },
+        {
+          "name": "Successful empty matching returns an object rather than false",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[]]]],["NODE"]]],
+          "output": {}
+        },
+        {
+          "name": "A named empty sequence produces a zero-length capture",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQMAX","empty"]]]],["NODE"]]],
+          "output": {"empty":{"path":[],"ofs":0,"len":0,"lim":0}}
+        },
+        {
+          "name": "An empty sequence cannot satisfy nonempty exact input",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQMIN","empty"]]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Numeric named-sequence opcodes retain their preferences",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[[15,"a",["REP",0,-1,["EXISTS"]]],[14,"b",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"a":{"path":[],"ofs":0,"len":0,"lim":0},"b":{"path":[],"ofs":0,"len":2,"lim":2}}
+        }
+      ]
+    },
+    {
+      "name": "Computed names and uniqueness",
+      "desc": "Names are evaluated with NODE missing but lexical TEMP intact. Duplicate names are invalid across the entire observable match, including nested arrays and integer/string collisions.",
+      "tests": [
+        {
+          "name": "Capture names evaluate with NODE missing",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQMAX",["CASE",["EXISTS"],"wrong","right"],1]]]],["NODE"]]],
+          "output": {"right":{"path":[],"ofs":0,"len":1,"lim":1}}
+        },
+        {
+          "name": "Capture names retain lexical TEMP bindings",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["WITH","prefix","g",[[["SEQMAX",["CONCAT",["TEMP","prefix"],"1"],1,2]]]]],["NODE"]]],
+          "output": {"g1":{"path":[],"ofs":0,"len":2,"lim":2}}
+        },
+        {
+          "name": "Duplicate names in one array reject the capture",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQMAX","same",1],["SEQMIN","same",2]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Integer and string capture names collide after coercion",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQMAX",1,1],["SEQMAX","1",2]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Capture names must be unique across nested arrays",
+          "input": {"a":[1],"b":[2]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",{"a":[[["SEQMAX","same",1]]],"b":[[["SEQMAX","same",2]]]}],["NODE"]]],
+          "output": false
+        }
+      ]
+    },
+    {
+      "name": "Named-group syntax",
+      "desc": "CAPTURE requires exactly one argument. Named sequences require a name and may appear only at the root of a specification applied to array elements.",
+      "tests": [
+        {
+          "name": "CAPTURE requires a match expression",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",["CAPTURE"],true]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "CAPTURE rejects additional arguments",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["MATCH",["IS",["CAPTURE",[[1]],0],true]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "SEQMAX requires a name argument",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["MATCH",[[["SEQMAX"]]]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "SEQMIN requires a name argument",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["MATCH",[[["SEQMIN"]]]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "SEQMAX requires an array-elements specification",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["MATCH",["SEQMAX","x",1]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "SEQMIN requires an array-elements specification",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["MATCH",["SEQMIN","x",1]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "SEQMAX cannot be nested in active sequence context",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["MATCH",[[["SEQ",["SEQMAX","x",1]]]]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "SEQMIN cannot be nested in active sequence context",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["MATCH",[[["SEQ",["SEQMIN","x",1]]]]]],
+          "errors": {"INVALID_GRAFT":true}
+        }
+      ]
+    },
+    {
+      "name": "Exhaustive split matrix",
+      "desc": "Enumerates every legal split for lengths 0 through 4, all eight MIN/MAX assignments to three groups, and partial/exact matching. Expected results rank all group lengths before any group starts, independently of successor traversal.",
+      "tests": [
+        {
+          "name": "HAS length 0 preferences 0",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","g0",["REP",0,-1,["EXISTS"]]],["SEQMIN","g1",["REP",0,-1,["EXISTS"]]],["SEQMIN","g2",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":0,"lim":0},"g2":{"path":[],"ofs":0,"len":0,"lim":0}}
+        },
+        {
+          "name": "IS length 0 preferences 0",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","g0",["REP",0,-1,["EXISTS"]]],["SEQMIN","g1",["REP",0,-1,["EXISTS"]]],["SEQMIN","g2",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":0,"lim":0},"g2":{"path":[],"ofs":0,"len":0,"lim":0}}
+        },
+        {
+          "name": "HAS length 0 preferences 1",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMAX","g0",["REP",0,-1,["EXISTS"]]],["SEQMIN","g1",["REP",0,-1,["EXISTS"]]],["SEQMIN","g2",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":0,"lim":0},"g2":{"path":[],"ofs":0,"len":0,"lim":0}}
+        },
+        {
+          "name": "IS length 0 preferences 1",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMAX","g0",["REP",0,-1,["EXISTS"]]],["SEQMIN","g1",["REP",0,-1,["EXISTS"]]],["SEQMIN","g2",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":0,"lim":0},"g2":{"path":[],"ofs":0,"len":0,"lim":0}}
+        },
+        {
+          "name": "HAS length 0 preferences 2",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","g0",["REP",0,-1,["EXISTS"]]],["SEQMAX","g1",["REP",0,-1,["EXISTS"]]],["SEQMIN","g2",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":0,"lim":0},"g2":{"path":[],"ofs":0,"len":0,"lim":0}}
+        },
+        {
+          "name": "IS length 0 preferences 2",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","g0",["REP",0,-1,["EXISTS"]]],["SEQMAX","g1",["REP",0,-1,["EXISTS"]]],["SEQMIN","g2",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":0,"lim":0},"g2":{"path":[],"ofs":0,"len":0,"lim":0}}
+        },
+        {
+          "name": "HAS length 0 preferences 3",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMAX","g0",["REP",0,-1,["EXISTS"]]],["SEQMAX","g1",["REP",0,-1,["EXISTS"]]],["SEQMIN","g2",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":0,"lim":0},"g2":{"path":[],"ofs":0,"len":0,"lim":0}}
+        },
+        {
+          "name": "IS length 0 preferences 3",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMAX","g0",["REP",0,-1,["EXISTS"]]],["SEQMAX","g1",["REP",0,-1,["EXISTS"]]],["SEQMIN","g2",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":0,"lim":0},"g2":{"path":[],"ofs":0,"len":0,"lim":0}}
+        },
+        {
+          "name": "HAS length 0 preferences 4",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","g0",["REP",0,-1,["EXISTS"]]],["SEQMIN","g1",["REP",0,-1,["EXISTS"]]],["SEQMAX","g2",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":0,"lim":0},"g2":{"path":[],"ofs":0,"len":0,"lim":0}}
+        },
+        {
+          "name": "IS length 0 preferences 4",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","g0",["REP",0,-1,["EXISTS"]]],["SEQMIN","g1",["REP",0,-1,["EXISTS"]]],["SEQMAX","g2",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":0,"lim":0},"g2":{"path":[],"ofs":0,"len":0,"lim":0}}
+        },
+        {
+          "name": "HAS length 0 preferences 5",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMAX","g0",["REP",0,-1,["EXISTS"]]],["SEQMIN","g1",["REP",0,-1,["EXISTS"]]],["SEQMAX","g2",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":0,"lim":0},"g2":{"path":[],"ofs":0,"len":0,"lim":0}}
+        },
+        {
+          "name": "IS length 0 preferences 5",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMAX","g0",["REP",0,-1,["EXISTS"]]],["SEQMIN","g1",["REP",0,-1,["EXISTS"]]],["SEQMAX","g2",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":0,"lim":0},"g2":{"path":[],"ofs":0,"len":0,"lim":0}}
+        },
+        {
+          "name": "HAS length 0 preferences 6",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","g0",["REP",0,-1,["EXISTS"]]],["SEQMAX","g1",["REP",0,-1,["EXISTS"]]],["SEQMAX","g2",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":0,"lim":0},"g2":{"path":[],"ofs":0,"len":0,"lim":0}}
+        },
+        {
+          "name": "IS length 0 preferences 6",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","g0",["REP",0,-1,["EXISTS"]]],["SEQMAX","g1",["REP",0,-1,["EXISTS"]]],["SEQMAX","g2",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":0,"lim":0},"g2":{"path":[],"ofs":0,"len":0,"lim":0}}
+        },
+        {
+          "name": "HAS length 0 preferences 7",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMAX","g0",["REP",0,-1,["EXISTS"]]],["SEQMAX","g1",["REP",0,-1,["EXISTS"]]],["SEQMAX","g2",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":0,"lim":0},"g2":{"path":[],"ofs":0,"len":0,"lim":0}}
+        },
+        {
+          "name": "IS length 0 preferences 7",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMAX","g0",["REP",0,-1,["EXISTS"]]],["SEQMAX","g1",["REP",0,-1,["EXISTS"]]],["SEQMAX","g2",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":0,"lim":0},"g2":{"path":[],"ofs":0,"len":0,"lim":0}}
+        },
+        {
+          "name": "HAS length 1 preferences 0",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","g0",["REP",0,-1,["EXISTS"]]],["SEQMIN","g1",["REP",0,-1,["EXISTS"]]],["SEQMIN","g2",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":0,"lim":0},"g2":{"path":[],"ofs":0,"len":0,"lim":0}}
+        },
+        {
+          "name": "IS length 1 preferences 0",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","g0",["REP",0,-1,["EXISTS"]]],["SEQMIN","g1",["REP",0,-1,["EXISTS"]]],["SEQMIN","g2",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":1,"len":0,"lim":1},"g1":{"path":[],"ofs":1,"len":0,"lim":1},"g2":{"path":[],"ofs":1,"len":0,"lim":1}}
+        },
+        {
+          "name": "HAS length 1 preferences 1",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMAX","g0",["REP",0,-1,["EXISTS"]]],["SEQMIN","g1",["REP",0,-1,["EXISTS"]]],["SEQMIN","g2",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":1,"lim":1},"g1":{"path":[],"ofs":1,"len":0,"lim":1},"g2":{"path":[],"ofs":1,"len":0,"lim":1}}
+        },
+        {
+          "name": "IS length 1 preferences 1",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMAX","g0",["REP",0,-1,["EXISTS"]]],["SEQMIN","g1",["REP",0,-1,["EXISTS"]]],["SEQMIN","g2",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":1,"lim":1},"g1":{"path":[],"ofs":1,"len":0,"lim":1},"g2":{"path":[],"ofs":1,"len":0,"lim":1}}
+        },
+        {
+          "name": "HAS length 1 preferences 2",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","g0",["REP",0,-1,["EXISTS"]]],["SEQMAX","g1",["REP",0,-1,["EXISTS"]]],["SEQMIN","g2",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":1,"lim":1},"g2":{"path":[],"ofs":1,"len":0,"lim":1}}
+        },
+        {
+          "name": "IS length 1 preferences 2",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","g0",["REP",0,-1,["EXISTS"]]],["SEQMAX","g1",["REP",0,-1,["EXISTS"]]],["SEQMIN","g2",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":1,"lim":1},"g2":{"path":[],"ofs":1,"len":0,"lim":1}}
+        },
+        {
+          "name": "HAS length 1 preferences 3",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMAX","g0",["REP",0,-1,["EXISTS"]]],["SEQMAX","g1",["REP",0,-1,["EXISTS"]]],["SEQMIN","g2",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":1,"lim":1},"g1":{"path":[],"ofs":1,"len":0,"lim":1},"g2":{"path":[],"ofs":1,"len":0,"lim":1}}
+        },
+        {
+          "name": "IS length 1 preferences 3",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMAX","g0",["REP",0,-1,["EXISTS"]]],["SEQMAX","g1",["REP",0,-1,["EXISTS"]]],["SEQMIN","g2",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":1,"lim":1},"g1":{"path":[],"ofs":1,"len":0,"lim":1},"g2":{"path":[],"ofs":1,"len":0,"lim":1}}
+        },
+        {
+          "name": "HAS length 1 preferences 4",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","g0",["REP",0,-1,["EXISTS"]]],["SEQMIN","g1",["REP",0,-1,["EXISTS"]]],["SEQMAX","g2",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":0,"lim":0},"g2":{"path":[],"ofs":0,"len":1,"lim":1}}
+        },
+        {
+          "name": "IS length 1 preferences 4",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","g0",["REP",0,-1,["EXISTS"]]],["SEQMIN","g1",["REP",0,-1,["EXISTS"]]],["SEQMAX","g2",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":0,"lim":0},"g2":{"path":[],"ofs":0,"len":1,"lim":1}}
+        },
+        {
+          "name": "HAS length 1 preferences 5",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMAX","g0",["REP",0,-1,["EXISTS"]]],["SEQMIN","g1",["REP",0,-1,["EXISTS"]]],["SEQMAX","g2",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":1,"lim":1},"g1":{"path":[],"ofs":1,"len":0,"lim":1},"g2":{"path":[],"ofs":1,"len":0,"lim":1}}
+        },
+        {
+          "name": "IS length 1 preferences 5",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMAX","g0",["REP",0,-1,["EXISTS"]]],["SEQMIN","g1",["REP",0,-1,["EXISTS"]]],["SEQMAX","g2",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":1,"lim":1},"g1":{"path":[],"ofs":1,"len":0,"lim":1},"g2":{"path":[],"ofs":1,"len":0,"lim":1}}
+        },
+        {
+          "name": "HAS length 1 preferences 6",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","g0",["REP",0,-1,["EXISTS"]]],["SEQMAX","g1",["REP",0,-1,["EXISTS"]]],["SEQMAX","g2",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":1,"lim":1},"g2":{"path":[],"ofs":1,"len":0,"lim":1}}
+        },
+        {
+          "name": "IS length 1 preferences 6",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","g0",["REP",0,-1,["EXISTS"]]],["SEQMAX","g1",["REP",0,-1,["EXISTS"]]],["SEQMAX","g2",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":1,"lim":1},"g2":{"path":[],"ofs":1,"len":0,"lim":1}}
+        },
+        {
+          "name": "HAS length 1 preferences 7",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMAX","g0",["REP",0,-1,["EXISTS"]]],["SEQMAX","g1",["REP",0,-1,["EXISTS"]]],["SEQMAX","g2",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":1,"lim":1},"g1":{"path":[],"ofs":1,"len":0,"lim":1},"g2":{"path":[],"ofs":1,"len":0,"lim":1}}
+        },
+        {
+          "name": "IS length 1 preferences 7",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMAX","g0",["REP",0,-1,["EXISTS"]]],["SEQMAX","g1",["REP",0,-1,["EXISTS"]]],["SEQMAX","g2",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":1,"lim":1},"g1":{"path":[],"ofs":1,"len":0,"lim":1},"g2":{"path":[],"ofs":1,"len":0,"lim":1}}
+        },
+        {
+          "name": "HAS length 2 preferences 0",
+          "input": [1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","g0",["REP",0,-1,["EXISTS"]]],["SEQMIN","g1",["REP",0,-1,["EXISTS"]]],["SEQMIN","g2",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":0,"lim":0},"g2":{"path":[],"ofs":0,"len":0,"lim":0}}
+        },
+        {
+          "name": "IS length 2 preferences 0",
+          "input": [1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","g0",["REP",0,-1,["EXISTS"]]],["SEQMIN","g1",["REP",0,-1,["EXISTS"]]],["SEQMIN","g2",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":2,"len":0,"lim":2},"g1":{"path":[],"ofs":2,"len":0,"lim":2},"g2":{"path":[],"ofs":2,"len":0,"lim":2}}
+        },
+        {
+          "name": "HAS length 2 preferences 1",
+          "input": [1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMAX","g0",["REP",0,-1,["EXISTS"]]],["SEQMIN","g1",["REP",0,-1,["EXISTS"]]],["SEQMIN","g2",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":2,"lim":2},"g1":{"path":[],"ofs":2,"len":0,"lim":2},"g2":{"path":[],"ofs":2,"len":0,"lim":2}}
+        },
+        {
+          "name": "IS length 2 preferences 1",
+          "input": [1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMAX","g0",["REP",0,-1,["EXISTS"]]],["SEQMIN","g1",["REP",0,-1,["EXISTS"]]],["SEQMIN","g2",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":2,"lim":2},"g1":{"path":[],"ofs":2,"len":0,"lim":2},"g2":{"path":[],"ofs":2,"len":0,"lim":2}}
+        },
+        {
+          "name": "HAS length 2 preferences 2",
+          "input": [1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","g0",["REP",0,-1,["EXISTS"]]],["SEQMAX","g1",["REP",0,-1,["EXISTS"]]],["SEQMIN","g2",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":2,"lim":2},"g2":{"path":[],"ofs":2,"len":0,"lim":2}}
+        },
+        {
+          "name": "IS length 2 preferences 2",
+          "input": [1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","g0",["REP",0,-1,["EXISTS"]]],["SEQMAX","g1",["REP",0,-1,["EXISTS"]]],["SEQMIN","g2",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":2,"lim":2},"g2":{"path":[],"ofs":2,"len":0,"lim":2}}
+        },
+        {
+          "name": "HAS length 2 preferences 3",
+          "input": [1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMAX","g0",["REP",0,-1,["EXISTS"]]],["SEQMAX","g1",["REP",0,-1,["EXISTS"]]],["SEQMIN","g2",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":2,"lim":2},"g1":{"path":[],"ofs":2,"len":0,"lim":2},"g2":{"path":[],"ofs":2,"len":0,"lim":2}}
+        },
+        {
+          "name": "IS length 2 preferences 3",
+          "input": [1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMAX","g0",["REP",0,-1,["EXISTS"]]],["SEQMAX","g1",["REP",0,-1,["EXISTS"]]],["SEQMIN","g2",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":2,"lim":2},"g1":{"path":[],"ofs":2,"len":0,"lim":2},"g2":{"path":[],"ofs":2,"len":0,"lim":2}}
+        },
+        {
+          "name": "HAS length 2 preferences 4",
+          "input": [1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","g0",["REP",0,-1,["EXISTS"]]],["SEQMIN","g1",["REP",0,-1,["EXISTS"]]],["SEQMAX","g2",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":0,"lim":0},"g2":{"path":[],"ofs":0,"len":2,"lim":2}}
+        },
+        {
+          "name": "IS length 2 preferences 4",
+          "input": [1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","g0",["REP",0,-1,["EXISTS"]]],["SEQMIN","g1",["REP",0,-1,["EXISTS"]]],["SEQMAX","g2",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":0,"lim":0},"g2":{"path":[],"ofs":0,"len":2,"lim":2}}
+        },
+        {
+          "name": "HAS length 2 preferences 5",
+          "input": [1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMAX","g0",["REP",0,-1,["EXISTS"]]],["SEQMIN","g1",["REP",0,-1,["EXISTS"]]],["SEQMAX","g2",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":2,"lim":2},"g1":{"path":[],"ofs":2,"len":0,"lim":2},"g2":{"path":[],"ofs":2,"len":0,"lim":2}}
+        },
+        {
+          "name": "IS length 2 preferences 5",
+          "input": [1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMAX","g0",["REP",0,-1,["EXISTS"]]],["SEQMIN","g1",["REP",0,-1,["EXISTS"]]],["SEQMAX","g2",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":2,"lim":2},"g1":{"path":[],"ofs":2,"len":0,"lim":2},"g2":{"path":[],"ofs":2,"len":0,"lim":2}}
+        },
+        {
+          "name": "HAS length 2 preferences 6",
+          "input": [1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","g0",["REP",0,-1,["EXISTS"]]],["SEQMAX","g1",["REP",0,-1,["EXISTS"]]],["SEQMAX","g2",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":2,"lim":2},"g2":{"path":[],"ofs":2,"len":0,"lim":2}}
+        },
+        {
+          "name": "IS length 2 preferences 6",
+          "input": [1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","g0",["REP",0,-1,["EXISTS"]]],["SEQMAX","g1",["REP",0,-1,["EXISTS"]]],["SEQMAX","g2",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":2,"lim":2},"g2":{"path":[],"ofs":2,"len":0,"lim":2}}
+        },
+        {
+          "name": "HAS length 2 preferences 7",
+          "input": [1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMAX","g0",["REP",0,-1,["EXISTS"]]],["SEQMAX","g1",["REP",0,-1,["EXISTS"]]],["SEQMAX","g2",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":2,"lim":2},"g1":{"path":[],"ofs":2,"len":0,"lim":2},"g2":{"path":[],"ofs":2,"len":0,"lim":2}}
+        },
+        {
+          "name": "IS length 2 preferences 7",
+          "input": [1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMAX","g0",["REP",0,-1,["EXISTS"]]],["SEQMAX","g1",["REP",0,-1,["EXISTS"]]],["SEQMAX","g2",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":2,"lim":2},"g1":{"path":[],"ofs":2,"len":0,"lim":2},"g2":{"path":[],"ofs":2,"len":0,"lim":2}}
+        },
+        {
+          "name": "HAS length 3 preferences 0",
+          "input": [1,1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","g0",["REP",0,-1,["EXISTS"]]],["SEQMIN","g1",["REP",0,-1,["EXISTS"]]],["SEQMIN","g2",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":0,"lim":0},"g2":{"path":[],"ofs":0,"len":0,"lim":0}}
+        },
+        {
+          "name": "IS length 3 preferences 0",
+          "input": [1,1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","g0",["REP",0,-1,["EXISTS"]]],["SEQMIN","g1",["REP",0,-1,["EXISTS"]]],["SEQMIN","g2",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":3,"len":0,"lim":3},"g1":{"path":[],"ofs":3,"len":0,"lim":3},"g2":{"path":[],"ofs":3,"len":0,"lim":3}}
+        },
+        {
+          "name": "HAS length 3 preferences 1",
+          "input": [1,1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMAX","g0",["REP",0,-1,["EXISTS"]]],["SEQMIN","g1",["REP",0,-1,["EXISTS"]]],["SEQMIN","g2",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":3,"lim":3},"g1":{"path":[],"ofs":3,"len":0,"lim":3},"g2":{"path":[],"ofs":3,"len":0,"lim":3}}
+        },
+        {
+          "name": "IS length 3 preferences 1",
+          "input": [1,1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMAX","g0",["REP",0,-1,["EXISTS"]]],["SEQMIN","g1",["REP",0,-1,["EXISTS"]]],["SEQMIN","g2",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":3,"lim":3},"g1":{"path":[],"ofs":3,"len":0,"lim":3},"g2":{"path":[],"ofs":3,"len":0,"lim":3}}
+        },
+        {
+          "name": "HAS length 3 preferences 2",
+          "input": [1,1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","g0",["REP",0,-1,["EXISTS"]]],["SEQMAX","g1",["REP",0,-1,["EXISTS"]]],["SEQMIN","g2",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":3,"lim":3},"g2":{"path":[],"ofs":3,"len":0,"lim":3}}
+        },
+        {
+          "name": "IS length 3 preferences 2",
+          "input": [1,1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","g0",["REP",0,-1,["EXISTS"]]],["SEQMAX","g1",["REP",0,-1,["EXISTS"]]],["SEQMIN","g2",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":3,"lim":3},"g2":{"path":[],"ofs":3,"len":0,"lim":3}}
+        },
+        {
+          "name": "HAS length 3 preferences 3",
+          "input": [1,1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMAX","g0",["REP",0,-1,["EXISTS"]]],["SEQMAX","g1",["REP",0,-1,["EXISTS"]]],["SEQMIN","g2",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":3,"lim":3},"g1":{"path":[],"ofs":3,"len":0,"lim":3},"g2":{"path":[],"ofs":3,"len":0,"lim":3}}
+        },
+        {
+          "name": "IS length 3 preferences 3",
+          "input": [1,1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMAX","g0",["REP",0,-1,["EXISTS"]]],["SEQMAX","g1",["REP",0,-1,["EXISTS"]]],["SEQMIN","g2",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":3,"lim":3},"g1":{"path":[],"ofs":3,"len":0,"lim":3},"g2":{"path":[],"ofs":3,"len":0,"lim":3}}
+        },
+        {
+          "name": "HAS length 3 preferences 4",
+          "input": [1,1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","g0",["REP",0,-1,["EXISTS"]]],["SEQMIN","g1",["REP",0,-1,["EXISTS"]]],["SEQMAX","g2",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":0,"lim":0},"g2":{"path":[],"ofs":0,"len":3,"lim":3}}
+        },
+        {
+          "name": "IS length 3 preferences 4",
+          "input": [1,1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","g0",["REP",0,-1,["EXISTS"]]],["SEQMIN","g1",["REP",0,-1,["EXISTS"]]],["SEQMAX","g2",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":0,"lim":0},"g2":{"path":[],"ofs":0,"len":3,"lim":3}}
+        },
+        {
+          "name": "HAS length 3 preferences 5",
+          "input": [1,1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMAX","g0",["REP",0,-1,["EXISTS"]]],["SEQMIN","g1",["REP",0,-1,["EXISTS"]]],["SEQMAX","g2",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":3,"lim":3},"g1":{"path":[],"ofs":3,"len":0,"lim":3},"g2":{"path":[],"ofs":3,"len":0,"lim":3}}
+        },
+        {
+          "name": "IS length 3 preferences 5",
+          "input": [1,1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMAX","g0",["REP",0,-1,["EXISTS"]]],["SEQMIN","g1",["REP",0,-1,["EXISTS"]]],["SEQMAX","g2",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":3,"lim":3},"g1":{"path":[],"ofs":3,"len":0,"lim":3},"g2":{"path":[],"ofs":3,"len":0,"lim":3}}
+        },
+        {
+          "name": "HAS length 3 preferences 6",
+          "input": [1,1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","g0",["REP",0,-1,["EXISTS"]]],["SEQMAX","g1",["REP",0,-1,["EXISTS"]]],["SEQMAX","g2",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":3,"lim":3},"g2":{"path":[],"ofs":3,"len":0,"lim":3}}
+        },
+        {
+          "name": "IS length 3 preferences 6",
+          "input": [1,1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","g0",["REP",0,-1,["EXISTS"]]],["SEQMAX","g1",["REP",0,-1,["EXISTS"]]],["SEQMAX","g2",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":3,"lim":3},"g2":{"path":[],"ofs":3,"len":0,"lim":3}}
+        },
+        {
+          "name": "HAS length 3 preferences 7",
+          "input": [1,1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMAX","g0",["REP",0,-1,["EXISTS"]]],["SEQMAX","g1",["REP",0,-1,["EXISTS"]]],["SEQMAX","g2",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":3,"lim":3},"g1":{"path":[],"ofs":3,"len":0,"lim":3},"g2":{"path":[],"ofs":3,"len":0,"lim":3}}
+        },
+        {
+          "name": "IS length 3 preferences 7",
+          "input": [1,1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMAX","g0",["REP",0,-1,["EXISTS"]]],["SEQMAX","g1",["REP",0,-1,["EXISTS"]]],["SEQMAX","g2",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":3,"lim":3},"g1":{"path":[],"ofs":3,"len":0,"lim":3},"g2":{"path":[],"ofs":3,"len":0,"lim":3}}
+        },
+        {
+          "name": "HAS length 4 preferences 0",
+          "input": [1,1,1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","g0",["REP",0,-1,["EXISTS"]]],["SEQMIN","g1",["REP",0,-1,["EXISTS"]]],["SEQMIN","g2",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":0,"lim":0},"g2":{"path":[],"ofs":0,"len":0,"lim":0}}
+        },
+        {
+          "name": "IS length 4 preferences 0",
+          "input": [1,1,1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","g0",["REP",0,-1,["EXISTS"]]],["SEQMIN","g1",["REP",0,-1,["EXISTS"]]],["SEQMIN","g2",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":4,"len":0,"lim":4},"g1":{"path":[],"ofs":4,"len":0,"lim":4},"g2":{"path":[],"ofs":4,"len":0,"lim":4}}
+        },
+        {
+          "name": "HAS length 4 preferences 1",
+          "input": [1,1,1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMAX","g0",["REP",0,-1,["EXISTS"]]],["SEQMIN","g1",["REP",0,-1,["EXISTS"]]],["SEQMIN","g2",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":4,"lim":4},"g1":{"path":[],"ofs":4,"len":0,"lim":4},"g2":{"path":[],"ofs":4,"len":0,"lim":4}}
+        },
+        {
+          "name": "IS length 4 preferences 1",
+          "input": [1,1,1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMAX","g0",["REP",0,-1,["EXISTS"]]],["SEQMIN","g1",["REP",0,-1,["EXISTS"]]],["SEQMIN","g2",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":4,"lim":4},"g1":{"path":[],"ofs":4,"len":0,"lim":4},"g2":{"path":[],"ofs":4,"len":0,"lim":4}}
+        },
+        {
+          "name": "HAS length 4 preferences 2",
+          "input": [1,1,1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","g0",["REP",0,-1,["EXISTS"]]],["SEQMAX","g1",["REP",0,-1,["EXISTS"]]],["SEQMIN","g2",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":4,"lim":4},"g2":{"path":[],"ofs":4,"len":0,"lim":4}}
+        },
+        {
+          "name": "IS length 4 preferences 2",
+          "input": [1,1,1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","g0",["REP",0,-1,["EXISTS"]]],["SEQMAX","g1",["REP",0,-1,["EXISTS"]]],["SEQMIN","g2",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":4,"lim":4},"g2":{"path":[],"ofs":4,"len":0,"lim":4}}
+        },
+        {
+          "name": "HAS length 4 preferences 3",
+          "input": [1,1,1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMAX","g0",["REP",0,-1,["EXISTS"]]],["SEQMAX","g1",["REP",0,-1,["EXISTS"]]],["SEQMIN","g2",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":4,"lim":4},"g1":{"path":[],"ofs":4,"len":0,"lim":4},"g2":{"path":[],"ofs":4,"len":0,"lim":4}}
+        },
+        {
+          "name": "IS length 4 preferences 3",
+          "input": [1,1,1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMAX","g0",["REP",0,-1,["EXISTS"]]],["SEQMAX","g1",["REP",0,-1,["EXISTS"]]],["SEQMIN","g2",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":4,"lim":4},"g1":{"path":[],"ofs":4,"len":0,"lim":4},"g2":{"path":[],"ofs":4,"len":0,"lim":4}}
+        },
+        {
+          "name": "HAS length 4 preferences 4",
+          "input": [1,1,1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","g0",["REP",0,-1,["EXISTS"]]],["SEQMIN","g1",["REP",0,-1,["EXISTS"]]],["SEQMAX","g2",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":0,"lim":0},"g2":{"path":[],"ofs":0,"len":4,"lim":4}}
+        },
+        {
+          "name": "IS length 4 preferences 4",
+          "input": [1,1,1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","g0",["REP",0,-1,["EXISTS"]]],["SEQMIN","g1",["REP",0,-1,["EXISTS"]]],["SEQMAX","g2",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":0,"lim":0},"g2":{"path":[],"ofs":0,"len":4,"lim":4}}
+        },
+        {
+          "name": "HAS length 4 preferences 5",
+          "input": [1,1,1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMAX","g0",["REP",0,-1,["EXISTS"]]],["SEQMIN","g1",["REP",0,-1,["EXISTS"]]],["SEQMAX","g2",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":4,"lim":4},"g1":{"path":[],"ofs":4,"len":0,"lim":4},"g2":{"path":[],"ofs":4,"len":0,"lim":4}}
+        },
+        {
+          "name": "IS length 4 preferences 5",
+          "input": [1,1,1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMAX","g0",["REP",0,-1,["EXISTS"]]],["SEQMIN","g1",["REP",0,-1,["EXISTS"]]],["SEQMAX","g2",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":4,"lim":4},"g1":{"path":[],"ofs":4,"len":0,"lim":4},"g2":{"path":[],"ofs":4,"len":0,"lim":4}}
+        },
+        {
+          "name": "HAS length 4 preferences 6",
+          "input": [1,1,1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","g0",["REP",0,-1,["EXISTS"]]],["SEQMAX","g1",["REP",0,-1,["EXISTS"]]],["SEQMAX","g2",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":4,"lim":4},"g2":{"path":[],"ofs":4,"len":0,"lim":4}}
+        },
+        {
+          "name": "IS length 4 preferences 6",
+          "input": [1,1,1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMIN","g0",["REP",0,-1,["EXISTS"]]],["SEQMAX","g1",["REP",0,-1,["EXISTS"]]],["SEQMAX","g2",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":0,"lim":0},"g1":{"path":[],"ofs":0,"len":4,"lim":4},"g2":{"path":[],"ofs":4,"len":0,"lim":4}}
+        },
+        {
+          "name": "HAS length 4 preferences 7",
+          "input": [1,1,1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMAX","g0",["REP",0,-1,["EXISTS"]]],["SEQMAX","g1",["REP",0,-1,["EXISTS"]]],["SEQMAX","g2",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":4,"lim":4},"g1":{"path":[],"ofs":4,"len":0,"lim":4},"g2":{"path":[],"ofs":4,"len":0,"lim":4}}
+        },
+        {
+          "name": "IS length 4 preferences 7",
+          "input": [1,1,1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQ",["REP",0,-1,["EXISTS"]]],["SEQMAX","g0",["REP",0,-1,["EXISTS"]]],["SEQMAX","g1",["REP",0,-1,["EXISTS"]]],["SEQMAX","g2",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"g0":{"path":[],"ofs":0,"len":4,"lim":4},"g1":{"path":[],"ofs":4,"len":0,"lim":4},"g2":{"path":[],"ofs":4,"len":0,"lim":4}}
+        }
+      ]
+    },
+    {
+      "name": "Capture names",
+      "desc": "Empty strings and integers are valid names; integers become strings. Names that shadow host methods, including __proto__ where supported, are ordinary output properties.",
+      "tests": [
+        {
+          "name": "Capture key  is an own data property",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQMAX","",1]]]],["NODE"]]],
+          "output": {"":{"path":[],"ofs":0,"len":1,"lim":1}}
+        },
+        {
+          "name": "Capture key 0 is an own data property",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQMAX",0,1]]]],["NODE"]]],
+          "output": {"0":{"path":[],"ofs":0,"len":1,"lim":1}}
+        },
+        {
+          "name": "Capture key -1 is an own data property",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQMAX",-1,1]]]],["NODE"]]],
+          "output": {"-1":{"path":[],"ofs":0,"len":1,"lim":1}}
+        },
+        {
+          "name": "Capture key constructor is an own data property",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQMAX","constructor",1]]]],["NODE"]]],
+          "output": {"constructor":{"path":[],"ofs":0,"len":1,"lim":1}}
+        },
+        {
+          "name": "Capture key toString is an own data property",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQMAX","toString",1]]]],["NODE"]]],
+          "output": {"toString":{"path":[],"ofs":0,"len":1,"lim":1}}
+        },
+        {
+          "name": "Capture key hasOwnProperty is an own data property",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQMAX","hasOwnProperty",1]]]],["NODE"]]],
+          "output": {"hasOwnProperty":{"path":[],"ofs":0,"len":1,"lim":1}}
+        },
+        {
+          "name": "Capture key __proto__ is an own data property",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",[[["SEQMAX","__proto__",1]]]],["NODE"]]],
+          "output": {"__proto__":{"path":[],"ofs":0,"len":1,"lim":1}},
+          "needProto": true
+        }
+      ]
+    },
+    {
+      "name": "Runtime name failures",
+      "desc": "Computed boolean, fractional, object, and array names are invalid operands. CAPTURE traps those match failures and returns false without exposing partial captures.",
+      "tests": [
+        {
+          "name": "Invalid runtime name false rejects CAPTURE",
+          "input": {"name":false,"items":[1]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["WITH","name",["NODE","name"],{"items":[[["SEQMAX",["TEMP","name"],1]]]}]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Invalid runtime name true rejects CAPTURE",
+          "input": {"name":true,"items":[1]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["WITH","name",["NODE","name"],{"items":[[["SEQMAX",["TEMP","name"],1]]]}]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Invalid runtime name 1.5 rejects CAPTURE",
+          "input": {"name":1.5,"items":[1]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["WITH","name",["NODE","name"],{"items":[[["SEQMAX",["TEMP","name"],1]]]}]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Invalid runtime name {} rejects CAPTURE",
+          "input": {"name":{},"items":[1]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["WITH","name",["NODE","name"],{"items":[[["SEQMAX",["TEMP","name"],1]]]}]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Invalid runtime name [] rejects CAPTURE",
+          "input": {"name":[],"items":[1]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["WITH","name",["NODE","name"],{"items":[[["SEQMAX",["TEMP","name"],1]]]}]],["NODE"]]],
+          "output": false
+        }
+      ]
+    },
+    {
+      "name": "Outer capture isolation",
+      "desc": "A CAPTURE call starts an independent match state. It may reuse an outer name, and neither successful nor partially failed inner matching changes the enclosing CAP namespace.",
+      "tests": [
+        {
+          "name": "An independent CAPTURE may reuse an outer name without changing CAP",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["MATCH",[[["SEQMAX","outer",["REP",0,-1,["EXISTS"]]]]],["COPY",{"inner":["CAPTURE",[[["SEQMIN","outer",1]]]],"outer":["CAP"]},["NODE"]]]],
+          "output": {"inner":{"outer":{"path":[],"ofs":0,"len":1,"lim":1}},"outer":{"outer":{"path":[],"ofs":0,"len":2,"lim":2}}}
+        },
+        {
+          "name": "Failed CAPTURE leaves the outer namespace intact",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["MATCH",[[["SEQMAX","outer",["REP",0,-1,["EXISTS"]]]]],["COPY",{"inner":["CAPTURE",[[["SEQMAX","leaked",1],["SEQMAX","never",9]]]],"outer":["CAP"]},["NODE"]]]],
+          "output": {"inner":false,"outer":{"outer":{"path":[],"ofs":0,"len":2,"lim":2}}}
+        }
+      ]
+    },
+    {
+      "name": "Paths under AT",
+      "desc": "AT changes the match root. Capture paths exclude the outer prefix and can be passed directly to SLICE while that current node is retained.",
+      "tests": [
+        {
+          "name": "AT prefixes are excluded and captured ranges still work with SLICE",
+          "input": {"items":[1,2]},
+          "jgraft": ["JGRAFT",{"v":1},["AT","items",["MATCH",[[["SEQMAX","x",["REP",0,-1,["EXISTS"]]]]],["COPY",["CAP","x"],["STASH","range"],["SLICE",["CAP","x"]],["STASH","slice"]]]],["COPY",{"capture":["STASH","range"],"slice":["STASH","slice"]},["NODE"]]],
+          "output": {"capture":{"path":[],"ofs":0,"len":2,"lim":2},"slice":[1,2]}
+        }
+      ]
+    },
+    {
+      "name": "Success, failure, and alternate targets",
+      "desc": "CAPTURE returns false for a failed match and an object for every successful match, even when no groups are named. Its argument is match context. Alternate targets start a fresh matching root, and ordinary function results are compared as data.",
+      "tests": [
+        {
+          "name": "Successful null",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["EXISTS"]],["NODE"]]],
+          "output": {}
+        },
+        {
+          "name": "FAIL against null",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["FAIL"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Successful false",
+          "input": false,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["EXISTS"]],["NODE"]]],
+          "output": {}
+        },
+        {
+          "name": "FAIL against false",
+          "input": false,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["FAIL"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Successful number",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["EXISTS"]],["NODE"]]],
+          "output": {}
+        },
+        {
+          "name": "FAIL against number",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["FAIL"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Successful string",
+          "input": "abc",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["EXISTS"]],["NODE"]]],
+          "output": {}
+        },
+        {
+          "name": "FAIL against string",
+          "input": "abc",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["FAIL"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Successful array",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["EXISTS"]],["NODE"]]],
+          "output": {}
+        },
+        {
+          "name": "FAIL against array",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["FAIL"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Successful object",
+          "input": {"a":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["EXISTS"]],["NODE"]]],
+          "output": {}
+        },
+        {
+          "name": "FAIL against object",
+          "input": {"a":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["FAIL"]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Numeric opcode",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[50,[[["SEQMAX","a",["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": {"a":{"path":[],"ofs":0,"len":2,"lim":2}}
+        },
+        {
+          "name": "Function result is literal data",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["CAPTURE",[[["SEQMAX","a",["REP",0,-1,["EXISTS"]]]]]],{"a":{"path":[[]],"ofs":0,"len":2,"lim":2}}],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Alternate array target",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[1,2]],[[["SEQMAX","a",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"a":{"path":[],"ofs":0,"len":2,"lim":2}}
+        },
+        {
+          "name": "Alternate object target",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["HAS",{"items":[[1,2]]},{"items":[[["SEQMAX","a",["REP",0,-1,["EXISTS"]]]]]}]],["NODE"]]],
+          "output": {"a":{"path":["items"],"ofs":0,"len":2,"lim":2}}
+        },
+        {
+          "name": "Regex success without groups",
+          "input": "🙂a",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["STR",["SEQ",["START"],"🙂a",["END"]]]],["NODE"]]],
+          "output": {}
+        },
+        {
+          "name": "Regex failure",
+          "input": "🙂a",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["STR",["SEQ",["START"],"a",["END"]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Empty regex success",
+          "input": "",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["STR",""]],["NODE"]]],
+          "output": {}
+        },
+        {
+          "name": "EXPR expansion",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1,"expr":["pattern",["HAS",[[["SEQMAX","a",["REP",0,-1,["EXISTS"]]]]]]]},["COPY",["CAPTURE",["EXPR","pattern"]],["NODE"]]],
+          "output": {"a":{"path":[],"ofs":0,"len":2,"lim":2}}
+        }
+      ]
+    },
+    {
+      "name": "Paths and observable spans",
+      "desc": "Capture paths identify arrays relative to the match root. Offsets/counts/limits refer to array elements, not the sizes of string elements. Nested properties with arbitrary names remain path elements. CAPTURE does not install its returned object into CAP.",
+      "tests": [
+        {
+          "name": "Path key \"\"",
+          "input": {"":[10,20,30]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",{"":[[["SEQ",10],["SEQMIN","middle",20],["SEQ",30]]]}],["NODE"]]],
+          "output": {"middle":{"path":[""],"ofs":1,"len":1,"lim":2}}
+        },
+        {
+          "name": "Path key \"a.b\"",
+          "input": {"a.b":[10,20,30]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",{"a.b":[[["SEQ",10],["SEQMIN","middle",20],["SEQ",30]]]}],["NODE"]]],
+          "output": {"middle":{"path":["a.b"],"ofs":1,"len":1,"lim":2}}
+        },
+        {
+          "name": "Path key \"a/b\"",
+          "input": {"a/b":[10,20,30]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",{"a/b":[[["SEQ",10],["SEQMIN","middle",20],["SEQ",30]]]}],["NODE"]]],
+          "output": {"middle":{"path":["a/b"],"ofs":1,"len":1,"lim":2}}
+        },
+        {
+          "name": "Path key \"constructor\"",
+          "input": {"constructor":[10,20,30]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",{"constructor":[[["SEQ",10],["SEQMIN","middle",20],["SEQ",30]]]}],["NODE"]]],
+          "output": {"middle":{"path":["constructor"],"ofs":1,"len":1,"lim":2}}
+        },
+        {
+          "name": "Path key \"🙂\"",
+          "input": {"🙂":[10,20,30]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",{"🙂":[[["SEQ",10],["SEQMIN","middle",20],["SEQ",30]]]}],["NODE"]]],
+          "output": {"middle":{"path":["🙂"],"ofs":1,"len":1,"lim":2}}
+        },
+        {
+          "name": "Path key \"__proto__\"",
+          "input": {"__proto__":[10,20,30]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",{"__proto__":[[["SEQ",10],["SEQMIN","middle",20],["SEQ",30]]]}],["NODE"]]],
+          "output": {"middle":{"path":["__proto__"],"ofs":1,"len":1,"lim":2}},
+          "needProto": true
+        },
+        {
+          "name": "String values are single array elements",
+          "input": ["🙂","ab",""],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[["SEQMAX","strings",["REP",0,-1,["EXISTS"]]]]]]],["NODE"]]],
+          "output": {"strings":{"path":[],"ofs":0,"len":3,"lim":3}}
+        },
+        {
+          "name": "Nested array index path",
+          "input": [[1,2]],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["IS",[[[[["SEQMAX","inner",["REP",0,-1,["EXISTS"]]]]]]]]],["NODE"]]],
+          "output": {"inner":{"path":[0],"ofs":0,"len":2,"lim":2}}
+        },
+        {
+          "name": "CAP stays empty outside MATCH",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",{"result":["CAPTURE",[[["SEQMAX","x",["REP",0,-1,["EXISTS"]]]]]],"after":["CAP"]},["NODE"]]],
+          "output": {"result":{"x":{"path":[],"ofs":0,"len":2,"lim":2}},"after":{}}
+        },
+        {
+          "name": "MATCH publishes paths and slices",
+          "input": {"nested":[1,2]},
+          "jgraft": ["JGRAFT",{"v":1},["MATCH",{"nested":[[["SEQMAX","a",["REP",0,-1,["EXISTS"]]]]]},["COPY",["SLICE",["CAP","a"]],"saved",["CAP"],"bounds"]]],
+          "output": {"saved":[1,2],"bounds":{"a":{"path":["nested"],"ofs":0,"len":2,"lim":2}},"nested":[1,2]}
+        },
+        {
+          "name": "IF publishes selected captures",
+          "input": {"nested":[1,2]},
+          "jgraft": ["JGRAFT",{"v":1},["IF",{"nested":[[["SEQMAX","a",["REP",0,-1,["EXISTS"]]]]]},["COPY",["CAP"],["NODE"]]]],
+          "output": {"a":{"path":["nested"],"ofs":0,"len":2,"lim":2}}
+        },
+        {
+          "name": "Boolean matching ignores capture names",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[["SEQMAX",["FAIL"],["REP",0,-1,["EXISTS"]]]]]],["NODE"]]],
+          "output": true
+        }
+      ]
+    },
+    {
+      "name": "Returned data independence",
+      "desc": "Capture results and their path arrays are ordinary mutable data. Modifying one result must not change a second result or an enclosing CAP namespace.",
+      "tests": [
+        {
+          "name": "Two results have independent ranges",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",{"a":["CAPTURE",[[["SEQMAX","x",["REP",0,-1,["EXISTS"]]]]]],"b":["CAPTURE",[[["SEQMAX","x",["REP",0,-1,["EXISTS"]]]]]]},["NODE"]],["COPY",9,["NODE","a","x","ofs"]]],
+          "output": {"a":{"x":{"path":[],"ofs":9,"len":2,"lim":2}},"b":{"x":{"path":[],"ofs":0,"len":2,"lim":2}}}
+        },
+        {
+          "name": "Returned path does not alias CAP",
+          "input": {"nested":[1,2]},
+          "jgraft": ["JGRAFT",{"v":1},["MATCH",{"nested":[[["SEQMAX","a",["REP",0,-1,["EXISTS"]]]]]},["COPY",["CAPTURE",{"nested":[[["SEQMAX","a",["REP",0,-1,["EXISTS"]]]]]}],["STASH","result"]],["COPY","changed",["STASH","result","a","path",0]],["COPY",{"result":["STASH","result"],"outer":["CAP"]},["NODE"]]]],
+          "output": {"result":{"a":{"path":["changed"],"ofs":0,"len":2,"lim":2}},"outer":{"a":{"path":["nested"],"ofs":0,"len":2,"lim":2}}}
+        }
+      ]
+    },
+    {
+      "name": "Fatal errors",
+      "desc": "CAPTURE converts ordinary match failure to false but must not swallow malformed expressions or resource exhaustion. Name failures remain recoverable match failures as tested above.",
+      "tests": [
+        {
+          "name": "Unknown expression",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["unknown"]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Missing argument",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE"],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Extra argument",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CAPTURE",["EXISTS"],0],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "Recursive expression resource failure",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1,"expr":["again",["EXPR","again"]]},["COPY",["CAPTURE",["EXPR","again"]],["NODE"]]],
+          "errors": {"RESOURCE_LIMIT":true},
+          "limits": {"depth":24}
+        }
+      ]
+    }
+  ]
+}

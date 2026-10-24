@@ -1,0 +1,1245 @@
+{
+  "version": 1,
+  "name": "START and END",
+  "desc": "Covers START and END as ordinary match/value expressions and as zero-width assertions in array sequence and string regex contexts. Tests distinguish node location from node value, first elements from the nonexistent end element, absolute cursors from subexpression boundaries, empty subjects, Unicode positions, namespace/scope restoration, composition, numeric IDs, and validation.",
+  "tests": [
+    {
+      "name": "Ordinary node locations",
+      "desc": "Outside sequence context, anchors inspect the immediate containing array. START tests index zero even for the missing element of an empty array; END tests the nonexistent element at array length. The root itself and object properties are neither. Results do not depend on the element value. Missing nodes are probed by structural patterns because AT itself requires an existing node.",
+      "tests": [
+        {
+          "name": "START at root null",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["START"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "START at root false",
+          "input": false,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["START"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "START at root true",
+          "input": true,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["START"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "START at root number",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["START"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "START at root string",
+          "input": "abc",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["START"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "START at root array",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["START"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "START at root empty array",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["START"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "START at root object",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["START"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "START length 0 index 0",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[["IS",["START"],true]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "START length 1 index 0",
+          "input": [10],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",0],["COPY",["START"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "START length 1 index 1",
+          "input": [10],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[["EXISTS"],["IS",["START"],false]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "START length 1 alias -1",
+          "input": [10],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",-1],["COPY",["START"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "START length 2 index 0",
+          "input": [10,11],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",0],["COPY",["START"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "START length 2 index 1",
+          "input": [10,11],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",1],["COPY",["START"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "START length 2 index 2",
+          "input": [10,11],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[["EXISTS"],["EXISTS"],["IS",["START"],false]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "START length 2 alias -1",
+          "input": [10,11],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",-1],["COPY",["START"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "START length 2 alias -2",
+          "input": [10,11],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",-2],["COPY",["START"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "START length 3 index 0",
+          "input": [10,11,12],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",0],["COPY",["START"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "START length 3 index 1",
+          "input": [10,11,12],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",1],["COPY",["START"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "START length 3 index 2",
+          "input": [10,11,12],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",2],["COPY",["START"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "START length 3 index 3",
+          "input": [10,11,12],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[["EXISTS"],["EXISTS"],["EXISTS"],["IS",["START"],false]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "START length 3 alias -1",
+          "input": [10,11,12],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",-1],["COPY",["START"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "START length 3 alias -2",
+          "input": [10,11,12],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",-2],["COPY",["START"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "START length 3 alias -3",
+          "input": [10,11,12],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",-3],["COPY",["START"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "START first value null",
+          "input": [null],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",0],["COPY",["START"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "START first value false",
+          "input": [false],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",0],["COPY",["START"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "START first value zero",
+          "input": [0],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",0],["COPY",["START"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "START first value empty string",
+          "input": [""],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",0],["COPY",["START"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "START first value array",
+          "input": [[]],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",0],["COPY",["START"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "START first value object",
+          "input": [{}],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",0],["COPY",["START"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "START object property 0",
+          "input": {"0":1,"1":2,"length":2},
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE","0"],["COPY",["START"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "START object property 1",
+          "input": {"0":1,"1":2,"length":2},
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE","1"],["COPY",["START"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "START object property length",
+          "input": {"0":1,"1":2,"length":2},
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE","length"],["COPY",["START"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "START object property missing",
+          "input": {"0":1,"1":2,"length":2},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",{"missing":["IS",["START"],false]}],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "START object property constructor",
+          "input": {"0":1,"1":2,"length":2},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",{"constructor":["IS",["START"],false]}],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "START nested first element",
+          "input": {"outer":[[5],[6]]},
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE","outer",1,0],["COPY",["START"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "START nested end element",
+          "input": {"outer":[[5],[6]]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",{"outer":[[[[["EXISTS"],["IS",["START"],false]]]]]}],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "START containing element is not array root",
+          "input": [[5]],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",0],["COPY",["START"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "START numeric opcode",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",0],["COPY",[17],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "END at root null",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["END"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "END at root false",
+          "input": false,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["END"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "END at root true",
+          "input": true,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["END"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "END at root number",
+          "input": 1,
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["END"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "END at root string",
+          "input": "abc",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["END"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "END at root array",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["END"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "END at root empty array",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["END"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "END at root object",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["END"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "END length 0 index 0",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[["IS",["END"],true]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "END length 1 index 0",
+          "input": [10],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",0],["COPY",["END"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "END length 1 index 1",
+          "input": [10],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[["EXISTS"],["IS",["END"],true]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "END length 1 alias -1",
+          "input": [10],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",-1],["COPY",["END"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "END length 2 index 0",
+          "input": [10,11],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",0],["COPY",["END"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "END length 2 index 1",
+          "input": [10,11],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",1],["COPY",["END"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "END length 2 index 2",
+          "input": [10,11],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[["EXISTS"],["EXISTS"],["IS",["END"],true]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "END length 2 alias -1",
+          "input": [10,11],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",-1],["COPY",["END"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "END length 2 alias -2",
+          "input": [10,11],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",-2],["COPY",["END"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "END length 3 index 0",
+          "input": [10,11,12],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",0],["COPY",["END"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "END length 3 index 1",
+          "input": [10,11,12],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",1],["COPY",["END"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "END length 3 index 2",
+          "input": [10,11,12],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",2],["COPY",["END"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "END length 3 index 3",
+          "input": [10,11,12],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[["EXISTS"],["EXISTS"],["EXISTS"],["IS",["END"],true]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "END length 3 alias -1",
+          "input": [10,11,12],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",-1],["COPY",["END"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "END length 3 alias -2",
+          "input": [10,11,12],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",-2],["COPY",["END"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "END length 3 alias -3",
+          "input": [10,11,12],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",-3],["COPY",["END"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "END first value null",
+          "input": [null],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",0],["COPY",["END"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "END first value false",
+          "input": [false],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",0],["COPY",["END"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "END first value zero",
+          "input": [0],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",0],["COPY",["END"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "END first value empty string",
+          "input": [""],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",0],["COPY",["END"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "END first value array",
+          "input": [[]],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",0],["COPY",["END"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "END first value object",
+          "input": [{}],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",0],["COPY",["END"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "END object property 0",
+          "input": {"0":1,"1":2,"length":2},
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE","0"],["COPY",["END"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "END object property 1",
+          "input": {"0":1,"1":2,"length":2},
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE","1"],["COPY",["END"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "END object property length",
+          "input": {"0":1,"1":2,"length":2},
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE","length"],["COPY",["END"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "END object property missing",
+          "input": {"0":1,"1":2,"length":2},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",{"missing":["IS",["END"],false]}],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "END object property constructor",
+          "input": {"0":1,"1":2,"length":2},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",{"constructor":["IS",["END"],false]}],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "END nested first element",
+          "input": {"outer":[[5],[6]]},
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE","outer",1,0],["COPY",["END"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "END nested end element",
+          "input": {"outer":[[5],[6]]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",{"outer":[[[[["EXISTS"],["IS",["END"],true]]]]]}],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "END containing element is not array root",
+          "input": [[5]],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",0],["COPY",["END"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "END numeric opcode",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[["EXISTS"],["IS",[18],true]]]],["NODE"]]],
+          "output": true
+        }
+      ]
+    },
+    {
+      "name": "Structural patterns and value callbacks",
+      "desc": "Ordinary structural array patterns inspect one element per term, including the single permitted missing element at length. An anchor used as a value inside MAP/FILTER receives the element location; it is not a test of the array value itself.",
+      "tests": [
+        {
+          "name": "HAS first element",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[["START"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "HAS second element is not first",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[1,["START"]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "HAS existing last element is not end",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[["END"]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "HAS missing end element",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[1,["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "HAS empty array end",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "HAS empty array starts at zero",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[["START"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "HAS beyond single end position",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[["END"],["END"]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "HAS object key does not imply array location",
+          "input": {"0":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",{"0":["START"]}],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "IS first element",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",[[["START"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "IS second element is not first",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",[[1,["START"]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "IS existing last element is not end",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",[[["END"]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "IS missing end element",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",[[1,["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "IS empty array end",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",[[["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "IS empty array starts at zero",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",[[["START"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "IS beyond single end position",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",[[["END"],["END"]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "IS object key does not imply array location",
+          "input": {"0":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",{"0":["START"]}],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "MAP first flags",
+          "input": [0,0,0],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["START"]],["NODE"]]],
+          "output": [true,false,false]
+        },
+        {
+          "name": "MAP end flags",
+          "input": [0,0,0],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["MAP",["END"]],["NODE"]]],
+          "output": [false,false,false]
+        },
+        {
+          "name": "FILTER first value",
+          "input": [10,20,30],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",["START"]],["NODE"]]],
+          "output": [10]
+        },
+        {
+          "name": "FILTER end excludes existing elements",
+          "input": [10,20,30],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["FILTER",["END"]],["NODE"]]],
+          "output": []
+        }
+      ]
+    },
+    {
+      "name": "Array sequence assertions",
+      "desc": "In sequence context both anchors have zero width, may be repeated at the same cursor, and test absolute array boundaries. Neither advances beyond length. Empty arrays have a position at both boundaries, consistently with ordinary element-context assertions.",
+      "tests": [
+        {
+          "name": "HAS / Both on empty",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[["SEQ",["START"],["END"]]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "IS / Both on empty",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",[[["SEQ",["START"],["END"]]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "HAS / START alone on empty",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[["SEQ",["START"]]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "IS / START alone on empty",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",[[["SEQ",["START"]]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "HAS / END alone on empty",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[["SEQ",["END"]]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "IS / END alone on empty",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",[[["SEQ",["END"]]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "HAS / Repeated assertions",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[["SEQ",["START"],["START"],["END"],["END"]]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "IS / Repeated assertions",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",[[["SEQ",["START"],["START"],["END"],["END"]]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "HAS / Whole singleton",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[["SEQ",["START"],1,["END"]]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "IS / Whole singleton",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",[[["SEQ",["START"],1,["END"]]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "HAS / START after consumption",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[["SEQ",1,["START"]]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "IS / START after consumption",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",[[["SEQ",1,["START"]]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "HAS / END before consumption",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[["SEQ",["END"],1]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "IS / END before consumption",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",[[["SEQ",["END"],1]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "HAS / START consumes nothing",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[["SEQ",["START"],1,1]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "IS / START consumes nothing",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",[[["SEQ",["START"],1,1]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "HAS / Repeated end cursor",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[["SEQ",1,["END"],["END"]]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "IS / Repeated end cursor",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",[[["SEQ",1,["END"],["END"]]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "HAS / Existing element after END",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[["SEQ",1,["END"],["EXISTS"]]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "IS / Existing element after END",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",[[["SEQ",1,["END"],["EXISTS"]]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "HAS / Missing element at END",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[["SEQ",1,["END"],["NONE",["EXISTS"]]]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "IS / Missing element at END",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",[[["SEQ",1,["END"],["NONE",["EXISTS"]]]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "HAS / Prefix end is not whole end",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[["SEQ",1,["END"]]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "IS / Prefix end is not whole end",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",[[["SEQ",1,["END"]]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "HAS / Boundary after repetition",
+          "input": [1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[["SEQ",["START"],["REP",0,-1,1],["END"]]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "IS / Boundary after repetition",
+          "input": [1,1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",[[["SEQ",["START"],["REP",0,-1,1],["END"]]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "HAS / No implicit reanchoring",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[["SEQ",1,["SEQ",["START"],2]]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "IS / No implicit reanchoring",
+          "input": [1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",[[["SEQ",1,["SEQ",["START"],2]]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "HAS / Numeric anchors",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[["SEQ",[17],1,[18]]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "IS / Numeric anchors",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",[[["SEQ",[17],1,[18]]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "HAS / ANY selects end at end",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[["SEQ",1,["ANY",["START"],["END"]]]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "IS / ANY selects end at end",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",[[["SEQ",1,["ANY",["START"],["END"]]]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "HAS / ALL both boundaries empty",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[["SEQ",["ALL",["START"],["END"]]]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "IS / ALL both boundaries empty",
+          "input": [],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",[[["SEQ",["ALL",["START"],["END"]]]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "HAS / ALL both boundaries nonempty",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[["SEQ",["ALL",["START"],["END"]]]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "IS / ALL both boundaries nonempty",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",[[["SEQ",["ALL",["START"],["END"]]]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "HAS / NONE rejects start",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[["SEQ",["NONE",["START"]],1]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "IS / NONE rejects start",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",[[["SEQ",["NONE",["START"]],1]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Nested arrays have separate boundaries",
+          "input": [[1],[2]],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",[[["SEQ",[[["SEQ",["START"],1,["END"]]]],[[["SEQ",["START"],2,["END"]]]],["END"]]]]],["NODE"]]],
+          "output": true
+        }
+      ]
+    },
+    {
+      "name": "Regex assertions and Unicode",
+      "desc": "STR searches positions, while START and END anchor the whole virtual character array. Assertions are zero width, END is an absolute end rather than an end-of-line assertion, and supplementary characters occupy one position.",
+      "tests": [
+        {
+          "name": "Empty boundaries",
+          "input": "",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Repeated empty boundaries",
+          "input": "",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],["START"],["END"],["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Whole text",
+          "input": "abc",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],"abc",["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Anchored prefix",
+          "input": "abc",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],"ab"]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Reject displaced prefix",
+          "input": "zabc",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],"abc"]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Unanchored suffix",
+          "input": "zabc",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ","abc",["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Reject interior end",
+          "input": "abcz",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ","abc",["END"]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "START after first character",
+          "input": "ab",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ","a",["START"],"b"]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Repeated END",
+          "input": "ab",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ","ab",["END"],["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "No character after END",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ","a",["END"],["EXISTS"]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "END before missing character",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ","a",["END"],["NONE",["EXISTS"]]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Final newline is data",
+          "input": "abc\n",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ","abc",["END"]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Consume final newline",
+          "input": "abc\n",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ","abc\n",["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Final carriage return is data",
+          "input": "abc\r",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ","abc",["END"]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Line separator is data",
+          "input": "abc ",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ","abc",["END"]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Supplementary singleton",
+          "input": "🙂",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],128578,["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Supplementary suffix",
+          "input": "a🙂",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ","🙂",["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Two codepoints",
+          "input": "🙂a",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],128578,97,["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Combining mark separate",
+          "input": "é",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],"e",["END"]]]],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "Consume combining mark",
+          "input": "é",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],"é",["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Numeric anchors",
+          "input": "x",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",[17],"x",[18]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Zero-width bounded REP",
+          "input": "",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["REP",3,0,["START"]],["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "Zero-width unbounded REP",
+          "input": "a",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["REP",0,-1,["START"]],"a",["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "START may search to its boundary",
+          "input": "abc",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["START"]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "START on empty string",
+          "input": "",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["START"]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "START lone surrogate",
+          "input": "\ud800",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],"\ud800",["END"]]]],["NODE"]]],
+          "output": true,
+          "needLoneSurrogate": true
+        },
+        {
+          "name": "END may search to its boundary",
+          "input": "abc",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["END"]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "END on empty string",
+          "input": "",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["END"]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "END lone surrogate",
+          "input": "\ud800",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["SEQ",["START"],"\ud800",["END"]]]],["NODE"]]],
+          "output": true,
+          "needLoneSurrogate": true
+        }
+      ]
+    },
+    {
+      "name": "Scope and context",
+      "desc": "References to common expressions keep the caller location/cursor. A LOCAL node override is a new root, and the original location is restored afterward. A nested array resets anchors to that array. WITH does not relocate the current node.",
+      "tests": [
+        {
+          "name": "START EXPR keeps location",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1,"expr":["anchor",["START"]]},["AT",["NODE",0],["COPY",["EXPR","anchor"],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "START WITH keeps location",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",0],["COPY",["WITH","x",1,["START"]],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "START LOCAL override is a root",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",0],["COPY",["LOCAL",null,[[1]],["START"]],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "START LOCAL restores caller",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",0],["COPY",["LOCAL","ignored",["LOCAL",null,[[1]],["START"]],["START"]],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "START EXPR regex cursor",
+          "input": "x",
+          "jgraft": ["JGRAFT",{"v":1,"expr":["anchor",["START"]]},["COPY",["IS",["STR",["SEQ",["EXPR","anchor"],"x",["END"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "START alternate target is a new root",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",0],["COPY",["IS",[[1]],["START"]],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": false
+        },
+        {
+          "name": "END EXPR keeps location",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1,"expr":["anchor",["END"]]},["COPY",["HAS",[[["EXISTS"],["IS",["EXPR","anchor"],true]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "END WITH keeps location",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[["EXISTS"],["IS",["WITH","x",1,["END"]],true]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "END LOCAL override is a root",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[["EXISTS"],["IS",["LOCAL",null,[[1]],["END"]],false]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "END LOCAL restores caller",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["HAS",[[["EXISTS"],["IS",["LOCAL","ignored",["LOCAL",null,[[1]],["END"]],["END"]],true]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "END EXPR regex cursor",
+          "input": "x",
+          "jgraft": ["JGRAFT",{"v":1,"expr":["anchor",["END"]]},["COPY",["IS",["STR",["SEQ",["START"],"x",["EXPR","anchor"]]]],["NODE"]]],
+          "output": true
+        },
+        {
+          "name": "END alternate target is a new root",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["AT",["NODE",0],["COPY",["IS",[[1]],["END"]],["STASH","result"]]],["COPY",["STASH","result"],["NODE"]]],
+          "output": false
+        }
+      ]
+    },
+    {
+      "name": "Validation",
+      "desc": "Both expressions take no operands. Extra operands are structural errors in value, match, and regex contexts, including when the extra value is an expression that would otherwise fail.",
+      "tests": [
+        {
+          "name": "START numeric extra operand",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[17,0],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "END numeric extra operand",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[18,0],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "START extra null",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["START",null],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "START regex extra null",
+          "input": "x",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["START",null]]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "START extra 0",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["START",0],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "START regex extra 0",
+          "input": "x",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["START",0]]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "START extra \"x\"",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["START","x"],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "START regex extra \"x\"",
+          "input": "x",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["START","x"]]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "START extra [\"FAIL\"]",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["START",["FAIL"]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "START regex extra [\"FAIL\"]",
+          "input": "x",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["START",["FAIL"]]]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "START extra {}",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["START",{}],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "START regex extra {}",
+          "input": "x",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["START",{}]]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "END extra null",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["END",null],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "END regex extra null",
+          "input": "x",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["END",null]]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "END extra 0",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["END",0],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "END regex extra 0",
+          "input": "x",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["END",0]]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "END extra \"x\"",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["END","x"],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "END regex extra \"x\"",
+          "input": "x",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["END","x"]]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "END extra [\"FAIL\"]",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["END",["FAIL"]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "END regex extra [\"FAIL\"]",
+          "input": "x",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["END",["FAIL"]]]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "END extra {}",
+          "input": [1],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["END",{}],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        },
+        {
+          "name": "END regex extra {}",
+          "input": "x",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["IS",["STR",["END",{}]]],["NODE"]]],
+          "errors": {"INVALID_GRAFT":true}
+        }
+      ]
+    }
+  ]
+}
