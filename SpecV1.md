@@ -473,11 +473,11 @@ captures from deeper arrays or strings.  Consider this example:
 
     [[
       [SEQ,
-        [REP, 0, -1, [EXISTS]],
-        { a: [[ [SEQMAX, "from_a", [REP, 0, -1, [EXISTS]] ] ]] },
-        [REP, 0, -1, [EXISTS]],
-        { b: [[ [SEQMAX, "from_b", [REP, 0, -1, [EXISTS]] ] ]] },
-        [REP, 0, -1, [EXISTS]]
+        [REP],
+        { a: [[ [SEQMAX, "from_a", [REP] ] ]] },
+        [REP],
+        { b: [[ [SEQMAX, "from_b", [REP] ] ]] },
+        [REP]
       ]
     ]]
 
@@ -489,8 +489,9 @@ inner array has already been resolved at that level before becoming a
 successful substructure match in the context of the current array, so those
 sequences do not participate in resolving the sequences of the current array.
 This is given deterministic behavior by selecting the earliest candidate array
-element.  In the example, this rule uses the captures from array elements 0 and
-1, respectively.
+element.  In the example, this rule uses the captures from the earliest array
+element having an array at property "a" followed by the first element after
+that having an array at property "b".
 
 Sequence context affects the behavior of several other match expressions:
 
@@ -1759,8 +1760,8 @@ property doesn't exist on the target.
 
 With no arguments, this matches when the current node is an array.
 
-The `length` / `offset` argument is interpreted in value-context and
-must resolve to an integer, or generates `INVALID_OPERAND`.
+The `length` / `offset` argument is interpreted in value-context and must
+resolve to an integer, or the expression fails with `INVALID_OPERAND`.
 
 With one argument, it asserts the current node is an array with at least this
 number of elements in the context of `HAS`, or exactly this number of elements
@@ -1774,9 +1775,9 @@ the array:
 
     [ARRAY, 3, true]
     // in HAS context is equivalent to
-    [[ [EXISTS], [EXISTS], [EXISTS], true ]]
+    [[ [SEQ, [REP,3,3]], true ]]
     // in IS context is equivalent to
-    [[ [EXISTS], [EXISTS], [EXISTS], true, [SEQ, [REP,0,-1,[EXISTS]] ] ]]
+    [[ [SEQ, [REP,3,3]], true, [SEQ, [REP]] ]]
 
 The `offset` may be negative to count backward from the end of the array.
 An `offset` out of bounds is not an error and simply tests false.
@@ -1946,7 +1947,10 @@ the final state with the most elements for sequence 1 is a split of
 
 #### <span id="ex-rep">REP</span>
 
-    [REP, min, max, match_expr]
+    [REP]                         // consume any number of elements
+    [REP, min]                    // consume at least min elements
+    [REP, min, max]               // consume between min and max elements
+    [REP, min, max, match_expr]   // match between min and max elements
 
 Match repetitions of an expression against a series of array elements.
 
@@ -1955,6 +1959,9 @@ evaluate to integers.  The value of `min` must be non-negative.  The value of
 `max` may be -1 as an alias for infinity, or 0 as an alias for "same as min".
 Otherwise, `max` must have a value greater or equal than `min`.
 `match_expr` is a [match context](#match-context) expression.
+When the `match_expr` argument is omitted, it defaults to `[EXISTS]` which
+basically just consumes elements.  When the `max` argument is omitted, it
+defaults to -1.  When the `min` argument is omitted, it defaults to 0.
 
 This expression is illegal outside of [sequence context](#matching).
 It produces all the successor cursor positions that can satisfy a count of
@@ -1962,13 +1969,16 @@ matches of the expression between `min` and `max`.  (Of course, implementations
 need to limit the successor states to the length of the array and handle
 expressions which consume zero elements when `max` is infinite.)
 
-Regex Notation | REP notation
----------------|--------------------------
- `(...)*`      | [REP,0,-1,...]
- `(...)?`      | [REP,0,1,...]
- `(...)+`      | [REP,1,-1,...]
- `(...){5}`    | [REP,5,0,...]
- `(...){3,5}`  | [REP,3,5,...]
+Regex Notation               | REP notation
+-----------------------------|--------------------
+ `.*` (where . includes \n)  | [REP]
+ `.+`                        | [REP,1]
+ `.?`                        | [REP,0,1]
+ `(...)*`                    | [REP,0,-1,...]
+ `(...)+`                    | [REP,1,-1,...]
+ `(...)?`                    | [REP,0,1,...]
+ `(...){5}`                  | [REP,5,0,...]
+ `(...){3,5}`                | [REP,3,5,...]
 
 #### <span id="ex-start">START</span>
 
