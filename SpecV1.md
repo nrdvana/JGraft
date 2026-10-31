@@ -37,8 +37,8 @@ indicates the operation and remaining elements become an argument list for it.
 The operation (first element) may be specified using either a name or numeric
 ID; the ID is useful for compact encoding in production, and the name is
 useful for development and debugging.
-In [contexts](#contexts) allowing a mixture of data and expressions, array
-literal values get "escaped" by wrapping them with another array.
+In [contexts](#argument-contexts) allowing a mixture of data and expressions,
+array literal values get "escaped" by wrapping them with another array.
 In other words, in the JSON representation of JGraft in a context that allows
 data and expressions, an array containing exactly one element which is also an
 array means a literal array having the elements of the inner array.
@@ -53,8 +53,9 @@ structure in its JSON-compatible form and interpret it on the fly.
 They should make it clear to the developer whether the data structure the
 application code interacts with is using objects and literal arrays, or the
 direct "arrays-are-special" representation of JGraft.
-The remainder of this specification uses the JSON form of actions and
-expressions, since the object model of a host language is left unspecified.
+Since the object model of a host language is left unspecified, the remainder of
+this specification uses the JSON representation of actions and expressions,
+using JavaScript-like notation for readability.
 
 ### Argument Contexts
 
@@ -107,7 +108,7 @@ Regular expressions are implemented using mostly the same specification
 structure as general matching, but operating on a virtual array of characters.
 
   * One-character strings describe characters
-  * Strings with more than one character implicitly become [`SEQ`](#ex-seq)
+  * Strings of other lengths implicitly become [`SEQ`](#ex-seq)
     expressions, matching a sequence of characters
   * Non-negative integers describe unicode codepoints
   * Arrays represent expressions; match expressions become part of the matching
@@ -1308,7 +1309,7 @@ Examples:
                                      // delete node.x.x;
             'x',[TEMP,0,'x'],        // tmp['0'].x= node.x;
                                      // delete node.x;
-            [TEMP,0],'x']]           // node.x= tmp['0'];
+            [TEMP,0],'x']            // node.x= tmp['0'];
                                      // delete tmp['0'];
 
 ### <span id="act-splice">SPLICE</span>
@@ -1382,7 +1383,7 @@ the form:
       path:  // array of path elements from root of match to target
       ofs:   // starting offset
       len:   // number of elements matched
-      lim:   // pos + len
+      lim:   // ofs + len
     }
 
 These may be used as the argument for [`SLICE`](#ex-slice).  For example, to
@@ -1425,7 +1426,7 @@ stash namespace itself as an object, but the root may not be overwritten.
 Reference data from the [const namespace](#namespaces).
 
 The arguments form a [path](#paths).  The path may be empty to reference the
-stash namespace itself as an object.  This reference expression cannot be used
+const namespace itself as an object.  This reference expression cannot be used
 as the target of a write operation.
 
 #### <span id="ex-node">NODE</span>
@@ -2034,7 +2035,7 @@ another array or object.
     [SLICE, value_expr, ofs]
     [SLICE, value_expr, ofs, len]
     [SLICE, config_obj]
-    // Where config_obj is of the form:
+    // Where config_obj must evaluate to an object of the form:
     // { ofs: N, len: N, lim: N, path: P }
     // like the objects of the capture namespace
 
@@ -2049,11 +2050,11 @@ also evaluate to an integer, and may also be negative to count backward from
 the `LENGTH` of the value in which case it represents a limiting offset.
 If `ofs` or `len` are not integers the expression fails with `INVALID_OPERAND`.
 
-In the third form, a `config_obj` may be used to pass values for the starting
-offset, count of elements, limiting offset, and an optional `path` under the
-current node.  The `path` is a plain array, not an expression, becoming the
-implied expression `[NODE, path]`.  Lacking `path`, the `SLICE` applies to the
-current node itself.
+In the third form, a `config_obj` (object value, after any expression
+evaluation) may be used to pass values for the starting offset, count of
+elements, limiting offset, and an optional `path` under the current node.
+The `path` is an array value, becoming the implied expression `[NODE, path]`.
+Lacking `path`, the `SLICE` applies to the current node itself.
 The positional properties of the object may not be negative, and if all three
 are given, they must agree such that `ofs + len == lim` or it results in
 `INVALID_OPERAND`.  When one property is absent, it is derived from the other
@@ -2408,12 +2409,13 @@ value is the `FAIL` expression, which fails with error `INVALID_TARGET`.
 Conditions are tested in argument order, and only the selected value-context
 expression gets evaluated.
 
-Because [match context](#contexts) lets a plain value describe a `HAS` match
-against the current node, this can be an efficient way to choose an expression
-based on its value.  If the value you want to compare is not the current node,
-you can temporarily set it up as the current node with [`LOCAL`](#ex-local).
+Because [match context](#argument-contexts) lets a plain value describe a `HAS`
+match against the current node, this can be an efficient way to choose an
+expression based on its value.  If the value you want to compare is not the
+current node, you can temporarily set it up as the current node with
+ [`LOCAL`](#ex-local).
 
-#### <span id="ex-case">FAIL</span>
+#### <span id="ex-fail">FAIL</span>
 
     [FAIL]
 
@@ -2434,9 +2436,12 @@ and "false" may be cast to booleans, and every other value generates
 
 If you want something closer to the "everything is true unless it is false-ish"
 seen in many programming languages, consider adding your preferred list of
-false values to the `ANY` expression:
+false values to a `NONE` expression, optionally wrapped with an `EXISTS` test:
 
-    [CASE, [EXISTS], [NOT, [ANY, false, 0, "", null]]]
+    // return true/false for current node, fail on undefined
+    [CASE, [EXISTS], [NONE, false, 0, "", null]]
+    // return true/false for an arbitrary value expression
+    [IS, value_expr, [NONE, false, 0, "", null]]
 
 #### <span id="ex-castnum">CASTNUM</span>
 
@@ -2447,7 +2452,7 @@ Cast a value to a number.
 
 Numeric values always pass through.  Any string which parses as a valid number
 according to JSON syntax also become a number, but non-numeric characters like
-whitespace are not permitted.  (use `SPLIT`'s `trim` feature for that)
+whitespace are not permitted.
 Extensions to the data model permitted by the implementation may also support
 numification, as decided by the implementation.
 Numbers outside the range supported by an implementation generate
