@@ -292,28 +292,29 @@ within that use `COPY`, `MOVE`, or other actions to alter the tree.
 
 The list of actions is fairly concise:
 
-Name                  | ID | Description
-----------------------|----|----------------------------------------------
-[JGRAFT](#act-jgraft) | -1 | Declare metadata; top-level element
-[AT](#act-at)         |  0 | Navigate to sub-node and execute sub-actions
-[MATCH](#act-match)   |  1 | Assert current node matches pattern
-[IF](#act-if)         |  2 | Choose action based on which pattern matches
-[COPY](#act-copy)     |  3 | Assign-by-value to properties
-[MOVE](#act-move)     |  4 | Move existing values between properties
-[SPLICE](#act-splice) |  5 | Perform standard splice() on an array
-[SPLIT](#act-split)   |  6 | Split string into array, apply actions, re-join
-[LOG](#act-log)       | 10 | Emit diagnostic message and data
+Name                    | ID | Description
+------------------------|----|----------------------------------------------
+[JGRAFT](#act-jgraft)   | -1 | Declare metadata; top-level element
+[RAISE](#act-raise)     |  0 | Emit diagnostics, or reject input
+[AT](#act-at)           |  1 | Navigate to sub-node and execute sub-actions
+[ATSPLIT](#act-atsplit) |  2 | Navigate into SPLIT, apply actions, re-JOIN
+[MATCH](#act-match)     |  3 | Assert current node matches pattern
+[IF](#act-if)           |  4 | Choose action based on which pattern matches
+[COPY](#act-copy)       |  5 | Assign-by-value to properties
+[MOVE](#act-move)       |  6 | Move existing values between properties
+[SPLICE](#act-splice)   |  7 | Perform standard splice() on an array
 
-The `SPLICE` action is an optimization vs. `COPY` or `MOVE` for making
-changes to a range of an array.
+The `RAISE` action can be used to provide improved diagnostics to a user
+applying a JGraft, or within `IF` to detect un-handled inputs that should be
+rejected.
 
-The `SPLIT` action is a tool for parsing strings in order to make changes
+The `ATSPLIT` action is a tool for tokenizing strings in order to make changes
 within them, then reassembling the modified string.  It can also be used to
 access specific substrings and copy them into stash variables for use in other
 actions.
 
-The `LOG` action can be used to provide improved diagnostics to a user
-applying a JGraft.
+The `SPLICE` action is an optimization vs. `COPY` or `MOVE` for making
+changes to a range of an array.
 
 ## Expression Overview
 
@@ -793,9 +794,9 @@ expression that can only return strings, it may end with `INVALID_GRAFT` before
 it even begins executing the JGraft, while simpler implementations would report
 this at runtime as `INVALID_OPERAND`.  However, `INVALID_TARGET` errors within
 match expressions are never upgraded to `INVALID_GRAFT`, as described below,
-and intentional failures generated from expressions (like `LOG` with level
-"fail", `FAIL`, or `CASE` lacking an "else") are also never upgraded to
-`INVALID_GRAFT`.  In the remaining cases, to upgrade an `INVALID_TARGET` error
+and intentional failures (like `RAISE` with level "fail", `FAIL`, or `CASE`
+lacking an "else") are also never upgraded to `INVALID_GRAFT`.
+In the remaining cases, to upgrade an `INVALID_TARGET` error
 to `INVALID_GRAFT` the static analysis must prove that in the *complete* graft
 semantics (such as the short-circuiting behavior of `AND`, `OR`, and `NOT`,
 which may be used intentionally to guard deeper expressions from evaluation
@@ -955,17 +956,107 @@ The algorithm when beginning a `JGRAFT` action is roughly:
         expresison that invokes it.
   - Set the `stash` namespace to a new empty object.
 
+### <span id="act-raise">RAISE</span>
+
+    ['RAISE', level, message]
+    ['RAISE', level, message, data]
+
+As JGraft applies a patch it may emit diagnostic information, such as when
+a match succeeded at an offset from the declared array.  You can emit your own
+custom diagnostics as well, using this action.  The motivation is that while
+a tool like `patch` can make a fairly straightforward diagnostic about why
+applying a text diff failed, a JGraft mismatch can be much harder to explain.
+An author of a JGraft might have more domain-specific information about why
+something wouldn't match, and can encode that with some `IF` actions in a way
+that the graft operation fails with a useful error message.
+
+The `level` argument (literal non-expression) is one of the following strings,
+or the corresponding ID:
+
+String | ID | Meaning
+-------|----|----------------------------------------------------------------
+"info" |  0 | shown if the user asks for details
+"warn" |  1 | flagged for the user even if they didn't ask for details
+"fail" |  2 | a fatal error that ends the graft attempt with `NO_MATCH`
+
+`message` is evaluated in [value context](#value-context).  It must resolve
+to a string and should be generally printable, and may not contain Unicode
+Surrogates, Noncharacters, or control characters (codepoints 0x00–0x1F and
+0x7F–0x9F).
+
+`data` is also evaluated in [value context](#value-context) but may resolve
+to any type of value.  It provides data to the user relevant to the message.
+This may be shown to the user in some form such as JSON, or inspected
+programmatically by code using a JGraft library.
+If the data is not being consumed immediately, implementations should ensure
+that it remains stable, such as deep-cloning it or setting up copy-on-write.
+This is already handled if the standard operation of the engine is to
+shallow-clone the ancestors of each change.
+
+Invalid literal arguments for `level` or `message` fail with `INVALID_GRAFT`.
+If the `message` is an expression returning an invalid value, the action
+fails with `INVALID_TARGET` (with the usual error escalation rules).
+
 ### <span id="act-at">AT</span>
 
     ['AT', path, subaction1, subaction2...]
 
-Change the current node to a sub-node.
+Navigate to a [path](#paths) within the current node, then execute actions.
 
-Navigate to a [path](#paths) within the current node, then execute all
-sub-actions with that node as the current node.  A nonexistent path counts as
-`INVALID_TARGET`.  The current node for an action may never reference data
-outside the input tree, so `path` is limited to `NODE` expressions.
-The change to the current node is only visible within the scope of this action.
+The `path` argument (path context) must refer to the current node or an
+existing sub-node.  This will become the current node for the duration of the
+execution of the sub-actions.  A nonexistent path fails with `INVALID_TARGET`,
+but a path referring to the wrong namespace fails with `INVALID_OPERAND` (with
+the usual error escalation rules).
+
+### <span id="act-atsplit">ATSPLIT</span>
+
+    ['ATSPLIT', path, split_spec, subaction1, subaction2...]
+
+Navigate into a tokenized view of a node, then execute actions.
+
+This is a combination of the `AT` action and `SPLIT` + `JOIN` expresisons.
+For a target node at `path`, it changes the current node to the array returned
+by the [`SPLIT` function](#ex-split) called on the target node,
+then executes actions on that array.  After all subactions complete, the value
+of the current node (which may not even be the same array after `COPY` or
+`MOVE`) is passed to the [`JOIN` function](#ex-join) along with `split_spec` to
+build a new string value for the target node.  The `path` argument is defined
+per the `AT` action, and the `split_spec` argument is defined per the `SPLIT`
+function.  The `path` for the target node is not evaluated a second time when
+assigning the new value, nor are any of the expressions within `split_spec`.
+(this means implementations must be able to pass pre-evaluated `split_spec` to
+their `SPLIT` and `JOIN` functions)
+
+`ATSPLIT` is similar to the following, but with the added benefit of changing
+the current node to the temporary array, whereas the example below would need
+to repeatedly act on `[STASH,0]`:
+
+    [AT, path,
+      [COPY, [SPLIT, split_spec], [STASH,0]],
+      subaction1,
+      ...
+      subactionN,
+      [COPY, [JOIN, split_spec, [STASH,0]], [NODE]]
+    ]
+
+`ATSPLIT` is the primary tool used to re-implement text diff/patch behavior:
+
+    [ATSPLIT, [NODE],
+      { sep: [ANY, "\n", "\r\n"], default: "\n", trim: [REP,0,-1," "] },
+      [MATCH,
+        [ARRAY, 10,
+          "Line ten",
+          "Line eleven",
+          "Line twelve",
+          "Line thirteen"
+        ],
+        [SPLICE, 11, 2,
+          "New Line eleven"
+          // no line 12
+        ]
+      ],
+    ]
 
 ### <span id="act-match">MATCH</span>
 
@@ -1240,230 +1331,6 @@ If [`SPLIT` metadata](#split-metadata) is present on the array it gets likewise
 spliced.  The replacement values may also introduce `SPLIT` metadata to the
 target array if none was present, in the same manner as if each element of the
 result of the splice had been inserted at the end of a fresh array.
-
-### <span id="act-split">SPLIT</span>
-
-    ['SPLIT', split_spec, subaction1, subaction2...]
-
-Execute actions within a temporary array of substrings.
-
-This can only be applied at a string node, or it fails with `INVALID_TARGET`.
-It splits the string according to `split_spec` to create an array, then runs
-each sub-action on that array, then re-assembles the string from the elements
-of the array.  The separators and any trimmed characters are preserved to use
-when re-assembling the string; the generated array carries them as hidden
-metadata.  Actions that modify the array also modify the metadata in parallel
-as described below.
-
-The `split_spec` may be a simple string used as a verbatim separator, a match
-expression to be evaluated in [regex longest-match context](#regex-context),
-or a literal object with a more elaborate specification:
-
-    {"sep": ...,        // A string or regex to split on
-     "element": ...,    // A regex that must match prior to testing for 'sep'
-     "default": ...,    // The default separator used for joining new elements
-     "keep": ...,       // Preserve the separator within the generated array
-     "ltrim": ...,      // A string or regex to trim from start of elements
-     "rtrim": ...,      // A string or regex to trim from end of elements
-     "trim": ...,       // sets 'ltrim' and 'rtrim' to the same value
-     "discard": bool,   // Don't preserve trimmed chars when re-assembling
-    }
-
-The `split_spec` object must be literal, not value context, since it needs to
-be able to contain expressions without evaluating them.  Unknown properties
-and illegal property values count as `INVALID_OPERAND`.  The `sep` parameter
-is interpreted in value context.  If the root is a match expression it is
-treated as a regular expression to be applied repeatedly when searching for
-separators, but otherwise it is evaluated immediately and must return a
-string.  If the `sep` parameter is a regular expression and `keep` is not
-used, the `default` parameter is required, otherwise it is ignored.
-It is also declared in value context, and must resolve to a string.
-
-The split operation iterates through the characters of the string looking for
-[the longest match](#regex-context) of the separator pattern.  If you specify
-an `element` regex, a test for separator will only match when the element
-characters (from the end of the previous separator until the current match
-position) also match the `element` pattern.   The `element` pattern is
-implicitly anchored to the start and end of the element characters.
-This gives you a way to pass over escape sequences without accidentally
-detecting a separator, and without requiring the complexity of "look-behind"
-or "look-ahead" or capture groups in the separator pattern.
-
-A zero-length separator (including a successful zero-length regex match)
-is considered to match at every boundary between characters except the one
-between the end of the previous separator and the following character
-(i.e. the current position) which prevents an infinite loop of empty
-elements.  This means the separator of `''` can be used to split the string
-into its individual characters.  It also means that a regular expression which
-can match the empty string will generate a single-character element any time
-none of the alternatives matched.
-
-For example, the pattern `/a*/` applied to the string "baabca" results in:
-
-    ['b', 'b',  'c', '']
-
-(Note that splitting a string into an array of individual characters is a
-quick way to reach a `RESOURCE_LIMIT` error)
-
-Once a separator is found, it uses the value of `keep` to determine what to do
-with it.  The default is to hide the separator from the resulting array but
-store it (attached invisibly to the preceding element) until it is time to
-reconstruct the string.
-The value "<" means to keep the separator as part of the current element in
-the generated array, and likewise ">" means to keep it as part of the
-following element.  The value '@' means to include the separator as its own
-element of the resulting array.  In all three cases, separator metadata is not
-used, and elements get reassembled with an empty string as the separator since
-the actual separator is part of the data.
-`default` must be specified when `sep` is a regular expression and `keep` is
-not used; if `sep` is a string then it also implies `default` and if `keep`
-is used then separators are not relevant to the join operation.
-
-`ltrim` and `rtrim` are used to hide unimportant characters from the resulting
-array element strings, such as leading/trailing whitespace (like `diff -b`)
-and you can (exclusive to the others) specify `trim` to set them both to the
-same value.  `ltrim` is implicitly anchored to the start of the element string,
-and `rtrim` is implicitly anchored to the end, allowing a common value for
-`trim`.  The longest match of `ltrim` gets removed first, followed by removing
-the longest match of `rtrim` from the remainder, to resolve cases where the
-trimming could overlap.
-If you want to permanently remove the trimmed characters, use `discard: true`.
-
-If the separators are not added to the array using `keep` and are not a
-constant string, they are stored in a parallel array of metadata associated
-with the array, referred to as [`SPLIT` metadata](#split-metadata).  Likewise,
-trimmed characters are stored there if not being discarded.  As modifications
-are applied to the array to rearrange its elements, this metadata is modified
-in parallel as described below.
-
-Once all actions have been applied to the array, it gets reassembled into a
-string.  Each element must be a string, or it fails with `INVALID_TARGET`.
-If `discard` is not true, each element gets any trimmiings stored in the
-`SPLIT` metadata re-added.
-If `keep` was not used and `sep` is not a constant, it looks for captured
-separators in the `SPLIT` metadata, falling back to the `default` separator.
-A separator is appended only if there is a following element.  In order to get
-a "newline at the end of the file" the final element of the array needs to be
-an empty string.  It is the responsibility of the nested actions to preserve
-or add this element as desired.
-Note that the distinct handling of parameters here matters for the edge case of
-completely replacing the current array with the contents from a different
-`SPLIT` operation.  The *presence* of `SPLIT` metadata in the array does not
-automatically mean it should be used.
-
-`SPLIT` is the primary tool used to re-implement text diff/patch behavior:
-
-    [SPLIT,
-      { sep: [ANY, "\n", "\r\n"], default: "\n", trim: [REP,0,-1," "] },
-      [MATCH,
-        [ARRAY, 10,
-          "Line ten",
-          "Line eleven",
-          "Line twelve",
-          "Line thirteen"
-        ],
-        [SPLICE, 11, 2,
-          "New Line eleven"
-          // no line 12
-        ]
-      ],
-    ]
-
-#### Split Metadata
-
-`SPLIT` metadata carries the separators and end-trimmings of a `SPLIT` action.
-It associates *to the array* as a parallel array of per-element data, rather
-than being bound to the values themselves.  The separator is paired to the
-element it *followed* and the final element will not logically have one since
-a string ending with a separator receives a final element of the empty string,
-though for the purposes of this algorithm it receives a copy of the separator
-of the preceeding element.
-Only one instance of `SPLIT` metadata may be associated to any one array.
-It also contains an `origin` tag; in any case where values are transferred
-between element references the `SPLIT` metadata will only carry over when both
-arrays have metadata of the same `origin`.
-
-Actions and expressions that operate on an array need to do a bit of extra work
-when `SPLIT` metadata is present in order to keep it associated with the
-correct element value.  To avoid this extra work, implementations should only
-generate `SPLIT` metadata when the separator is not a constant or when trimming
-is requested and not being discarded.
-
-Individual actions and expressions may define their handling of `SPLIT`
-metadata more specifically, but in general:
-
-  * If an array with `SPLIT` metadata is receiving an element in an "insert"
-    manner from a reference expression to an array element having `SPLIT`
-    metadata of the same `origin`, the element metadata carries over.
-    (does not include function expressions derived from reference expressions,
-    but does include references via a bare integer argument)
-  * If an array with `SPLIT` metadata is receiving an element in an "insert"
-    manner from a direct reference to an array without `SPLIT` metadata of the
-    same `origin`, the element receives "adjacent element metadata" described
-    below.
-  * If an array with `SPLIT` metadata is receiving a new value for an existing
-    element in an "overwrite" manner, the existing separator and trimming is
-    unchanged, regardless of the source.
-  * If an array without `SPLIT` metadata is receiving an element from an
-    array with `SPLIT` metadata in an "insert" manner, the destination array
-    is upgraded to have `SPLIT` metadata (of the same `origin`) to preserve the
-    metata for that element.
-  * Construction of new arrays and appending elements to arrays count as an
-    "insert" operation.
-
-`SPLIT` metadata must describe all array elements uniformly.  If separators
-exist for any element, separators must exist for all elements, and likewise for
-trimmings.  To resolve this for elements added to the array, the element
-receives "adjacent element metadata".  For separators, new elements receive the
-separator of the preceeding elemnent, or at the start of the array, the
-following element.  (arrays of no elements drop the `SPLIT` metadata)
-If trimmings are present, the new element receives the left-trimming of the
-previous line, or an empty string if there is no previous line.
-Right-trimmiing for new elements is always the empty string.
-These rules are all designed around the concept of preserving indent and
-comments in text while allowing changes to the strings within, and extending
-indent to subsequent lines without replicating comments.
-
-### <span id="act-log">LOG</span>
-
-    ['LOG', level, message]
-    ['LOG', level, message, data]
-
-As JGraft applies a patch it may emit diagnostic information, such as when
-a match succeeded at an offset from the declared array.  You can emit your own
-custom diagnostics as well, using this action.  The motivation is that while
-a tool like `patch` can make a fairly straightforward diagnostic about why
-applying a text diff failed, a JGraft mismatch can be much harder to explain.
-An author of a JGraft might have more domain-specific information about why
-something wouldn't match, and can encode that with some `IF` actions in a way
-that the graft operation fails with a useful error message.
-
-The `level` argument (literal non-expression) is one of the following strings,
-or the corresponding ID:
-
-String | ID | Meaning
--------|----|----------------------------------------------------------------
-"info" |  0 | shown if the user asks for details
-"warn" |  1 | flagged for the user even if they didn't ask for details
-"fail" |  2 | a fatal error that ends the graft attempt with `NO_MATCH`
-
-`message` is evaluated in [value context](#value-context).  It must resolve
-to a string and should be generally printable, and may not contain unicode
-Surrogates, Noncharacters, or control characters (codepoints 0x00–0x1F and
-0x7F–0x9F).
-
-`data` is also evaluated in [value context](#value-context) but may resolve
-to any type of value.  It provides data to the user relevant to the message.
-This may be shown to the user in some form such as JSON, or inspected
-programmatically by code using a JGraft library.
-If the data is not being consumed immediately, implementations should ensure
-that it remains stable, such as deep-cloning it or setting up copy-on-write.
-This is already handled if the standard operation of the engine is to
-shallow-clone the ancestors of each change.
-
-Errors in `level` or literal `message` fail with `INVALID_GRAFT`.
-If the `message` is an expresion returning an invalid value, the expression
-fails with `INVALID_TARGET` with the usual rules for upgrading the error.
 
 ## Expressions
 
@@ -2312,32 +2179,174 @@ from computed values.
     [SPLIT, split_spec]                 // operate on current node
     [SPLIT, split_spec, string_expr]
 
-Split a string into an array.
+Split a string into an array, optionally preserving separators and trimmed
+strings in hidden metadata.
 
-`split_spec` is declared using the same argument context defined by the
-[`SPLIT` action](#act-split).  (it may *contain* expressions, so it is not
-itself value-context)  In the 1-argument form, the current node must be a
-string.  Otherwise the value-context `string_expr` must evaluate to a string.
-Non-strings result in `INVALID_TARGET`.
-The algorithm of the `SPLIT` action (configured by the `split_spec` value) is
-applied to the string, and the array is returned.
+In the one-argument form, the input is the current node, else the input comes
+from evaluating `string_expr` (value context).  The input must be a string, or
+`SPLIT` fails with `INVALID_TARGET`.  The validity of the input should be
+checked after the validity of `split_spec`.
+
+The `split_spec` argument may be a simple string used as a verbatim separator,
+a match expression to be evaluated in
+[regex longest-match context](#regex-context), a reference expression resolving
+to one of those two, or a literal object with a more elaborate specification:
+
+    {"sep": ...,        // A string or regex to split on
+     "element": ...,    // A regex that must match prior to testing for 'sep'
+     "default": ...,    // The default separator used for joining new elements
+     "keep": ...,       // Preserve the separator within the generated array
+     "ltrim": ...,      // A string or regex to trim from start of elements
+     "rtrim": ...,      // A string or regex to trim from end of elements
+     "trim": ...,       // sets 'ltrim' and 'rtrim' to the same value
+     "discard": bool,   // Don't preserve trimmed chars when re-assembling
+    }
+
+The `split_spec` object must be literal, not value context, since it needs to
+be able to contain expressions without evaluating them.  Unknown properties
+and illegal literal property values count as `INVALID_OPERAND`.
+If the `sep` parameter is an [expression reference](#ex-expr), it is first
+resolved to something that isn't an expression reference.  Then, if the root is
+a match expression it is treated as a regular expression to be applied
+repeatedly when searching for separators, but otherwise it is evaluated
+immediately and must return a string.  `default` is not used by `SPLIT`, but
+defined here since the specification is shared with `JOIN`.
+
+The split operation iterates through the characters of the string looking for
+[the longest match](#regex-context) of the separator pattern.  If you specify
+an `element` regex, a test for separator will only match when the element
+characters (from the end of the previous separator until the current match
+position) also match the `element` pattern.   The `element` pattern is
+implicitly anchored to the start and end of the element characters.
+This gives you a way to pass over escape sequences without accidentally
+detecting a separator, and without requiring the complexity of "look-behind"
+or "look-ahead" or capture groups in the separator pattern.
+
+A zero-length separator (including a successful zero-length regex match)
+is considered to match at every boundary between characters except the current
+position (meaning the boundary between the end of the previous separator and
+the following character) which prevents an infinite loop of empty
+elements.  This means the separator of `''` can be used to split the string
+into its individual characters.  It also means that a regular expression which
+can match the empty string will generate a single-character element any time
+none of the alternatives matched.
+
+For example, the pattern `/a*/` applied to the string "baabca" results in:
+
+    ['b', 'b',  'c', '']
+
+(Note that splitting a string into an array of individual characters is a
+quick way to reach a `RESOURCE_LIMIT` error)
+
+Once a separator is found, it uses the value of `keep` to determine what to do
+with it.  The default is to hide the separator from the resulting array but
+store it (attached invisibly to the preceding element) until it is time to
+reconstruct the string.
+The value "<" means to keep the separator as part of the current element in
+the generated array, and likewise ">" means to keep it as part of the
+following element.  The value '@' means to include the separator as its own
+element of the resulting array.  In all three cases, separator metadata is not
+used, and elements get reassembled with an empty string as the separator since
+the actual separator is part of the data.
+
+`ltrim` and `rtrim` are used to hide unimportant characters from the resulting
+array element strings, such as leading/trailing whitespace (like `diff -b`)
+and you can (exclusive to the others) specify `trim` to set them both to the
+same value.  `ltrim` is implicitly anchored to the start of the element string,
+and `rtrim` is implicitly anchored to the end, allowing a common value for
+`trim`.  The longest match of `ltrim` gets removed first, followed by removing
+the longest match of `rtrim` from the remainder, to resolve cases where the
+trimming could overlap.
+If you want to permanently remove the trimmed characters, use `discard: true`.
+
+If the separators are not added to the array using `keep` and are not a
+constant string, they are stored in a parallel array of metadata associated
+with the array, referred to as [`SPLIT` metadata](#split-metadata).  Likewise,
+trimmed characters are stored there if not being discarded.  As modifications
+are applied to the array to rearrange its elements, this metadata is modified
+in parallel as described below.
+
+##### Split Metadata
+
+"SPLIT metadata" carries the hidden separators and end-trimmings from `SPLIT`.
+It associates *to the array* as a parallel array of per-element data, rather
+than being bound to the values themselves.  The separator is paired to the
+element it *followed* and the final element will not logically have one since
+a string ending with a separator receives a final element of the empty string,
+though for the purposes of this algorithm it receives a copy of the separator
+of the preceeding element.
+Only one instance of `SPLIT` metadata may be associated to any one array.
+It also contains an `origin` tag; in any case where values are transferred
+between element references the `SPLIT` metadata will only carry over when both
+arrays have metadata of the same `origin`.
+
+Actions and expressions that operate on an array need to do a bit of extra work
+when `SPLIT` metadata is present in order to keep it associated with the
+correct element value.  To avoid this extra work, implementations should only
+generate `SPLIT` metadata when the separator is not a constant or when trimming
+is requested and not being discarded.
+
+Individual actions and expressions may define their handling of `SPLIT`
+metadata more specifically, but in general:
+
+  * If an array with `SPLIT` metadata is receiving an element in an "insert"
+    manner from a direct reference to an array element having `SPLIT`
+    metadata of the same `origin`, the element metadata carries over.
+    (function expressions derived from reference expressions do not qualify,
+    but references via aliases like negative integers do)
+  * If an array with `SPLIT` metadata is receiving an element in an "insert"
+    manner from a direct reference to an array without `SPLIT` metadata of the
+    same `origin`, the element receives "adjacent element metadata" described
+    below.
+  * If an array with `SPLIT` metadata is receiving a new value for an existing
+    element in an "overwrite" manner, the existing separator and trimming is
+    unchanged, regardless of the source.
+  * If an array without `SPLIT` metadata is receiving an element from an
+    array with `SPLIT` metadata in an "insert" manner, the destination array
+    is upgraded to have `SPLIT` metadata (of the same `origin`) to preserve the
+    metata for that element.
+  * Construction of new arrays and appending elements to arrays count as an
+    "insert" operation.
+
+`SPLIT` metadata must describe all array elements uniformly; if separators
+exist for any element, separators must exist for all elements, and likewise for
+trimmings.  To resolve this for elements added to the array, the element
+receives "adjacent element metadata".  For separators, new elements receive the
+separator of the preceeding element, or at the start of the array, the
+following element.  (arrays of no elements drop the `SPLIT` metadata)
+If trimmings are present, the new element receives the left-trimming of the
+previous line, or an empty string if there is no previous line.
+Right-trimmiing for new elements is always the empty string.
+These rules are all designed around the concept of preserving indent and
+comments in text while allowing changes to the strings within, and extending
+indent to subsequent lines without replicating comments.
 
 #### <span id="ex-join">JOIN</span>
 
     [JOIN, split_spec]                  // operate on current node
     [JOIN, split_spec, array_expr]
 
-This is the counterpart to the `SPLIT` expression, implementing the second half
-of the [`SPLIT` action](#act-split).  This expression takes the same
-`split_spec` as the `SPLIT` action, though it only really needs the `keep`,
-`discard`, `sep`, and `default` properties.  In the 1-argument form, the
-current node must be an array.  Otherwise, the value-context `array_expr` is
-evaluated and must return an array.  Non-arrays result in `INVALID_TARGET`.
-If the array has associated [`SPLIT` metadata](#split-metadata) it gets used,
-however a constant `sep` parameter overrides any separator stored in the
-metadata, and a `discard: true` parameter causes it to ignore any trimming
-stored in the metadata.  If `sep` is not a constant and the metadata does not
-include captured separators, the `default` parameter is used as the separator.
+This is the counterpart to the `SPLIT` expression, joining an array into a
+string.
+
+This expression takes a `split_spec` argument identical to the
+[`SPLIT` expression](#ex-split), though it only really needs the `keep`,
+`discard`, `sep`, and `default` properties.
+In the 1-argument form, the input is the current node,
+else the value-context `array_expr` is evaluated to determine the input.
+The input must be an array and all its elements must be strings, or `JOIN`
+fails with `INVALID_TARGET`.  This is tested after validating `split_spec`.
+If `discard` is not true, each element gets any trimmings stored in
+the [`SPLIT` metadata](#split-metadata) re-added.
+If `keep` was not used and `sep` is not a constant, it looks for
+captured separators in the `SPLIT` metadata, falling back to the `default`
+separator.  `default` must be specified when `sep` is a regular expression and
+`keep` is not used; if `sep` is a string then it also implies `default` and if
+`keep` is used then separators are not relevant to the join operation.
+`default` is declared in value context, and must resolve to a string.
+Separators are only added *between* elements; any separator associated with the
+final element is ignored.  In order to get a "newline at the end of the file"
+the final element of the array needs to be an empty string.
 
 #### <span id="ex-props">PROPS</span>
 
