@@ -73,9 +73,12 @@ are deferred until execution or match preparation uses the child.
 In an array match, the matcher may skip a node test after a mismatch or when
 another alternative succeeds. If that test contains a local validation error,
 the `lazy` expectation can allow both the match outcome and `invalid_graft`.
-The `unsupported_graft` is only seen when testing the rejection of an
-unsupported `JGRAFT` version.  Each implementation must be aware of its own
-nonformance, rather than being told by the conformance test.
+The `unsupported_graft` flag covers tests for unsupported `JGRAFT` versions
+and date operations limited by the implementation's supported range.
+When a date range test lists both an output and an error, expect the output
+if the implementation supports the operation for that date. Otherwise expect
+the listed error, `unsupported_graft` within the [portable date range](../SpecV1.md#dates)
+or `runtime_error` outside it.
 Likewise, `resource_limit` will only be specified for cases which are designed
 to consume an impossible amount of resources, and each implementation will need
 to set limits large enough to pass the normal conformance tests.

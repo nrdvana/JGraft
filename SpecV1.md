@@ -183,6 +183,16 @@ date-times may be saved into the const, stash, and temporary namespaces
 without losing their metadata.  When exported as an "undo" JGraft, dates are
 represented by a `CASTDATE` expression.
 
+The portable range for JGraft dates is defined as years 1583 (the historic
+cutoff defined in ISO 8601) to 9999, inclusive.  For a timestamp to be
+portable, both its local and UTC years must be in range.  Implementations may
+support wider ranges.  Implementations must also preserve at least nanosecond
+precision on the `second` field.  If an implementation cannot perform an
+otherwise valid date operation because the date is outside its supported range,
+it must fail with `UNSUPPORTED_GRAFT` if the date is within the portable range
+(such as when the host calendar functions have a 32-bit Y2038 problem), or
+`RUNTIME_ERROR` otherwise.
+
 JGraft defines three distinct types: date, datetime, and timestamp.  They are
 considered immutable values, but expose virtual properties which may be
 referenced in [paths](#paths).  `date` lacks a time component, and has virtual
@@ -205,6 +215,19 @@ Since each of these is a different type, the usual rules apply when testing
 them: dissimilar types cannot "match" in a match expression, and the `LESS`
 and `LESSEQ` expressions will fail.  You can use the `CASTDATE` function to
 cast values to the same precision for comparison.
+
+A `timestamp` also has a read-only `unix_seconds` virtual property.  Its value
+is the number of seconds since `1970-01-01T00:00:00Z` (possibly negative),
+using 86,400 seconds per day (excluding leap seconds as if they didn't exist).
+The conversion accounts for `tz_offset`, so timestamps representing the same
+instant produce the same value.  Implementations must preserve at least as much
+of the fractional portion of the `second` property as fits in the
+[15-digit precision requirement](#math) of the overall number, and may include
+more.  Digits beyond that are not guaranteed.  If the timestamp being
+converted is within a leap second, the `second` value is clamped to the start
+of the following minute; `23:59:60.75Z` maps to exactly midnight.
+A round-trip from the `unix_seconds` property back to the `CASTDATE` function
+may be lossy in the presence of leap seconds and high precision seconds.
 
 ### Macros
 
@@ -2969,10 +2992,11 @@ formats:
 where the hyphens and colons are optional when the standard number of digits
 is present, the 'T' separator may also be a space, `ss` can be written
 `ss.sss` or `ss,sss` to an arbitrary precision (silently truncated to the
-precision supported by the implementation), and the timezone '+' may be a '-'
-or Unicode minus sign for any nonzero timezone (as prescribed by ISO-8601).
-The year field should also be permitted to have more than 4 digits if hyphens
-are used.
+supported precision, subject to [portable requirements](#dates) ) and the
+timezone '+' may be a '-' or Unicode minus sign for any nonzero timezone (as
+prescribed by ISO-8601).  The year field may have more than 4 digits if
+hyphens are used.  Implementations that accept larger years must preserve
+them even if they do not support math on them.
 
 Additional date formats may be supported if the list above doesn't cover a
 commonly encountered format of a particular host language, but implementations
@@ -2982,24 +3006,37 @@ more specific expressions to parse them if required.
 Additionally, `value_expr` may evaluate to an object with the following
 properties:
 
-    { "year":      // required
-      "month":     // default is 1
-      "day":       // default is 1
-      "hour":      // indicates datetime if present, default is 0
-      "minute":    // indicates datetime if present, default is 0
-      "second":    // indicates datetime if present, default is 0
-      "tz_offset": // indicates timestamp if present
+    { "year":         // required
+      "month":        // default is 1
+      "day":          // default is 1
+      "hour":         // indicates datetime if present, default is 0
+      "minute":       // indicates datetime if present, default is 0
+      "second":       // indicates datetime if present, default is 0
+      "tz_offset":    // indicates timestamp if present
+    }
+    // or
+    { "unix_seconds": // timestamp, seconds since Unix epoch
+      "tz_offset":    // offset for the JGraft timestamp, default is 0
     }
 
-where the precision of the result (`date` vs `datetime` vs `timestamp`) is
+The precision of the result (`date` vs `datetime` vs `timestamp`) is
 chosen based on the least-significant property supplied in the object before
-applying defaults.
+applying defaults.  The `unix_seconds` form always creates a timestamp and
+that property may not appear with any calendar or time properties.
 
-All date formats should be validated against the Gregorian calendar for years
-1583 and onward (the cutoff defined in ISO 8601) and invalid days rejected.
-Hours and minutes should be validated against the standard
-range, but seconds should permit a leap second (60 and fractions above that)
-without historic validation.
+All calendar properties should be validated against the Gregorian calendar for
+years 1583 and onward and invalid days rejected.  Hours and minutes should be
+validated against the standard range, but seconds should permit a leap second
+(60 and fractions above that) without historic validation.
+
+The `unix_seconds` value is any finite number.  It is first rounded to the
+number of significant decimal digits the implementation's numbers hold reliably
+(15 for IEEE doubles), and the fractional seconds of that rounded value become
+the fraction of the resulting `second` property. It must fail if it cannot
+perform the conversion to a calendar date, according to the rule described in
+[dates](#dates).  When `tz_offset` is nonzero, the instant in time is
+unaffected, but the generated JGraft timestamp is represented in terms of
+that offset.
 
 If host language date objects are permitted in the data, they should also be
 supported by this expression, though depending on the capabilities or

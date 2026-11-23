@@ -20,10 +20,10 @@
           "lazy": {"output":"2000-02-29"}
         },
         {
-          "name": "Extended year",
-          "input": "12024-03-01",
+          "name": "Last portable calendar date",
+          "input": "9999-12-31",
           "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["CASTDATE"]],["NODE"]]],
-          "lazy": {"output":"12024-03-01"}
+          "lazy": {"output":"9999-12-31"}
         },
         {
           "name": "Calendar datetime",
@@ -148,20 +148,20 @@
         {
           "name": "Date available fields",
           "input": "2024-01-01",
-          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",[[["EXISTS",["TEMP","d","hour"]],["EXISTS",["TEMP","d","tz_offset"]]]],"d",["CASTDATE"]],["NODE"]]],
-          "lazy": {"output":[false,false]}
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",[[["EXISTS",["TEMP","d","hour"]],["EXISTS",["TEMP","d","tz_offset"]],["EXISTS",["TEMP","d","unix_seconds"]]]],"d",["CASTDATE"]],["NODE"]]],
+          "lazy": {"output":[false,false,false]}
         },
         {
           "name": "Datetime available fields",
           "input": "2024-01-01T00:00:00",
-          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",[[["EXISTS",["TEMP","d","hour"]],["EXISTS",["TEMP","d","tz_offset"]]]],"d",["CASTDATE"]],["NODE"]]],
-          "lazy": {"output":[true,false]}
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",[[["EXISTS",["TEMP","d","hour"]],["EXISTS",["TEMP","d","tz_offset"]],["EXISTS",["TEMP","d","unix_seconds"]]]],"d",["CASTDATE"]],["NODE"]]],
+          "lazy": {"output":[true,false,false]}
         },
         {
           "name": "Timestamp available fields",
           "input": "2024-01-01T00:00:00Z",
-          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",[[["EXISTS",["TEMP","d","hour"]],["EXISTS",["TEMP","d","tz_offset"]]]],"d",["CASTDATE"]],["NODE"]]],
-          "lazy": {"output":[true,true]}
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",[[["EXISTS",["TEMP","d","hour"]],["EXISTS",["TEMP","d","tz_offset"]],["EXISTS",["TEMP","d","unix_seconds"]]]],"d",["CASTDATE"]],["NODE"]]],
+          "lazy": {"output":[true,true,true]}
         },
         {
           "name": "Existing timestamp passes through CASTDATE",
@@ -178,9 +178,303 @@
       ]
     },
     {
+      "name": "Unix seconds construction",
+      "desc": "CASTDATE constructs a timestamp from an epoch count and expresses its calendar fields at the requested offset.",
+      "tests": [
+        {
+          "name": "Epoch zero defaults to UTC",
+          "input": {"unix_seconds":0},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["CASTDATE"]],["NODE"]]],
+          "lazy": {"output":"1970-01-01T00:00:00Z"}
+        },
+        {
+          "name": "Offset crosses into the previous year",
+          "input": {"unix_seconds":0,"tz_offset":-90},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",[[["TEMP","d","year"],["TEMP","d","month"],["TEMP","d","day"],["TEMP","d","hour"],["TEMP","d","minute"],["TEMP","d","second"],["TEMP","d","tz_offset"]]],"d",["CASTDATE"]],["NODE"]]],
+          "lazy": {"output":[1969,12,31,22,30,0,-90]}
+        },
+        {
+          "name": "Positive offset crosses into leap day",
+          "input": {"unix_seconds":951777000,"tz_offset":90},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",[[["TEMP","d","year"],["TEMP","d","month"],["TEMP","d","day"],["TEMP","d","hour"],["TEMP","d","minute"],["TEMP","d","second"],["TEMP","d","tz_offset"]]],"d",["CASTDATE"]],["NODE"]]],
+          "lazy": {"output":[2000,2,29,0,0,0,90]}
+        },
+        {
+          "name": "Negative fractional count falls in the preceding second",
+          "input": {"unix_seconds":-0.25},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",[[["TEMP","d","year"],["TEMP","d","month"],["TEMP","d","day"],["TEMP","d","hour"],["TEMP","d","minute"],["TEMP","d","second"],["TEMP","d","tz_offset"]]],"d",["CASTDATE"]],["NODE"]]],
+          "lazy": {"output":[1969,12,31,23,59,59.75,0]}
+        },
+        {
+          "name": "Constructor preserves nanoseconds near the epoch",
+          "input": {"unix_seconds":12.001953125},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",["TEMP","d","second"],"d",["CASTDATE"]],["NODE"]]],
+          "lazy": {"output":12.001953125}
+        },
+        {
+          "name": "Constructor retains the fractional part of a ten-digit count",
+          "input": {"unix_seconds":1000000000.03125},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",["TEMP","d","second"],"d",["CASTDATE"]],["NODE"]]],
+          "lazy": {"output":40.03125}
+        },
+        {
+          "name": "DATE accepts the epoch form",
+          "input": {"unix_seconds":0},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DATE"],["NODE"]]],
+          "lazy": {"output":true}
+        }
+      ]
+    },
+    {
+      "name": "Unix seconds virtual property",
+      "desc": "These cases read the property on independently constructed timestamps, including instants whose epoch count loses information.",
+      "tests": [
+        {
+          "name": "Negative fraction before the epoch",
+          "input": "1969-12-31T23:59:59.75Z",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",["TEMP","d","unix_seconds"],"d",["CASTDATE"]],["NODE"]]],
+          "lazy": {"output":-0.25}
+        },
+        {
+          "name": "Positive offset resolves to the epoch",
+          "input": "1970-01-01T05:45:00+05:45",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",["TEMP","d","unix_seconds"],"d",["CASTDATE"]],["NODE"]]],
+          "lazy": {"output":0}
+        },
+        {
+          "name": "Negative offset resolves to the epoch",
+          "input": "1969-12-31T20:30:00-03:30",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",["TEMP","d","unix_seconds"],"d",["CASTDATE"]],["NODE"]]],
+          "lazy": {"output":0}
+        },
+        {
+          "name": "Nine fractional digits fit after six whole digits",
+          "input": "1970-01-02T10:17:36.001953125Z",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",["TEMP","d","unix_seconds"],"d",["CASTDATE"]],["NODE"]]],
+          "lazy": {"output":123456.001953125}
+        },
+        {
+          "name": "Five fractional digits fit after ten whole digits",
+          "input": "2001-09-09T01:46:40.03125Z",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",["TEMP","d","unix_seconds"],"d",["CASTDATE"]],["NODE"]]],
+          "lazy": {"output":1000000000.03125}
+        },
+        {
+          "name": "Extra fractional digits may exceed portable precision",
+          "input": "2001-09-09T01:46:40.03125762939453125Z",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",[[["LESSEQ",1000000000.03125,["TEMP","d","unix_seconds"]],["LESSEQ",["TEMP","d","unix_seconds"],1000000000.03126]]],"d",["CASTDATE"]],["NODE"]]],
+          "lazy": {"output":[true,true]}
+        },
+        {
+          "name": "Midnight after a leap second counts ordinary days",
+          "input": "2017-01-01T00:00:00Z",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",["TEMP","d","unix_seconds"],"d",["CASTDATE"]],["NODE"]]],
+          "lazy": {"output":1483228800}
+        },
+        {
+          "name": "Whole leap second maps to midnight",
+          "input": "2016-12-31T23:59:60Z",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",["TEMP","d","unix_seconds"],"d",["CASTDATE"]],["NODE"]]],
+          "lazy": {"output":1483228800}
+        },
+        {
+          "name": "Fractional leap second at an offset loses its fraction",
+          "input": "2017-01-01T00:59:60.75+01:00",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",["TEMP","d","unix_seconds"],"d",["CASTDATE"]],["NODE"]]],
+          "lazy": {"output":1483228800}
+        },
+        {
+          "name": "Leap second round trip produces ordinary midnight",
+          "input": "2016-12-31T23:59:60.75Z",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",["CASTSTR",["CASTDATE",{"unix_seconds":["TEMP","d","unix_seconds"]}]],"d",["CASTDATE"]],["NODE"]]],
+          "lazy": {"output":"2017-01-01T00:00:00Z"}
+        },
+        {
+          "name": "A timestamp in writable storage still has a read-only property",
+          "input": "1970-01-01T00:00:00Z",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTDATE"],["STASH","d"],1,["STASH","d","unix_seconds"]]],
+          "lazy": {"runtime_error":true}
+        }
+      ]
+    },
+    {
+      "name": "Unix seconds validation",
+      "desc": "The epoch count must be numeric and excludes each calendar and time field even when that field has its default value.",
+      "tests": [
+        {
+          "name": "A numeric string fails CASTDATE",
+          "input": {"unix_seconds":"0"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["CASTDATE"]],["NODE"]]],
+          "lazy": {"runtime_error":true}
+        },
+        {
+          "name": "A null count fails CASTDATE",
+          "input": {"unix_seconds":null},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["CASTDATE"]],["NODE"]]],
+          "lazy": {"runtime_error":true}
+        },
+        {
+          "name": "A boolean count fails DATE",
+          "input": {"unix_seconds":false},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DATE"],["NODE"]]],
+          "lazy": {"output":false}
+        },
+        {
+          "name": "Epoch count with year fails CASTDATE",
+          "input": {"unix_seconds":0,"year":1970},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["CASTDATE"]],["NODE"]]],
+          "lazy": {"runtime_error":true}
+        },
+        {
+          "name": "Epoch count with month fails CASTDATE",
+          "input": {"unix_seconds":0,"month":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["CASTDATE"]],["NODE"]]],
+          "lazy": {"runtime_error":true}
+        },
+        {
+          "name": "Epoch count with day fails CASTDATE",
+          "input": {"unix_seconds":0,"day":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["CASTDATE"]],["NODE"]]],
+          "lazy": {"runtime_error":true}
+        },
+        {
+          "name": "Epoch count with hour fails CASTDATE",
+          "input": {"unix_seconds":0,"hour":0},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["CASTDATE"]],["NODE"]]],
+          "lazy": {"runtime_error":true}
+        },
+        {
+          "name": "Epoch count with minute fails CASTDATE",
+          "input": {"unix_seconds":0,"minute":0},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["CASTDATE"]],["NODE"]]],
+          "lazy": {"runtime_error":true}
+        },
+        {
+          "name": "Epoch count with second fails CASTDATE",
+          "input": {"unix_seconds":0,"second":0},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["CASTDATE"]],["NODE"]]],
+          "lazy": {"runtime_error":true}
+        },
+        {
+          "name": "DATE rejects mixed epoch and calendar forms",
+          "input": {"unix_seconds":0,"year":1970},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["DATE"],["NODE"]]],
+          "lazy": {"output":false}
+        }
+      ]
+    },
+    {
+      "name": "Calendar and Unix seconds range",
+      "desc": "Both the local and UTC years determine whether a timestamp is portable. Each expected error applies only when the implementation lacks the range for that operation.",
+      "tests": [
+        {
+          "name": "Extended calendar year is preserved when supported",
+          "input": "10000-03-01",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["CASTDATE"]],["NODE"]]],
+          "lazy": {"output":"10000-03-01","runtime_error":true}
+        },
+        {
+          "name": "Extended object year is preserved when supported",
+          "input": {"year":10000,"month":3,"day":1},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",["TEMP","d","year"],"d",["CASTDATE"]],["NODE"]]],
+          "lazy": {"output":10000,"runtime_error":true}
+        },
+        {
+          "name": "Timestamp preserves a large year when supported",
+          "input": "123456789012-03-01T00:00:00Z",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",["TEMP","d","year"],"d",["CASTDATE"]],["NODE"]]],
+          "lazy": {"output":123456789012,"runtime_error":true}
+        },
+        {
+          "name": "First portable instant",
+          "input": {"unix_seconds":-12212553600},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["CASTDATE"]],["NODE"]]],
+          "lazy": {"output":"1583-01-01T00:00:00Z","unsupported_graft":true}
+        },
+        {
+          "name": "One second before the portable range",
+          "input": {"unix_seconds":-12212553601},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["CASTDATE"]],["NODE"]]],
+          "lazy": {"output":"1582-12-31T23:59:59Z","runtime_error":true}
+        },
+        {
+          "name": "First portable UTC instant expressed in local year 1582",
+          "input": {"unix_seconds":-12212553600,"tz_offset":-60},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",[[["TEMP","d","year"],["TEMP","d","month"],["TEMP","d","day"],["TEMP","d","hour"],["TEMP","d","tz_offset"]]],"d",["CASTDATE"]],["NODE"]]],
+          "lazy": {"output":[1582,12,31,23,-60],"runtime_error":true}
+        },
+        {
+          "name": "Local year 1583 with a UTC instant below the portable range",
+          "input": "1583-01-01T00:59:59+01:00",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",["TEMP","d","unix_seconds"],"d",["CASTDATE"]],["NODE"]]],
+          "lazy": {"output":-12212553601,"runtime_error":true}
+        },
+        {
+          "name": "First second beyond signed 32-bit time",
+          "input": {"unix_seconds":2147483648},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["CASTDATE"]],["NODE"]]],
+          "lazy": {"output":"2038-01-19T03:14:08Z","unsupported_graft":true}
+        },
+        {
+          "name": "A host range failure propagates through DATE",
+          "input": {"unix_seconds":2147483648},
+          "jgraft": ["JGRAFT",{"v":1},["MATCH",["DATE"]]],
+          "lazy": {"output":{"unix_seconds":2147483648},"unsupported_graft":true}
+        },
+        {
+          "name": "Reading the first second beyond signed 32-bit time",
+          "input": "2038-01-19T03:14:08Z",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",["TEMP","d","unix_seconds"],"d",["CASTDATE"]],["NODE"]]],
+          "lazy": {"output":2147483648,"unsupported_graft":true}
+        },
+        {
+          "name": "Last portable whole second",
+          "input": {"unix_seconds":253402300799},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["CASTDATE"]],["NODE"]]],
+          "lazy": {"output":"9999-12-31T23:59:59Z","unsupported_graft":true}
+        },
+        {
+          "name": "First second beyond the portable range",
+          "input": {"unix_seconds":253402300800},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["CASTSTR",["CASTDATE"]],["NODE"]]],
+          "lazy": {"output":"10000-01-01T00:00:00Z","runtime_error":true}
+        },
+        {
+          "name": "Local year 10000 with a portable UTC instant",
+          "input": "10000-01-01T00:59:59+01:00",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",["TEMP","d","unix_seconds"],"d",["CASTDATE"]],["NODE"]]],
+          "lazy": {"output":253402300799,"runtime_error":true}
+        },
+        {
+          "name": "Last portable UTC second expressed in local year 10000",
+          "input": {"unix_seconds":253402300799,"tz_offset":60},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",[[["TEMP","d","year"],["TEMP","d","month"],["TEMP","d","day"],["TEMP","d","hour"],["TEMP","d","minute"],["TEMP","d","second"],["TEMP","d","tz_offset"]]],"d",["CASTDATE"]],["NODE"]]],
+          "lazy": {"output":[10000,1,1,0,59,59,60],"runtime_error":true}
+        },
+        {
+          "name": "Local year 9999 with a UTC instant outside the portable range",
+          "input": "9999-12-31T23:00:00-01:00",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",["TEMP","d","unix_seconds"],"d",["CASTDATE"]],["NODE"]]],
+          "lazy": {"output":253402300800,"runtime_error":true}
+        },
+        {
+          "name": "Very large finite epoch count",
+          "input": {"unix_seconds":1e+300},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",[[["LESS",3e+292,["TEMP","d","year"]],["LESS",["TEMP","d","year"],4e+292]]],"d",["CASTDATE"]],["NODE"]]],
+          "lazy": {"output":[true,true],"runtime_error":true}
+        }
+      ]
+    },
+    {
       "name": "Fractional precision",
       "desc": "Equivalent decimal separators agree. Truncation may discard unsupported digits but cannot carry into the next second.",
       "tests": [
+        {
+          "name": "Leap second retains nanoseconds in the calendar field",
+          "input": "2016-12-31T23:59:60.001953125Z",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["LOCAL",["TEMP","d","second"],"d",["CASTDATE"]],["NODE"]]],
+          "lazy": {"output":60.001953125}
+        },
         {
           "name": "Comma and point agree at second 09",
           "input": ["2024-01-02T00:00:09.987654321987654321Z","2024-01-02T00:00:09,987654321987654321Z"],
