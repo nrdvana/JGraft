@@ -1,227 +1,473 @@
 {
   "version": 1,
   "name": "SLICE SPLICE",
-  "desc": "SLICE reads and SPLICE edits, with paired cases for shared span defaults, boundaries, relative paths, and option validation. Separate cases cover SLICE scalar/array configurations, explicit sources, strings and Unicode codepoints; SPLICE element-addressing versus array-addressing forms, the prohibition on bare NODE with integer options, replacement evaluation, and ownership. Complete span objects are supplied as ordinary data; no matching or capture construction is needed. SPLIT metadata, resource stress, and implementation-specific partial failure trees are excluded. Where strict is absent, lazy expectations also apply under full local validation.",
+  "desc": "SLICE and SPLICE share span configurations, relative paths, and validation. Cases cover array and string edits, Unicode code points, pre-edit replacement values, and ownership. SLICE also accepts an explicit source.",
   "tests": [
     {
-      "name": "Action namespace permissions",
-      "desc": "Exercise each mutating action's own namespace checks. CAP is never populated. Namespace construction and broader reference behavior are covered in 01-jgraft-namespaces.json.",
+      "name": "Configuration values from namespaces",
+      "desc": "With base omitted, a configuration read from any namespace selects a span in the current node.",
       "tests": [
         {
-          "name": "SPLICE cannot write CONST",
-          "input": {"source":1},
-          "jgraft": ["JGRAFT",{"v":1,"const":["x",[[1,2]]]},["SPLICE",["CONST","x"],{"len":0},7]],
-          "lazy": {"invalid_graft":true}
+          "name": "Current node value supplies the offset and length pair",
+          "input": [1,1],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],"x"]],
+          "lazy": {"output":[1,"x"]}
         },
         {
-          "name": "SPLICE cannot write CAP",
-          "input": {"source":1},
-          "jgraft": ["JGRAFT",{"v":1,"const":["x",[[1,2]]]},["SPLICE",["CAP","x"],{"len":0},7]],
-          "lazy": {"invalid_graft":true}
+          "name": "Constant span is read as configuration",
+          "input": [0,1],
+          "jgraft": ["JGRAFT",{"v":1,"const":["bounds",[[1,1]]]},["SPLICE",["CONST","bounds"],"x"]],
+          "lazy": {"output":[0,"x"]}
         },
         {
-          "name": "SPLICE does not bypass read-only root via relative path",
-          "input": {},
-          "jgraft": ["JGRAFT",{"v":1,"const":["x",[[1,2]]]},["SPLICE",["CONST"],{"path":[["x"]],"len":0},7]],
-          "lazy": {"invalid_graft":true}
+          "name": "Stashed span is read as configuration",
+          "input": {"list":[0,1]},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",{"path":[["list"]],"len":1},["STASH","bounds"]],["SPLICE",["STASH","bounds"],"x"],["COPY",["STASH","bounds"],"saved"]],
+          "lazy": {"output":{"list":["x",1],"saved":{"path":["list"],"len":1}}}
         }
       ]
     },
     {
-      "name": "SPLICE replacement values",
-      "desc": "Replacement arguments each insert one value, including array values. Omitting replacements deletes the span; all replacements evaluate in value context against the pre-edit state.",
+      "name": "Span bases",
+      "tests": [
+        {
+          "name": "Named and positional sources accept the same computed string",
+          "input": {"left":"a😀","right":"bc"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"base":["CONCAT",["NODE","left"],["NODE","right"]],"ofs":1,"len":2}],"named",["SLICE",[[1,2]],["CONCAT",["NODE","left"],["NODE","right"]]],"positional"]],
+          "lazy": {"output":{"left":"a😀","right":"bc","named":"😀b","positional":"😀b"}}
+        },
+        {
+          "name": "Plain base in a computed configuration stays data",
+          "input": {"options":{"base":{"items":["STASH","draft"]},"path":["items"],"ofs":1}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE","options"]],["NODE"]]],
+          "lazy": {"output":["draft"]}
+        },
+        {
+          "name": "Positional source accepts a stored unexpanded reference macro",
+          "input": {"draft":["other"]},
+          "jgraft": ["JGRAFT",{"v":1,"const":["ref",["VAL",["STASH","draft"]]]},["COPY",[[1,2,3]],["STASH","draft"],["SLICE",1,["CONST","ref"]],["NODE"]]],
+          "lazy": {"output":[2,3]}
+        },
+        {
+          "name": "A saved value keeps its snapshot and a saved reference follows the location",
+          "input": {"items":["old"]},
+          "jgraft": [
+            "JGRAFT", {"v":1},
+            ["COPY",{"base":["NODE","items"],"len":1},["STASH","snapshot"],{"base":["VAL",["NODE","items"]],"len":1},["STASH","live"]],
+            ["COPY","new",["NODE","items",0]],
+            ["COPY",["SLICE",["STASH","snapshot"]],"before",["SLICE",["STASH","live"]],"after"]
+          ],
+          "lazy": {"output":{"items":["new"],"before":["old"],"after":["new"]}}
+        },
+        {
+          "name": "Saved configuration resolves its base at each use",
+          "input": {"key":"a","pos":1,"replacement":"R"},
+          "jgraft": [
+            "JGRAFT", {"v":1},
+            ["COPY",{"field":"a😀b"},["STASH","a"],{"field":"xyz"},["STASH","b"]],
+            ["COPY",{"base":["VAL",["STASH",["NODE","key"]]],"path":[["field"]],"ofs":["NODE","pos"],"len":1},["STASH","span"]],
+            ["COPY",["SLICE",["STASH","span"]],"before","b","key"],
+            ["SPLICE",["STASH","span"],["NODE","replacement"]],
+            ["COPY",["STASH","a","field"],"first",["STASH","b","field"],"second"]
+          ],
+          "lazy": {"output":{"key":"b","pos":1,"replacement":"R","before":"😀","first":"a😀b","second":"xRz"}}
+        },
+        {
+          "name": "Splicing a stashed array preserves its source snapshot",
+          "input": [0,1,2],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NODE"],["STASH","items"]],["SPLICE",{"base":["VAL",["STASH","items"]],"ofs":1,"len":1},"a","b"],["COPY",["STASH","items"],false]],
+          "lazy": {"output":[0,1,2,[0,"a","b",2]]}
+        },
+        {
+          "name": "A reference macro may read a constant subtree",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1,"const":["data",{"field":"abc"}]},["COPY",["SLICE",{"base":["VAL",["CONST","data"]],"path":[["field"]],"ofs":1}],["NODE"]]],
+          "lazy": {"output":"bc"}
+        },
+        {
+          "name": "A relative path through a constant base is read-only",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1,"const":["data",{"field":"abc"}]},["SPLICE",{"base":["VAL",["CONST","data"]],"path":[["field"]],"ofs":1},"x"]],
+          "lazy": {"runtime_error":true},
+          "strict": {"runtime_error":true,"invalid_graft":true}
+        },
+        {
+          "name": "Reading a stash value into base supplies no splice destination",
+          "input": "abc",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["NODE"],["STASH","draft"]],["SPLICE",{"base":["STASH","draft"],"ofs":1},"x"]],
+          "lazy": {"runtime_error":true}
+        },
+        {
+          "name": "SLICE reads a string computed by a value macro",
+          "input": "abc",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"base":["VAL",["CONCAT",["NODE"],"x"]],"ofs":-2}],["NODE"]]],
+          "lazy": {"output":"cx"}
+        },
+        {
+          "name": "SLICE follows a relative path through the result of a saved value macro",
+          "input": {"text":"outer","inner":{"text":"abc"}},
+          "jgraft": [
+            "JGRAFT", {"v":1,"const":["make",["VAL",{"field":["CONCAT",["NODE","text"],"!"]}]]},
+            ["AT","inner",["COPY",["SLICE",{"path":[["field"]],"ofs":1},["CONST","make"]],"result"]]
+          ],
+          "lazy": {"output":{"text":"outer","inner":{"text":"abc","result":"bc!"}}}
+        },
+        {
+          "name": "SPLICE rejects the same string-producing function body",
+          "input": "abc",
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"base":["VAL",["CONCAT",["NODE"],"x"]],"ofs":-2},"y"]],
+          "lazy": {"runtime_error":true},
+          "strict": {"runtime_error":true,"invalid_graft":true}
+        },
+        {
+          "name": "SPLICE follows EX through two macros to a stashed array",
+          "input": {"key":"items","value":"new"},
+          "jgraft": [
+            "JGRAFT", {"v":1,"const":["root",["VAL",["STASH",["NODE","key"]]],"alias",["VAL",["EX","root"]]]},
+            ["COPY",{"list":[[0,1,2]]},["STASH","items"]],
+            ["SPLICE",{"base":["VAL",["EX","alias"]],"path":[["list"]],"ofs":1,"len":1},["NODE","value"]],
+            ["COPY",["STASH","items","list"],"result"]
+          ],
+          "lazy": {"output":{"key":"items","value":"new","result":[0,"new",2]}}
+        },
+        {
+          "name": "Expanded NODE reference in a splice uses the current AT node",
+          "input": {"text":"outer","inner":{"text":"abc"}},
+          "jgraft": [
+            "JGRAFT", {"v":1,"const":["text",["VAL",["NODE","text"]]]},
+            ["AT","inner",["SPLICE",{"base":["VAL",["EX","text"]],"ofs":1,"len":1},"X"]]
+          ],
+          "lazy": {"output":{"text":"outer","inner":{"text":"aXc"}}}
+        },
+        {
+          "name": "The stash root can supply a base for an edit to a descendant",
+          "input": null,
+          "jgraft": ["JGRAFT",{"v":1},["COPY","abc",["STASH","text"]],["SPLICE",{"base":["VAL",["STASH"]],"path":[["text"]],"ofs":1},"!"],["COPY",["STASH","text"],["NODE"]]],
+          "lazy": {"output":"a!"}
+        },
+        {
+          "name": "A fully expanded splice base must still be writable",
+          "input": "abc",
+          "jgraft": ["JGRAFT",{"v":1,"const":["text","abc","ref",["VAL",["CONST","text"]]]},["SPLICE",{"base":["VAL",["EX","ref"]],"ofs":1},"x"]],
+          "lazy": {"runtime_error":true},
+          "strict": {"runtime_error":true,"invalid_graft":true}
+        },
+        {
+          "name": "A missing referenced splice target is not created",
+          "input": {},
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"base":["VAL",["STASH","missing"]],"len":0},"x"]],
+          "lazy": {"runtime_error":true}
+        },
+        {
+          "name": "Positional source overrides a literal base and retains the relative path",
+          "input": {"field":"xyz"},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"base":{"field":"abc"},"path":[["field"]],"ofs":1},["NODE"]],["NODE"]]],
+          "lazy": {"output":"yz"}
+        },
+        {
+          "name": "Positional source overrides base in a computed configuration",
+          "input": {"options":{"base":"abc","ofs":1}},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",["NODE","options"],"xyz"],["NODE"]]],
+          "lazy": {"output":"yz"}
+        },
+        {
+          "name": "An overridden reference macro is not resolved",
+          "input": "abc",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"base":["VAL",["STASH","missing"]],"ofs":1},["VAL",["NODE"]]],["NODE"]]],
+          "lazy": {"output":"bc"}
+        },
+        {
+          "name": "The overridden base expression is still evaluated",
+          "input": "abc",
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"base":["FAIL"],"ofs":1},["NODE"]],["NODE"]]],
+          "lazy": {"runtime_error":true}
+        },
+        {
+          "name": "A positional source that evaluates to null overrides a usable base",
+          "input": {"source":null},
+          "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",{"base":"abc","ofs":1},["NODE","source"]],["NODE"]]],
+          "lazy": {"runtime_error":true}
+        }
+      ]
+    },
+    {
+      "name": "SPLICE array replacement values",
+      "desc": "Each replacement inserts one array element. Replacements evaluate against the pre-edit state.",
       "tests": [
         {
           "name": "Insert null",
           "input": ["left","right"],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,0,null]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[1,0]],null]],
           "lazy": {"output":["left",null,"right"]}
         },
         {
           "name": "Replace by null",
           "input": ["left","old","right"],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":1,"len":1},null]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":1,"len":1},null]],
           "lazy": {"output":["left",null,"right"]}
         },
         {
           "name": "Insert false",
           "input": ["left","right"],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,0,false]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[1,0]],false]],
           "lazy": {"output":["left",false,"right"]}
         },
         {
           "name": "Replace by false",
           "input": ["left","old","right"],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":1,"len":1},false]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":1,"len":1},false]],
           "lazy": {"output":["left",false,"right"]}
         },
         {
           "name": "Insert true",
           "input": ["left","right"],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,0,true]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[1,0]],true]],
           "lazy": {"output":["left",true,"right"]}
         },
         {
           "name": "Replace by true",
           "input": ["left","old","right"],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":1,"len":1},true]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":1,"len":1},true]],
           "lazy": {"output":["left",true,"right"]}
         },
         {
           "name": "Insert zero",
           "input": ["left","right"],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,0,0]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[1,0]],0]],
           "lazy": {"output":["left",0,"right"]}
         },
         {
           "name": "Replace by zero",
           "input": ["left","old","right"],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":1,"len":1},0]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":1,"len":1},0]],
           "lazy": {"output":["left",0,"right"]}
         },
         {
           "name": "Insert fraction",
           "input": ["left","right"],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,0,-1.25]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[1,0]],-1.25]],
           "lazy": {"output":["left",-1.25,"right"]}
         },
         {
           "name": "Replace by fraction",
           "input": ["left","old","right"],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":1,"len":1},-1.25]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":1,"len":1},-1.25]],
           "lazy": {"output":["left",-1.25,"right"]}
         },
         {
           "name": "Insert empty string",
           "input": ["left","right"],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,0,""]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[1,0]],""]],
           "lazy": {"output":["left","","right"]}
         },
         {
           "name": "Replace by empty string",
           "input": ["left","old","right"],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":1,"len":1},""]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":1,"len":1},""]],
           "lazy": {"output":["left","","right"]}
         },
         {
           "name": "Insert Unicode and controls",
           "input": ["left","right"],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,0,"雪😀\n\u0000"]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[1,0]],"雪😀\n\u0000"]],
           "lazy": {"output":["left","雪😀\n\u0000","right"]}
         },
         {
           "name": "Replace by Unicode and controls",
           "input": ["left","old","right"],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":1,"len":1},"雪😀\n\u0000"]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":1,"len":1},"雪😀\n\u0000"]],
           "lazy": {"output":["left","雪😀\n\u0000","right"]}
         },
         {
           "name": "Insert empty array",
           "input": ["left","right"],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,0,[[]]]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[1,0]],[[]]]],
           "lazy": {"output":["left",[],"right"]}
         },
         {
           "name": "Replace by empty array",
           "input": ["left","old","right"],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":1,"len":1},[[]]]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":1,"len":1},[[]]]],
           "lazy": {"output":["left",[],"right"]}
         },
         {
           "name": "Insert empty object",
           "input": ["left","right"],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,0,{}]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[1,0]],{}]],
           "lazy": {"output":["left",{},"right"]}
         },
         {
           "name": "Replace by empty object",
           "input": ["left","old","right"],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":1,"len":1},{}]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":1,"len":1},{}]],
           "lazy": {"output":["left",{},"right"]}
         },
         {
           "name": "Insert array",
           "input": ["left","right"],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,0,[[1,null,{"n":2}]]]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[1,0]],[[1,null,{"n":2}]]]],
           "lazy": {"output":["left",[1,null,{"n":2}],"right"]}
         },
         {
           "name": "Replace by array",
           "input": ["left","old","right"],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":1,"len":1},[[1,null,{"n":2}]]]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":1,"len":1},[[1,null,{"n":2}]]]],
           "lazy": {"output":["left",[1,null,{"n":2}],"right"]}
         },
         {
           "name": "Insert object",
           "input": ["left","right"],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,0,{"a":[[1,2]]}]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[1,0]],{"a":[[1,2]]}]],
           "lazy": {"output":["left",{"a":[1,2]},"right"]}
         },
         {
           "name": "Replace by object",
           "input": ["left","old","right"],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":1,"len":1},{"a":[[1,2]]}]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":1,"len":1},{"a":[[1,2]]}]],
           "lazy": {"output":["left",{"a":[1,2]},"right"]}
         },
         {
           "name": "Array replacement is a single element",
           "input": [0,3],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,0,[[1,2]]]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[1,0]],[[1,2]]]],
           "lazy": {"output":[0,[1,2],3]}
         },
         {
           "name": "Empty array replacement is not deletion",
           "input": [0,1,2],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,1,[[]]]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[1,1]],[[]]]],
           "lazy": {"output":[0,[],2]}
         },
         {
           "name": "No replacements deletes the selected span",
           "input": [0,1,2,3],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,2]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[1,2]]]],
           "lazy": {"output":[0,3]}
         },
         {
           "name": "Several replacements retain argument order",
           "input": [0,3],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,0,1,2]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[1,0]],1,2]],
           "lazy": {"output":[0,1,2,3]}
         },
         {
           "name": "Replace scalar by several subtrees",
           "input": [0,1,2],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,1,{"n":7},[[8,9]]]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[1,1]],{"n":7},[[8,9]]]],
           "lazy": {"output":[0,{"n":7},[8,9],2]}
         },
         {
           "name": "Replace subtrees by scalar values",
           "input": [{"a":1},[2],3],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,2,null,false]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[0,2]],null,false]],
           "lazy": {"output":[null,false,3]}
         },
         {
           "name": "Escaped operator-looking array stays data",
           "input": [],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,0,[["UNKNOWN",[["NODE"]]]]]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[0,0]],[["UNKNOWN",[["NODE"]]]]]],
           "lazy": {"output":[["UNKNOWN",["NODE"]]]}
         },
         {
           "name": "Referenced array is one literal replacement",
           "input": ["NODE","missing"],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,2,["NODE"]]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[0,2]],["NODE"]]],
           "lazy": {"output":[["NODE","missing"]]}
         },
         {
           "name": "Nested replacement expressions see pre-edit NODE",
           "input": [7,8],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,2,{"first":["NODE",0],"list":[[["NODE",1],["NODE",0]]]}]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[0,2]],{"first":["NODE",0],"list":[[["NODE",1],["NODE",0]]]}]],
           "lazy": {"output":[{"first":7,"list":[8,7]}]}
         },
         {
           "name": "Replace one indexed element",
           "input": [0,1],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE",1],1,7]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[1,1]],7]],
           "lazy": {"output":[0,7]}
+        },
+        {
+          "name": "A scalar offset consumes the tail and all later arguments are replacements",
+          "input": ["a","b","c","d"],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,1,"x"]],
+          "lazy": {"output":["a",1,"x"]}
+        }
+      ]
+    },
+    {
+      "name": "SPLICE strings and Unicode code points",
+      "tests": [
+        {
+          "name": "Scalar negative offset deletes the final code point",
+          "input": "a😀",
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",-1]],
+          "lazy": {"output":"a"}
+        },
+        {
+          "name": "Escaped pair replaces one supplementary character",
+          "input": "a😀b",
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[1,1]],"x","y"]],
+          "lazy": {"output":"axyb"}
+        },
+        {
+          "name": "Zero-length span inserts between a base and combining mark",
+          "input": "é!",
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[1,0]],"x"]],
+          "lazy": {"output":"ex́!"}
+        },
+        {
+          "name": "Zero-length tail appends to an empty string",
+          "input": "",
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,"😀"]],
+          "lazy": {"output":"😀"}
+        },
+        {
+          "name": "Negative limit preserves the final code point",
+          "input": "a😀bc",
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[1,-1]]]],
+          "lazy": {"output":"ac"}
+        },
+        {
+          "name": "Empty replacement string deletes the span",
+          "input": "abcd",
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":1,"lim":3},""]],
+          "lazy": {"output":"ad"}
+        },
+        {
+          "name": "Replacements read the original string",
+          "input": "abc",
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[1,1]],["SLICE",-1],["SLICE",0]]],
+          "lazy": {"output":"acabcc"}
+        },
+        {
+          "name": "Offset and replacement use the invoking object",
+          "input": {"field":"😀old!","ofs":1,"value":"new"},
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"path":[["field"]],"ofs":["NODE","ofs"],"len":3},["NODE","value"]]],
+          "lazy": {"output":{"field":"😀new!","ofs":1,"value":"new"}}
+        },
+        {
+          "name": "AT selects a string for deletion",
+          "input": {"field":"abcdef","other":12},
+          "jgraft": ["JGRAFT",{"v":1},["AT","field",["SPLICE",[[2,3]]]]],
+          "lazy": {"output":{"field":"abf","other":12}}
+        },
+        {
+          "name": "Range exceeds code point length",
+          "input": "😀",
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[1,1]]]],
+          "lazy": {"runtime_error":true}
+        },
+        {
+          "name": "Array-valued replacement cannot be inserted into a string",
+          "input": "abc",
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[0,1]],[["x","y"]]]],
+          "lazy": {"runtime_error":true}
+        },
+        {
+          "name": "Later replacement evaluates to a non-string",
+          "input": {"text":"abc","bad":42},
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"path":[["text"]],"len":1},"x",["NODE","bad"]]],
+          "lazy": {"runtime_error":true}
         }
       ]
     },
@@ -230,7 +476,7 @@
       "desc": "Paired SLICE and SPLICE cases cover every small array span, negative aliases, insertion points, and object-option defaults. SLICE returns the selected values; SPLICE removes or replaces that same span.",
       "tests": [
         {
-          "name": "Integer form deletes 0 at 0",
+          "name": "Array configuration deletes 0 at 0",
           "desc": "The same span rule is exercised by a read and an edit. Each leaf contains its complete input and expectations.",
           "tests": [
             {
@@ -239,7 +485,7 @@
               "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",[[0,0]]],["NODE"]]],
               "lazy": {"output":[]}
             },
-            {"name":"SPLICE","input":[0,1,2,3],"jgraft":["JGRAFT",{"v":1},["SPLICE",0,0]],"lazy":{"output":[0,1,2,3]}}
+            {"name":"SPLICE","input":[0,1,2,3],"jgraft":["JGRAFT",{"v":1},["SPLICE",[[0,0]]]],"lazy":{"output":[0,1,2,3]}}
           ]
         },
         {
@@ -255,13 +501,13 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":0,"len":0},"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":0,"len":0},"x"]],
               "lazy": {"output":["x",0,1,2,3]}
             }
           ]
         },
         {
-          "name": "Integer form deletes 1 at 0",
+          "name": "Array configuration deletes 1 at 0",
           "desc": "The same span rule is exercised by a read and an edit. Each leaf contains its complete input and expectations.",
           "tests": [
             {
@@ -270,7 +516,7 @@
               "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",[[0,1]]],["NODE"]]],
               "lazy": {"output":[0]}
             },
-            {"name":"SPLICE","input":[0,1,2,3],"jgraft":["JGRAFT",{"v":1},["SPLICE",0,1]],"lazy":{"output":[1,2,3]}}
+            {"name":"SPLICE","input":[0,1,2,3],"jgraft":["JGRAFT",{"v":1},["SPLICE",[[0,1]]]],"lazy":{"output":[1,2,3]}}
           ]
         },
         {
@@ -286,13 +532,13 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":0,"len":1},"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":0,"len":1},"x"]],
               "lazy": {"output":["x",1,2,3]}
             }
           ]
         },
         {
-          "name": "Integer form deletes 2 at 0",
+          "name": "Array configuration deletes 2 at 0",
           "desc": "The same span rule is exercised by a read and an edit. Each leaf contains its complete input and expectations.",
           "tests": [
             {
@@ -301,7 +547,7 @@
               "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",[[0,2]]],["NODE"]]],
               "lazy": {"output":[0,1]}
             },
-            {"name":"SPLICE","input":[0,1,2,3],"jgraft":["JGRAFT",{"v":1},["SPLICE",0,2]],"lazy":{"output":[2,3]}}
+            {"name":"SPLICE","input":[0,1,2,3],"jgraft":["JGRAFT",{"v":1},["SPLICE",[[0,2]]]],"lazy":{"output":[2,3]}}
           ]
         },
         {
@@ -317,13 +563,13 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":0,"len":2},"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":0,"len":2},"x"]],
               "lazy": {"output":["x",2,3]}
             }
           ]
         },
         {
-          "name": "Integer form deletes 3 at 0",
+          "name": "Array configuration deletes 3 at 0",
           "desc": "The same span rule is exercised by a read and an edit. Each leaf contains its complete input and expectations.",
           "tests": [
             {
@@ -332,7 +578,7 @@
               "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",[[0,3]]],["NODE"]]],
               "lazy": {"output":[0,1,2]}
             },
-            {"name":"SPLICE","input":[0,1,2,3],"jgraft":["JGRAFT",{"v":1},["SPLICE",0,3]],"lazy":{"output":[3]}}
+            {"name":"SPLICE","input":[0,1,2,3],"jgraft":["JGRAFT",{"v":1},["SPLICE",[[0,3]]]],"lazy":{"output":[3]}}
           ]
         },
         {
@@ -348,13 +594,13 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":0,"len":3},"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":0,"len":3},"x"]],
               "lazy": {"output":["x",3]}
             }
           ]
         },
         {
-          "name": "Integer form deletes 4 at 0",
+          "name": "Array configuration deletes 4 at 0",
           "desc": "The same span rule is exercised by a read and an edit. Each leaf contains its complete input and expectations.",
           "tests": [
             {
@@ -363,7 +609,7 @@
               "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",[[0,4]]],["NODE"]]],
               "lazy": {"output":[0,1,2,3]}
             },
-            {"name":"SPLICE","input":[0,1,2,3],"jgraft":["JGRAFT",{"v":1},["SPLICE",0,4]],"lazy":{"output":[]}}
+            {"name":"SPLICE","input":[0,1,2,3],"jgraft":["JGRAFT",{"v":1},["SPLICE",[[0,4]]]],"lazy":{"output":[]}}
           ]
         },
         {
@@ -379,13 +625,13 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":0,"len":4},"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":0,"len":4},"x"]],
               "lazy": {"output":["x"]}
             }
           ]
         },
         {
-          "name": "Integer form deletes 0 at 1",
+          "name": "Array configuration deletes 0 at 1",
           "desc": "The same span rule is exercised by a read and an edit. Each leaf contains its complete input and expectations.",
           "tests": [
             {
@@ -394,7 +640,7 @@
               "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",[[1,0]]],["NODE"]]],
               "lazy": {"output":[]}
             },
-            {"name":"SPLICE","input":[0,1,2,3],"jgraft":["JGRAFT",{"v":1},["SPLICE",1,0]],"lazy":{"output":[0,1,2,3]}}
+            {"name":"SPLICE","input":[0,1,2,3],"jgraft":["JGRAFT",{"v":1},["SPLICE",[[1,0]]]],"lazy":{"output":[0,1,2,3]}}
           ]
         },
         {
@@ -410,13 +656,13 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":1,"len":0},"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":1,"len":0},"x"]],
               "lazy": {"output":[0,"x",1,2,3]}
             }
           ]
         },
         {
-          "name": "Integer form deletes 1 at 1",
+          "name": "Array configuration deletes 1 at 1",
           "desc": "The same span rule is exercised by a read and an edit. Each leaf contains its complete input and expectations.",
           "tests": [
             {
@@ -425,7 +671,7 @@
               "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",[[1,1]]],["NODE"]]],
               "lazy": {"output":[1]}
             },
-            {"name":"SPLICE","input":[0,1,2,3],"jgraft":["JGRAFT",{"v":1},["SPLICE",1,1]],"lazy":{"output":[0,2,3]}}
+            {"name":"SPLICE","input":[0,1,2,3],"jgraft":["JGRAFT",{"v":1},["SPLICE",[[1,1]]]],"lazy":{"output":[0,2,3]}}
           ]
         },
         {
@@ -441,13 +687,13 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":1,"len":1},"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":1,"len":1},"x"]],
               "lazy": {"output":[0,"x",2,3]}
             }
           ]
         },
         {
-          "name": "Integer form deletes 2 at 1",
+          "name": "Array configuration deletes 2 at 1",
           "desc": "The same span rule is exercised by a read and an edit. Each leaf contains its complete input and expectations.",
           "tests": [
             {
@@ -456,7 +702,7 @@
               "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",[[1,2]]],["NODE"]]],
               "lazy": {"output":[1,2]}
             },
-            {"name":"SPLICE","input":[0,1,2,3],"jgraft":["JGRAFT",{"v":1},["SPLICE",1,2]],"lazy":{"output":[0,3]}}
+            {"name":"SPLICE","input":[0,1,2,3],"jgraft":["JGRAFT",{"v":1},["SPLICE",[[1,2]]]],"lazy":{"output":[0,3]}}
           ]
         },
         {
@@ -472,13 +718,13 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":1,"len":2},"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":1,"len":2},"x"]],
               "lazy": {"output":[0,"x",3]}
             }
           ]
         },
         {
-          "name": "Integer form deletes 3 at 1",
+          "name": "Array configuration deletes 3 at 1",
           "desc": "The same span rule is exercised by a read and an edit. Each leaf contains its complete input and expectations.",
           "tests": [
             {
@@ -487,7 +733,7 @@
               "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",[[1,3]]],["NODE"]]],
               "lazy": {"output":[1,2,3]}
             },
-            {"name":"SPLICE","input":[0,1,2,3],"jgraft":["JGRAFT",{"v":1},["SPLICE",1,3]],"lazy":{"output":[0]}}
+            {"name":"SPLICE","input":[0,1,2,3],"jgraft":["JGRAFT",{"v":1},["SPLICE",[[1,3]]]],"lazy":{"output":[0]}}
           ]
         },
         {
@@ -503,13 +749,13 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":1,"len":3},"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":1,"len":3},"x"]],
               "lazy": {"output":[0,"x"]}
             }
           ]
         },
         {
-          "name": "Integer form deletes 0 at 2",
+          "name": "Array configuration deletes 0 at 2",
           "desc": "The same span rule is exercised by a read and an edit. Each leaf contains its complete input and expectations.",
           "tests": [
             {
@@ -518,7 +764,7 @@
               "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",[[2,0]]],["NODE"]]],
               "lazy": {"output":[]}
             },
-            {"name":"SPLICE","input":[0,1,2,3],"jgraft":["JGRAFT",{"v":1},["SPLICE",2,0]],"lazy":{"output":[0,1,2,3]}}
+            {"name":"SPLICE","input":[0,1,2,3],"jgraft":["JGRAFT",{"v":1},["SPLICE",[[2,0]]]],"lazy":{"output":[0,1,2,3]}}
           ]
         },
         {
@@ -534,13 +780,13 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":2,"len":0},"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":2,"len":0},"x"]],
               "lazy": {"output":[0,1,"x",2,3]}
             }
           ]
         },
         {
-          "name": "Integer form deletes 1 at 2",
+          "name": "Array configuration deletes 1 at 2",
           "desc": "The same span rule is exercised by a read and an edit. Each leaf contains its complete input and expectations.",
           "tests": [
             {
@@ -549,7 +795,7 @@
               "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",[[2,1]]],["NODE"]]],
               "lazy": {"output":[2]}
             },
-            {"name":"SPLICE","input":[0,1,2,3],"jgraft":["JGRAFT",{"v":1},["SPLICE",2,1]],"lazy":{"output":[0,1,3]}}
+            {"name":"SPLICE","input":[0,1,2,3],"jgraft":["JGRAFT",{"v":1},["SPLICE",[[2,1]]]],"lazy":{"output":[0,1,3]}}
           ]
         },
         {
@@ -565,13 +811,13 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":2,"len":1},"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":2,"len":1},"x"]],
               "lazy": {"output":[0,1,"x",3]}
             }
           ]
         },
         {
-          "name": "Integer form deletes 2 at 2",
+          "name": "Array configuration deletes 2 at 2",
           "desc": "The same span rule is exercised by a read and an edit. Each leaf contains its complete input and expectations.",
           "tests": [
             {
@@ -580,7 +826,7 @@
               "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",[[2,2]]],["NODE"]]],
               "lazy": {"output":[2,3]}
             },
-            {"name":"SPLICE","input":[0,1,2,3],"jgraft":["JGRAFT",{"v":1},["SPLICE",2,2]],"lazy":{"output":[0,1]}}
+            {"name":"SPLICE","input":[0,1,2,3],"jgraft":["JGRAFT",{"v":1},["SPLICE",[[2,2]]]],"lazy":{"output":[0,1]}}
           ]
         },
         {
@@ -596,13 +842,13 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":2,"len":2},"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":2,"len":2},"x"]],
               "lazy": {"output":[0,1,"x"]}
             }
           ]
         },
         {
-          "name": "Integer form deletes 0 at 3",
+          "name": "Array configuration deletes 0 at 3",
           "desc": "The same span rule is exercised by a read and an edit. Each leaf contains its complete input and expectations.",
           "tests": [
             {
@@ -611,7 +857,7 @@
               "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",[[3,0]]],["NODE"]]],
               "lazy": {"output":[]}
             },
-            {"name":"SPLICE","input":[0,1,2,3],"jgraft":["JGRAFT",{"v":1},["SPLICE",3,0]],"lazy":{"output":[0,1,2,3]}}
+            {"name":"SPLICE","input":[0,1,2,3],"jgraft":["JGRAFT",{"v":1},["SPLICE",[[3,0]]]],"lazy":{"output":[0,1,2,3]}}
           ]
         },
         {
@@ -627,13 +873,13 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":3,"len":0},"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":3,"len":0},"x"]],
               "lazy": {"output":[0,1,2,"x",3]}
             }
           ]
         },
         {
-          "name": "Integer form deletes 1 at 3",
+          "name": "Array configuration deletes 1 at 3",
           "desc": "The same span rule is exercised by a read and an edit. Each leaf contains its complete input and expectations.",
           "tests": [
             {
@@ -642,7 +888,7 @@
               "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",[[3,1]]],["NODE"]]],
               "lazy": {"output":[3]}
             },
-            {"name":"SPLICE","input":[0,1,2,3],"jgraft":["JGRAFT",{"v":1},["SPLICE",3,1]],"lazy":{"output":[0,1,2]}}
+            {"name":"SPLICE","input":[0,1,2,3],"jgraft":["JGRAFT",{"v":1},["SPLICE",[[3,1]]]],"lazy":{"output":[0,1,2]}}
           ]
         },
         {
@@ -658,13 +904,13 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":3,"len":1},"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":3,"len":1},"x"]],
               "lazy": {"output":[0,1,2,"x"]}
             }
           ]
         },
         {
-          "name": "Integer form deletes 0 at 4",
+          "name": "Array configuration deletes 0 at 4",
           "desc": "The same span rule is exercised by a read and an edit. Each leaf contains its complete input and expectations.",
           "tests": [
             {
@@ -673,7 +919,7 @@
               "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",[[4,0]]],["NODE"]]],
               "lazy": {"output":[]}
             },
-            {"name":"SPLICE","input":[0,1,2,3],"jgraft":["JGRAFT",{"v":1},["SPLICE",4,0]],"lazy":{"output":[0,1,2,3]}}
+            {"name":"SPLICE","input":[0,1,2,3],"jgraft":["JGRAFT",{"v":1},["SPLICE",[[4,0]]]],"lazy":{"output":[0,1,2,3]}}
           ]
         },
         {
@@ -689,7 +935,7 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":4,"len":0},"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":4,"len":0},"x"]],
               "lazy": {"output":[0,1,2,3,"x"]}
             }
           ]
@@ -707,7 +953,7 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":2},"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":2},"x"]],
               "lazy": {"output":[0,1,"x"]}
             }
           ]
@@ -725,7 +971,7 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"len":2},"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"len":2},"x"]],
               "lazy": {"output":["x",2,3]}
             }
           ]
@@ -743,7 +989,7 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"lim":2},"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"lim":2},"x"]],
               "lazy": {"output":["x",2,3]}
             }
           ]
@@ -761,7 +1007,7 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":1,"len":2},"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":1,"len":2},"x"]],
               "lazy": {"output":[0,"x",3]}
             }
           ]
@@ -779,7 +1025,7 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":1,"lim":3},"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":1,"lim":3},"x"]],
               "lazy": {"output":[0,"x",3]}
             }
           ]
@@ -797,7 +1043,7 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"len":2,"lim":3},"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"len":2,"lim":3},"x"]],
               "lazy": {"output":[0,"x",3]}
             }
           ]
@@ -815,7 +1061,7 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":1,"len":2,"lim":3},"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":1,"len":2,"lim":3},"x"]],
               "lazy": {"output":[0,"x",3]}
             }
           ]
@@ -833,7 +1079,7 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"len":0},"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"len":0},"x"]],
               "lazy": {"output":["x",0,1,2,3]}
             }
           ]
@@ -851,7 +1097,7 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"lim":0},"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"lim":0},"x"]],
               "lazy": {"output":["x",0,1,2,3]}
             }
           ]
@@ -869,7 +1115,7 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":4},"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":4},"x"]],
               "lazy": {"output":[0,1,2,3,"x"]}
             }
           ]
@@ -887,7 +1133,7 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":2,"lim":2},"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":2,"lim":2},"x"]],
               "lazy": {"output":[0,1,"x",2,3]}
             }
           ]
@@ -905,7 +1151,7 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"len":0,"lim":2},"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"len":0,"lim":2},"x"]],
               "lazy": {"output":[0,1,"x",2,3]}
             }
           ]
@@ -923,7 +1169,7 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":-1},"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":-1},"x"]],
               "lazy": {"output":[0,1,2,"x"]}
             }
           ]
@@ -941,7 +1187,7 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":-3,"len":2},"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":-3,"len":2},"x"]],
               "lazy": {"output":[0,"x",3]}
             }
           ]
@@ -959,7 +1205,7 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":-3,"lim":3},"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":-3,"lim":3},"x"]],
               "lazy": {"output":[0,"x",3]}
             }
           ]
@@ -977,7 +1223,7 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":-3,"len":2,"lim":3},"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":-3,"len":2,"lim":3},"x"]],
               "lazy": {"output":[0,"x",3]}
             }
           ]
@@ -995,13 +1241,13 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":-4,"len":1},"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":-4,"len":1},"x"]],
               "lazy": {"output":["x",1,2,3]}
             }
           ]
         },
         {
-          "name": "Append with false",
+          "name": "Append at length",
           "desc": "The same span rule is exercised by a read and an edit. Each leaf contains its complete input and expectations.",
           "tests": [
             {
@@ -1013,13 +1259,13 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",false,0,"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[["LENGTH"],0]],"x"]],
               "lazy": {"output":[0,1,2,3,"x"]}
             }
           ]
         },
         {
-          "name": "Negative index selects final element",
+          "name": "Negative offset selects final element",
           "desc": "The same span rule is exercised by a read and an edit. Each leaf contains its complete input and expectations.",
           "tests": [
             {
@@ -1031,13 +1277,13 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",-1,1,"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[-1,1]],"x"]],
               "lazy": {"output":[0,1,2,"x"]}
             }
           ]
         },
         {
-          "name": "Negative index selects first element",
+          "name": "Negative offset selects first element",
           "desc": "The same span rule is exercised by a read and an edit. Each leaf contains its complete input and expectations.",
           "tests": [
             {
@@ -1049,13 +1295,13 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",-4,1,"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[-4,1]],"x"]],
               "lazy": {"output":["x",1,2,3]}
             }
           ]
         },
         {
-          "name": "Negative count leaves final element",
+          "name": "Negative limit leaves final element",
           "desc": "The same span rule is exercised by a read and an edit. Each leaf contains its complete input and expectations.",
           "tests": [
             {
@@ -1067,13 +1313,13 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,-1,"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[1,-1]],"x"]],
               "lazy": {"output":[0,"x",3]}
             }
           ]
         },
         {
-          "name": "Negative count leaves two elements",
+          "name": "Negative limit leaves two elements",
           "desc": "The same span rule is exercised by a read and an edit. Each leaf contains its complete input and expectations.",
           "tests": [
             {
@@ -1085,13 +1331,13 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,-2,"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[1,-2]],"x"]],
               "lazy": {"output":[0,"x",2,3]}
             }
           ]
         },
         {
-          "name": "Negative count can select zero elements",
+          "name": "Negative limit can select zero elements",
           "desc": "The same span rule is exercised by a read and an edit. Each leaf contains its complete input and expectations.",
           "tests": [
             {
@@ -1103,13 +1349,13 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",2,-2,"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[2,-2]],"x"]],
               "lazy": {"output":[0,1,"x",2,3]}
             }
           ]
         },
         {
-          "name": "Negative count equal to minus length",
+          "name": "Negative limit equal to minus length",
           "desc": "The same span rule is exercised by a read and an edit. Each leaf contains its complete input and expectations.",
           "tests": [
             {
@@ -1121,13 +1367,13 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,-4,"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[0,-4]],"x"]],
               "lazy": {"output":["x",0,1,2,3]}
             }
           ]
         },
         {
-          "name": "Both path and count use negative aliases",
+          "name": "Both span bounds use negative aliases",
           "desc": "The same span rule is exercised by a read and an edit. Each leaf contains its complete input and expectations.",
           "tests": [
             {
@@ -1139,13 +1385,13 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",-3,-1,"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[-3,-1]],"x"]],
               "lazy": {"output":[0,"x",3]}
             }
           ]
         },
         {
-          "name": "Empty integer splice on empty array",
+          "name": "Empty span on empty array",
           "desc": "The same span rule is exercised by a read and an edit. Each leaf contains its complete input and expectations.",
           "tests": [
             {
@@ -1154,11 +1400,11 @@
               "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",[[0,0]]],["NODE"]]],
               "lazy": {"output":[]}
             },
-            {"name":"SPLICE","input":[],"jgraft":["JGRAFT",{"v":1},["SPLICE",0,0]],"lazy":{"output":[]}}
+            {"name":"SPLICE","input":[],"jgraft":["JGRAFT",{"v":1},["SPLICE",[[0,0]]]],"lazy":{"output":[]}}
           ]
         },
         {
-          "name": "Append to empty array with false",
+          "name": "Append to empty array at length",
           "desc": "The same span rule is exercised by a read and an edit. Each leaf contains its complete input and expectations.",
           "tests": [
             {
@@ -1167,7 +1413,7 @@
               "jgraft": ["JGRAFT",{"v":1},["COPY",["SLICE",[[["LENGTH"],0]]],["NODE"]]],
               "lazy": {"output":[]}
             },
-            {"name":"SPLICE","input":[],"jgraft":["JGRAFT",{"v":1},["SPLICE",false,0,7]],"lazy":{"output":[7]}}
+            {"name":"SPLICE","input":[],"jgraft":["JGRAFT",{"v":1},["SPLICE",[[["LENGTH"],0]],7]],"lazy":{"output":[7]}}
           ]
         },
         {
@@ -1183,7 +1429,7 @@
             {
               "name": "SPLICE",
               "input": [],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":0},7]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":0},7]],
               "lazy": {"output":[7]}
             }
           ]
@@ -1201,7 +1447,7 @@
             {
               "name": "SPLICE",
               "input": [],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"len":0},7]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"len":0},7]],
               "lazy": {"output":[7]}
             }
           ]
@@ -1219,7 +1465,7 @@
             {
               "name": "SPLICE",
               "input": [],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"lim":0},7]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"lim":0},7]],
               "lazy": {"output":[7]}
             }
           ]
@@ -1237,7 +1483,7 @@
             {
               "name": "SPLICE",
               "input": [],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":0,"len":0,"lim":0},7]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":0,"len":0,"lim":0},7]],
               "lazy": {"output":[7]}
             }
           ]
@@ -1246,169 +1492,169 @@
     },
     {
       "name": "SPLICE evaluation, relative paths, and ownership",
-      "desc": "Options and replacements evaluate before mutation. Integer and object forms deliberately distinguish replacing an array element from editing an array stored at that location. No capture objects or SPLIT metadata are used.",
+      "desc": "The relative path selects the target. Configuration fields and replacements are evaluated with the invoking node in scope.",
       "tests": [
         {
           "name": "All replacement references see the original array",
           "input": [0,1,2,3],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,2,["NODE",2],["NODE",1],["NODE",0]]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[1,2]],["NODE",2],["NODE",1],["NODE",0]]],
           "lazy": {"output":[0,2,1,0,3]}
         },
         {
           "name": "Insert snapshot of entire target array",
           "input": [0,1],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,0,["NODE"]]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[1,0]],["NODE"]]],
           "lazy": {"output":[0,[0,1],1]}
         },
         {
           "name": "Repeated references become independently writable values",
           "input": [{"n":1}],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,0,["NODE",0],["NODE",0]],["COPY",7,["NODE",1,"n"]]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[1,0]],["NODE",0],["NODE",0]],["COPY",7,["NODE",1,"n"]]],
           "lazy": {"output":[{"n":1},{"n":7},{"n":1}]}
         },
         {
           "name": "Inserted copy does not alias a separate source",
           "input": {"source":{"n":1},"list":[]},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list"],{"len":0},["NODE","source"]],["COPY",7,["NODE","list",0,"n"]]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"len":0,"path":[["list"]]},["NODE","source"]],["COPY",7,["NODE","list",0,"n"]]],
           "lazy": {"output":{"source":{"n":1},"list":[{"n":7}]}}
         },
         {
           "name": "Earlier replacement does not affect a later LENGTH",
           "input": [0,1],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,0,7,["LENGTH"]]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[0,0]],7,["LENGTH"]]],
           "lazy": {"output":[7,2,0,1]}
         },
         {
-          "name": "Integer count expression reads the original array",
+          "name": "Length expression reads the original array",
           "input": [2,"a","b"],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,["NODE",0],"x"]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[1,["NODE",0]]],"x"]],
           "lazy": {"output":[2,"x"]}
         },
         {
           "name": "Object bounds expressions read the original array",
           "input": [1,2,"a","b"],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":["NODE",0],"len":["NODE",1]},"x"]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":["NODE",0],"len":["NODE",1]},"x"]],
           "lazy": {"output":[1,"x","b"]}
         },
         {
-          "name": "Computed positive integer count",
+          "name": "Computed array configuration supplies a length",
           "input": {"count":2,"list":[0,1,2,3]},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list",1],["NODE","count"],"x"]],
+          "jgraft": ["JGRAFT",{"v":1,"const":["span",[[1,["NODE","count"]]]]},["AT","list",["SPLICE",["CONST","span"],"x"]]],
           "lazy": {"output":{"count":2,"list":[0,"x",3]}}
         },
         {
-          "name": "Computed negative integer count",
+          "name": "Computed array configuration supplies a negative limit",
           "input": {"count":-1,"list":[0,1,2,3]},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list",1],["NODE","count"],"x"]],
+          "jgraft": ["JGRAFT",{"v":1,"const":["span",[[1,["NODE","count"]]]]},["AT","list",["SPLICE",["CONST","span"],"x"]]],
           "lazy": {"output":{"count":-1,"list":[0,"x",3]}}
         },
         {
           "name": "Computed option object",
-          "input": {"options":{"ofs":1,"len":1},"list":[0,1,2]},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list"],["NODE","options"],"x"]],
-          "lazy": {"output":{"options":{"ofs":1,"len":1},"list":[0,"x",2]}}
+          "input": {"options":{"ofs":1,"len":1,"path":["list"]},"list":[0,1,2]},
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","options"],"x"]],
+          "lazy": {"output":{"options":{"ofs":1,"len":1,"path":["list"]},"list":[0,"x",2]}}
         },
         {
-          "name": "Computed integer path selector",
+          "name": "Computed offset selects an element within a nested array",
           "input": {"offset":1,"list":[0,1,2]},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list",["NODE","offset"]],1,"x"]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"path":[["list"]],"ofs":["NODE","offset"],"len":1},"x"]],
           "lazy": {"output":{"offset":1,"list":[0,"x",2]}}
         },
         {
-          "name": "Expanded path addresses integer-form element",
-          "input": {"path":["list",1],"list":[0,1,2]},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE",["NODE","path"]],1,"x"]],
-          "lazy": {"output":{"path":["list",1],"list":[0,"x",2]}}
+          "name": "Reference supplies the path to the target",
+          "input": {"path":["list"],"list":[0,1,2]},
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"path":["NODE","path"],"ofs":1,"len":1},"x"]],
+          "lazy": {"output":{"path":["list"],"list":[0,"x",2]}}
         },
         {
           "name": "Options path selects a nested target",
           "input": {"outer":{"list":[0,1,2]},"keep":1},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","outer"],{"path":[["list"]],"ofs":1,"len":1},"x"]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"path":[["outer","list"]],"ofs":1,"len":1},"x"]],
           "lazy": {"output":{"outer":{"list":[0,"x",2]},"keep":1}}
         },
         {
           "name": "Relative options path may contain array indices",
           "input": {"outer":[{"list":[0,1,2]}]},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","outer"],{"path":[[0,"list"]],"ofs":1,"len":1},"x"]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"path":[["outer",0,"list"]],"ofs":1,"len":1},"x"]],
           "lazy": {"output":{"outer":[{"list":[0,"x",2]}]}}
         },
         {
           "name": "Options path is relative rather than a namespace reference",
           "input": {"CONST":{"list":[0,1]}},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"path":[["CONST","list"]],"len":1},"x"]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"path":[["CONST","list"]],"len":1},"x"]],
           "lazy": {"output":{"CONST":{"list":["x",1]}}}
         },
         {
           "name": "Empty options path preserves source array",
           "input": [0,1],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"path":[[]],"len":1},"x"]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"path":[[]],"len":1},"x"]],
           "lazy": {"output":["x",1]}
         },
         {
           "name": "Computed relative path uses entry NODE",
-          "input": {"selected":["list"],"outer":{"selected":["wrong"],"list":[0,1]}},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","outer"],{"path":["NODE","selected"],"len":1},"x"]],
-          "lazy": {"output":{"selected":["list"],"outer":{"selected":["wrong"],"list":["x",1]}}}
+          "input": {"selected":["outer","list"],"outer":{"selected":["wrong"],"list":[0,1]}},
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"path":["NODE","selected"],"len":1},"x"]],
+          "lazy": {"output":{"selected":["outer","list"],"outer":{"selected":["wrong"],"list":["x",1]}}}
         },
         {
           "name": "Negative bounds use final relative target length",
           "input": {"outer":{"list":[0,1,2]},"other":0},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"path":[["outer","list"]],"ofs":-1,"len":1},"x"]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"path":[["outer","list"]],"ofs":-1,"len":1},"x"]],
           "lazy": {"output":{"outer":{"list":[0,1,"x"]},"other":0}}
         },
         {
           "name": "Relative path uses ordinary negative array aliases",
           "input": {"outer":[[0],[1,2]]},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","outer"],{"path":[[-1]],"len":1},"x"]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"path":[["outer",-1]],"len":1},"x"]],
           "lazy": {"output":{"outer":[[0],["x",2]]}}
         },
         {
-          "name": "Object form distinguishes target array from an array element",
+          "name": "Relative path selects a nested array",
           "input": [[0,1],[2,3]],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE",0],{"len":1},"x"]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"len":1,"path":[[0]]},"x"]],
           "lazy": {"output":[["x",1],[2,3]]}
         },
         {
-          "name": "Integer form replaces the array-valued element itself",
+          "name": "Span in the outer array replaces an array-valued element",
           "input": [[0,1],[2,3]],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,1,"x"]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[0,1]],"x"]],
           "lazy": {"output":["x",[2,3]]}
         },
         {
           "name": "Splice array selected by AT",
           "input": {"list":[0,1],"keep":7},
-          "jgraft": ["JGRAFT",{"v":1},["AT","list",["SPLICE",0,1,"x"]]],
+          "jgraft": ["JGRAFT",{"v":1},["AT","list",["SPLICE",[[0,1]],"x"]]],
           "lazy": {"output":{"list":["x",1],"keep":7}}
         },
         {
           "name": "Object splice of AT current array",
           "input": {"list":[0,1]},
-          "jgraft": ["JGRAFT",{"v":1},["AT","list",["SPLICE",["NODE"],{"ofs":1},"x"]]],
+          "jgraft": ["JGRAFT",{"v":1},["AT","list",["SPLICE",{"ofs":1},"x"]]],
           "lazy": {"output":{"list":[0,"x"]}}
         },
         {
           "name": "Later action sees completed indices",
           "input": [0,1,2],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,1],["COPY",7,0]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[0,1]]],["COPY",7,0]],
           "lazy": {"output":[7,2]}
         },
         {
           "name": "Later action sees completed length",
           "input": [0,1],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",false,0,2,3],["COPY",["LENGTH"],["NODE"]]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[["LENGTH"],0]],2,3],["COPY",["LENGTH"],["NODE"]]],
           "lazy": {"output":4}
         },
         {
-          "name": "Splice stash independently of its copied source",
+          "name": "Snapshot in STASH survives an edit to the original",
           "input": {"list":[0,1]},
           "jgraft": [
             "JGRAFT",
             {"v":1},
             ["COPY",["NODE","list"],["STASH","list"]],
-            ["SPLICE",["STASH","list"],{"len":1},"x"],
+            ["SPLICE",{"path":[["list"]],"len":1},"x"],
             ["COPY",["STASH","list"],"saved"]
           ],
-          "lazy": {"output":{"list":[0,1],"saved":["x",1]}}
+          "lazy": {"output":{"list":["x",1],"saved":[0,1]}}
         },
         {
           "name": "Constant replacement stays independent",
@@ -1416,7 +1662,7 @@
           "jgraft": [
             "JGRAFT",
             {"v":1,"const":["value",{"n":1}]},
-            ["SPLICE",0,0,["CONST","value"]],
+            ["SPLICE",[[0,0]],["CONST","value"]],
             ["COPY",7,["NODE",0,"n"]],
             ["COPY",["CONST","value"],false]
           ],
@@ -1425,7 +1671,7 @@
         {
           "name": "Zero-length span still evaluates replacements",
           "input": [],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,0,["LENGTH"]]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[0,0]],["LENGTH"]]],
           "lazy": {"output":[0]}
         }
       ]
@@ -1448,7 +1694,7 @@
             {
               "name": "SPLICE",
               "input": [0,1],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE","0",{"len":0},"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"len":0,"path":[["0"]]},"x"]],
               "lazy": {"runtime_error":true},
               "desc": "The string selector cannot address an element of this array, even though a similarly named object property would be a valid source-array location."
             }
@@ -1467,7 +1713,7 @@
             {
               "name": "SPLICE",
               "input": [0,1],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":3,"len":0},"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":3,"len":0},"x"]],
               "lazy": {"runtime_error":true}
             }
           ]
@@ -1485,7 +1731,7 @@
             {
               "name": "SPLICE",
               "input": [0,1],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"len":3},"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"len":3},"x"]],
               "lazy": {"runtime_error":true}
             }
           ]
@@ -1503,7 +1749,7 @@
             {
               "name": "SPLICE",
               "input": [0,1],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"lim":3},"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"lim":3},"x"]],
               "lazy": {"runtime_error":true}
             }
           ]
@@ -1521,7 +1767,7 @@
             {
               "name": "SPLICE",
               "input": [0,1],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":-3,"len":0},"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":-3,"len":0},"x"]],
               "lazy": {"runtime_error":true}
             }
           ]
@@ -1539,7 +1785,7 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":-1,"len":1,"lim":3},"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":-1,"len":1,"lim":3},"x"]],
               "lazy": {"runtime_error":true}
             }
           ]
@@ -1557,7 +1803,7 @@
             {
               "name": "SPLICE",
               "input": [[0,1]],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"path":[[false]],"len":0},"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"path":[[false]],"len":0},"x"]],
               "lazy": {"runtime_error":true}
             }
           ]
@@ -1569,169 +1815,168 @@
       "desc": "Input-dependent type and range failures use RUNTIME_ERROR. Missing targets are not auto-vivified, bounds are not clamped, and the state exposed after a failing action is not prescribed by these fixtures.",
       "tests": [
         {
-          "name": "Object form requires array target null",
+          "name": "Target must be an array or string: null",
           "input": null,
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"len":0},7]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"len":0},7]],
           "lazy": {"runtime_error":true}
         },
         {
-          "name": "Object form requires array target false",
+          "name": "Target must be an array or string: false",
           "input": false,
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"len":0},7]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"len":0},7]],
           "lazy": {"runtime_error":true}
         },
         {
-          "name": "Object form requires array target true",
+          "name": "Target must be an array or string: true",
           "input": true,
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"len":0},7]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"len":0},7]],
           "lazy": {"runtime_error":true}
         },
         {
-          "name": "Object form requires array target 3",
+          "name": "Target must be an array or string: 3",
           "input": 3,
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"len":0},7]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"len":0},7]],
           "lazy": {"runtime_error":true}
         },
         {
-          "name": "Object form requires array target \"text\"",
+          "name": "String target rejects a numeric replacement",
           "input": "text",
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"len":0},7]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"len":0},7]],
           "lazy": {"runtime_error":true}
         },
         {
-          "name": "Object form requires array target {}",
+          "name": "Target must be an array or string: {}",
           "input": {},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"len":0},7]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"len":0},7]],
           "lazy": {"runtime_error":true}
         },
         {
-          "name": "Integer form cannot target an object property",
+          "name": "Scalar offset requires a current array or string",
           "input": {"list":[0,1],"count":1},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE","list",["NODE","count"],"x"]],
-          "lazy": {"runtime_error":true},
-          "desc": "The computed integer selects element-addressing mode, in which an object property is not an array element. An object-valued option could validly edit the stored array instead."
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","count"],"x"]],
+          "lazy": {"runtime_error":true}
         },
         {
-          "name": "Missing array parent is not created",
+          "name": "Intermediate node in a target path is missing",
           "input": {},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","missing",0],0,"x"]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"path":[["missing",0]],"len":0},"x"]],
           "lazy": {"runtime_error":true}
         },
         {
           "name": "Missing object-form target is not created",
           "input": {},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","missing"],{"len":0},"x"]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"len":0,"path":[["missing"]]},"x"]],
           "lazy": {"runtime_error":true}
         },
         {
           "name": "Cannot traverse a scalar parent",
           "input": {"list":null},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list",0],0,"x"]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"path":[["list",0]],"len":0},"x"]],
           "lazy": {"runtime_error":true}
         },
         {
           "name": "Offset beyond end",
           "input": [0,1],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",3,0,"x"]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[3,0]],"x"]],
           "lazy": {"runtime_error":true}
         },
         {
           "name": "Offset before start",
           "input": [0,1],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",-3,0,"x"]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[-3,0]],"x"]],
           "lazy": {"runtime_error":true}
         },
         {
           "name": "Too many removals",
           "input": [0,1],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,2,"x"]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[1,2]],"x"]],
           "lazy": {"runtime_error":true}
         },
         {
           "name": "Cannot remove at length",
           "input": [0,1],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",false,1,"x"]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[["LENGTH"],1]],"x"]],
           "lazy": {"runtime_error":true},
           "strict": {"runtime_error":true,"invalid_graft":true},
           "desc": "Deeper analysis may prove that the reference or span cannot succeed; local validation alone need not do so."
         },
         {
-          "name": "Negative count ends before offset",
+          "name": "Negative limit ends before offset",
           "input": [0,1,2],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",2,-2,"x"]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[2,-2]],"x"]],
           "lazy": {"runtime_error":true}
         },
         {
-          "name": "Negative count ends before array",
+          "name": "Negative limit ends before array",
           "input": [0,1],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,-3,"x"]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[0,-3]],"x"]],
           "lazy": {"runtime_error":true}
         },
         {
-          "name": "Negative count is not clamped on empty array",
+          "name": "Negative limit is not clamped on empty array",
           "input": [],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,-1,"x"]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[0,-1]],"x"]],
           "lazy": {"runtime_error":true}
         },
         {
           "name": "Relative target missing",
           "input": {"outer":{}},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","outer"],{"path":[["list"]],"len":0},"x"]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"path":[["outer","list"]],"len":0},"x"]],
           "lazy": {"runtime_error":true}
         },
         {
           "name": "Relative target scalar",
           "input": {"outer":{"list":7}},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","outer"],{"path":[["list"]],"len":0},"x"]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"path":[["outer","list"]],"len":0},"x"]],
           "lazy": {"runtime_error":true}
         },
         {
           "name": "Relative path cannot create ancestors",
           "input": {},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"path":[["missing","list"]],"len":0},"x"]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"path":[["missing","list"]],"len":0},"x"]],
           "lazy": {"runtime_error":true}
         },
         {
           "name": "Missing replacement source",
           "input": {"list":[0,1]},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list"],{"len":1},["NODE","missing"]]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"len":1,"path":[["list"]]},["NODE","missing"]]],
           "lazy": {"runtime_error":true}
         },
         {
           "name": "Replacement reads past end",
           "input": [0,1],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,1,["NODE",false]]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[0,1]],["NODE",false]]],
           "lazy": {"runtime_error":true}
         },
         {
           "name": "Later replacement still executes before splice",
           "input": [0,1],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,1,7,["FAIL"]]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[0,1]],7,["FAIL"]]],
           "lazy": {"runtime_error":true}
         },
         {
           "name": "FAIL in options remains a runtime failure",
           "input": [0,1],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,["FAIL"]]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["FAIL"]]],
           "lazy": {"runtime_error":true}
         },
         {
           "name": "FAIL in replacement remains a runtime failure",
           "input": [0,1],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,1,["FAIL"]]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[0,1]],["FAIL"]]],
           "lazy": {"runtime_error":true}
         },
         {
           "name": "Missing options reference",
           "input": {"list":[0,1]},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list"],["NODE","missing"]]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","missing"]]],
           "lazy": {"runtime_error":true}
         },
         {
           "name": "Previous edit makes a later span impossible",
           "desc": "The explicit replacement establishes the array size independently of input. The final action attempts to remove an element from the known empty array, which deeper analysis may diagnose.",
           "input": [0,1],
-          "jgraft": ["JGRAFT",{"v":1},["COPY",[[0,1]],["NODE"]],["SPLICE",0,2],["SPLICE",0,1]],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[[0,1]],["NODE"]],["SPLICE",[[0,2]]],["SPLICE",[[0,1]]]],
           "lazy": {"runtime_error":true},
           "strict": {"runtime_error":true,"invalid_graft":true}
         },
@@ -1739,7 +1984,7 @@
           "name": "TEMP from an earlier action is unavailable to SPLICE",
           "desc": "The new action receives a fresh TEMP root.",
           "input": {},
-          "jgraft": ["JGRAFT",{"v":1},["COPY",[[0,1]],["TEMP","list"]],["SPLICE",["TEMP","list"],{"len":1}]],
+          "jgraft": ["JGRAFT",{"v":1},["COPY",[[0,1]],["TEMP","list"]],["SPLICE",["TEMP","list"]]],
           "lazy": {"runtime_error":true},
           "strict": {"runtime_error":true,"invalid_graft":true}
         }
@@ -1762,7 +2007,7 @@
             {
               "name": "SPLICE",
               "input": [0,1],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{}]],
               "lazy": {"invalid_graft":true}
             }
           ]
@@ -1780,7 +2025,7 @@
             {
               "name": "SPLICE",
               "input": [0,1],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"path":[[]]}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"path":[[]]}]],
               "lazy": {"invalid_graft":true}
             }
           ]
@@ -1798,7 +2043,7 @@
             {
               "name": "SPLICE",
               "input": [0,1],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":0,"unknown":1}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":0,"unknown":1}]],
               "lazy": {"invalid_graft":true}
             }
           ]
@@ -1816,7 +2061,7 @@
             {
               "name": "SPLICE",
               "input": [0,1],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":0,"pos":1}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":0,"pos":1}]],
               "lazy": {"invalid_graft":true}
             }
           ]
@@ -1834,7 +2079,7 @@
             {
               "name": "SPLICE",
               "input": [0,1],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":0,"length":1}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":0,"length":1}]],
               "lazy": {"invalid_graft":true}
             }
           ]
@@ -1852,7 +2097,7 @@
             {
               "name": "SPLICE",
               "input": [0,1],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":null}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":null}]],
               "lazy": {"invalid_graft":true}
             }
           ]
@@ -1870,7 +2115,7 @@
             {
               "name": "SPLICE",
               "input": [0,1],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":false}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":false}]],
               "lazy": {"invalid_graft":true}
             }
           ]
@@ -1888,7 +2133,7 @@
             {
               "name": "SPLICE",
               "input": [0,1],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":true}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":true}]],
               "lazy": {"invalid_graft":true}
             }
           ]
@@ -1906,7 +2151,7 @@
             {
               "name": "SPLICE",
               "input": [0,1],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":1.5}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":1.5}]],
               "lazy": {"invalid_graft":true}
             }
           ]
@@ -1924,7 +2169,7 @@
             {
               "name": "SPLICE",
               "input": [0,1],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":"1"}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":"1"}]],
               "lazy": {"invalid_graft":true}
             }
           ]
@@ -1942,7 +2187,7 @@
             {
               "name": "SPLICE",
               "input": [0,1],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":{}}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":{}}]],
               "lazy": {"invalid_graft":true}
             }
           ]
@@ -1960,7 +2205,7 @@
             {
               "name": "SPLICE",
               "input": [0,1],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":[[]]}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":[[]]}]],
               "lazy": {"invalid_graft":true}
             }
           ]
@@ -1978,7 +2223,7 @@
             {
               "name": "SPLICE",
               "input": [0,1],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"len":null}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"len":null}]],
               "lazy": {"invalid_graft":true}
             }
           ]
@@ -1996,7 +2241,7 @@
             {
               "name": "SPLICE",
               "input": [0,1],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"len":false}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"len":false}]],
               "lazy": {"invalid_graft":true}
             }
           ]
@@ -2014,7 +2259,7 @@
             {
               "name": "SPLICE",
               "input": [0,1],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"len":true}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"len":true}]],
               "lazy": {"invalid_graft":true}
             }
           ]
@@ -2032,7 +2277,7 @@
             {
               "name": "SPLICE",
               "input": [0,1],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"len":1.5}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"len":1.5}]],
               "lazy": {"invalid_graft":true}
             }
           ]
@@ -2050,7 +2295,7 @@
             {
               "name": "SPLICE",
               "input": [0,1],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"len":"1"}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"len":"1"}]],
               "lazy": {"invalid_graft":true}
             }
           ]
@@ -2068,7 +2313,7 @@
             {
               "name": "SPLICE",
               "input": [0,1],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"len":{}}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"len":{}}]],
               "lazy": {"invalid_graft":true}
             }
           ]
@@ -2086,7 +2331,7 @@
             {
               "name": "SPLICE",
               "input": [0,1],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"len":[[]]}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"len":[[]]}]],
               "lazy": {"invalid_graft":true}
             }
           ]
@@ -2104,7 +2349,7 @@
             {
               "name": "SPLICE",
               "input": [0,1],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"len":-1}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"len":-1}]],
               "lazy": {"invalid_graft":true}
             }
           ]
@@ -2122,7 +2367,7 @@
             {
               "name": "SPLICE",
               "input": [0,1],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"lim":null}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"lim":null}]],
               "lazy": {"invalid_graft":true}
             }
           ]
@@ -2140,7 +2385,7 @@
             {
               "name": "SPLICE",
               "input": [0,1],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"lim":false}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"lim":false}]],
               "lazy": {"invalid_graft":true}
             }
           ]
@@ -2158,7 +2403,7 @@
             {
               "name": "SPLICE",
               "input": [0,1],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"lim":true}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"lim":true}]],
               "lazy": {"invalid_graft":true}
             }
           ]
@@ -2176,7 +2421,7 @@
             {
               "name": "SPLICE",
               "input": [0,1],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"lim":1.5}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"lim":1.5}]],
               "lazy": {"invalid_graft":true}
             }
           ]
@@ -2194,7 +2439,7 @@
             {
               "name": "SPLICE",
               "input": [0,1],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"lim":"1"}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"lim":"1"}]],
               "lazy": {"invalid_graft":true}
             }
           ]
@@ -2212,7 +2457,7 @@
             {
               "name": "SPLICE",
               "input": [0,1],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"lim":{}}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"lim":{}}]],
               "lazy": {"invalid_graft":true}
             }
           ]
@@ -2230,7 +2475,7 @@
             {
               "name": "SPLICE",
               "input": [0,1],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"lim":[[]]}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"lim":[[]]}]],
               "lazy": {"invalid_graft":true}
             }
           ]
@@ -2248,7 +2493,7 @@
             {
               "name": "SPLICE",
               "input": [0,1],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"lim":-1}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"lim":-1}]],
               "lazy": {"invalid_graft":true}
             }
           ]
@@ -2266,7 +2511,7 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":2,"lim":1}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":2,"lim":1}]],
               "lazy": {"invalid_graft":true}
             }
           ]
@@ -2284,7 +2529,7 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"len":3,"lim":2}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"len":3,"lim":2}]],
               "lazy": {"invalid_graft":true}
             }
           ]
@@ -2302,7 +2547,7 @@
             {
               "name": "SPLICE",
               "input": [0,1,2,3],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":1,"len":1,"lim":3}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":1,"len":1,"lim":3}]],
               "lazy": {"invalid_graft":true}
             }
           ]
@@ -2320,7 +2565,7 @@
             {
               "name": "SPLICE",
               "input": [0,1],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"path":null,"len":0}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"path":null,"len":0}]],
               "lazy": {"invalid_graft":true}
             }
           ]
@@ -2338,7 +2583,7 @@
             {
               "name": "SPLICE",
               "input": [0,1],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"path":false,"len":0}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"path":false,"len":0}]],
               "lazy": {"invalid_graft":true}
             }
           ]
@@ -2356,7 +2601,7 @@
             {
               "name": "SPLICE",
               "input": [0,1],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"path":0,"len":0}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"path":0,"len":0}]],
               "lazy": {"invalid_graft":true}
             }
           ]
@@ -2374,7 +2619,7 @@
             {
               "name": "SPLICE",
               "input": [0,1],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"path":"list","len":0}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"path":"list","len":0}]],
               "lazy": {"invalid_graft":true}
             }
           ]
@@ -2392,7 +2637,7 @@
             {
               "name": "SPLICE",
               "input": [0,1],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"path":{},"len":0}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"path":{},"len":0}]],
               "lazy": {"invalid_graft":true}
             }
           ]
@@ -2410,7 +2655,7 @@
             {
               "name": "SPLICE",
               "input": {"value":null,"list":[0,1]},
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list"],{"ofs":["NODE","value"]}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":["NODE","value"],"path":[["list"]]}]],
               "lazy": {"runtime_error":true}
             }
           ]
@@ -2428,7 +2673,7 @@
             {
               "name": "SPLICE",
               "input": {"value":false,"list":[0,1]},
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list"],{"ofs":["NODE","value"]}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":["NODE","value"],"path":[["list"]]}]],
               "lazy": {"runtime_error":true}
             }
           ]
@@ -2446,7 +2691,7 @@
             {
               "name": "SPLICE",
               "input": {"value":1.5,"list":[0,1]},
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list"],{"ofs":["NODE","value"]}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":["NODE","value"],"path":[["list"]]}]],
               "lazy": {"runtime_error":true}
             }
           ]
@@ -2464,7 +2709,7 @@
             {
               "name": "SPLICE",
               "input": {"value":"1","list":[0,1]},
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list"],{"ofs":["NODE","value"]}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":["NODE","value"],"path":[["list"]]}]],
               "lazy": {"runtime_error":true}
             }
           ]
@@ -2482,7 +2727,7 @@
             {
               "name": "SPLICE",
               "input": {"value":{},"list":[0,1]},
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list"],{"ofs":["NODE","value"]}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":["NODE","value"],"path":[["list"]]}]],
               "lazy": {"runtime_error":true}
             }
           ]
@@ -2500,7 +2745,7 @@
             {
               "name": "SPLICE",
               "input": {"value":null,"list":[0,1]},
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list"],{"len":["NODE","value"]}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"len":["NODE","value"],"path":[["list"]]}]],
               "lazy": {"runtime_error":true}
             }
           ]
@@ -2518,7 +2763,7 @@
             {
               "name": "SPLICE",
               "input": {"value":false,"list":[0,1]},
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list"],{"len":["NODE","value"]}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"len":["NODE","value"],"path":[["list"]]}]],
               "lazy": {"runtime_error":true}
             }
           ]
@@ -2536,7 +2781,7 @@
             {
               "name": "SPLICE",
               "input": {"value":1.5,"list":[0,1]},
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list"],{"len":["NODE","value"]}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"len":["NODE","value"],"path":[["list"]]}]],
               "lazy": {"runtime_error":true}
             }
           ]
@@ -2554,7 +2799,7 @@
             {
               "name": "SPLICE",
               "input": {"value":"1","list":[0,1]},
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list"],{"len":["NODE","value"]}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"len":["NODE","value"],"path":[["list"]]}]],
               "lazy": {"runtime_error":true}
             }
           ]
@@ -2572,7 +2817,7 @@
             {
               "name": "SPLICE",
               "input": {"value":{},"list":[0,1]},
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list"],{"len":["NODE","value"]}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"len":["NODE","value"],"path":[["list"]]}]],
               "lazy": {"runtime_error":true}
             }
           ]
@@ -2590,7 +2835,7 @@
             {
               "name": "SPLICE",
               "input": {"value":null,"list":[0,1]},
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list"],{"lim":["NODE","value"]}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"lim":["NODE","value"],"path":[["list"]]}]],
               "lazy": {"runtime_error":true}
             }
           ]
@@ -2608,7 +2853,7 @@
             {
               "name": "SPLICE",
               "input": {"value":false,"list":[0,1]},
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list"],{"lim":["NODE","value"]}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"lim":["NODE","value"],"path":[["list"]]}]],
               "lazy": {"runtime_error":true}
             }
           ]
@@ -2626,7 +2871,7 @@
             {
               "name": "SPLICE",
               "input": {"value":1.5,"list":[0,1]},
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list"],{"lim":["NODE","value"]}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"lim":["NODE","value"],"path":[["list"]]}]],
               "lazy": {"runtime_error":true}
             }
           ]
@@ -2644,7 +2889,7 @@
             {
               "name": "SPLICE",
               "input": {"value":"1","list":[0,1]},
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list"],{"lim":["NODE","value"]}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"lim":["NODE","value"],"path":[["list"]]}]],
               "lazy": {"runtime_error":true}
             }
           ]
@@ -2662,7 +2907,7 @@
             {
               "name": "SPLICE",
               "input": {"value":{},"list":[0,1]},
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list"],{"lim":["NODE","value"]}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"lim":["NODE","value"],"path":[["list"]]}]],
               "lazy": {"runtime_error":true}
             }
           ]
@@ -2680,7 +2925,7 @@
             {
               "name": "SPLICE",
               "input": {"path":null,"list":[0,1]},
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"path":["NODE","path"],"len":0}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"path":["NODE","path"],"len":0}]],
               "lazy": {"runtime_error":true}
             }
           ]
@@ -2698,7 +2943,7 @@
             {
               "name": "SPLICE",
               "input": {"path":0,"list":[0,1]},
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"path":["NODE","path"],"len":0}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"path":["NODE","path"],"len":0}]],
               "lazy": {"runtime_error":true}
             }
           ]
@@ -2716,7 +2961,7 @@
             {
               "name": "SPLICE",
               "input": {"path":"list","list":[0,1]},
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"path":["NODE","path"],"len":0}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"path":["NODE","path"],"len":0}]],
               "lazy": {"runtime_error":true}
             }
           ]
@@ -2734,7 +2979,7 @@
             {
               "name": "SPLICE",
               "input": {"path":{},"list":[0,1]},
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"path":["NODE","path"],"len":0}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"path":["NODE","path"],"len":0}]],
               "lazy": {"runtime_error":true}
             }
           ]
@@ -2752,7 +2997,7 @@
             {
               "name": "SPLICE",
               "input": {"path":[["list"]],"list":[0,1]},
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"path":["NODE","path"],"len":0}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"path":["NODE","path"],"len":0}]],
               "lazy": {"runtime_error":true}
             }
           ]
@@ -2773,7 +3018,7 @@
               "name": "SPLICE",
               "desc": "The path operand has array type but contains an invalid array-valued selector after expansion.",
               "input": {"list":[0,1]},
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"path":[[[["list"]]]],"len":0}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"path":[[[["list"]]]],"len":0}]],
               "lazy": {"runtime_error":true},
               "strict": {"runtime_error":true,"invalid_graft":true}
             }
@@ -2792,7 +3037,7 @@
             {
               "name": "SPLICE",
               "input": [0,1],
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"ofs":["LOCAL",null,"x",0],"len":0}]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"ofs":["LOCAL",null,"x",0],"len":0}]],
               "lazy": {"invalid_graft":true}
             }
           ]
@@ -2801,168 +3046,132 @@
     },
     {
       "name": "SPLICE local validation and computed options",
-      "desc": "Literal named options receive local type, domain, unknown-key, and consistency checks. An input-derived object is validated after evaluation instead. Arrays are not an alternative SPLICE option format, and null is not a count-to-end shorthand.",
+      "desc": "Literal and computed configurations follow SLICE validation. A scalar integer alone selects the tail.",
       "tests": [
         {
           "name": "Invalid literal options null",
           "input": [0,1],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,null]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",null]],
           "lazy": {"invalid_graft":true}
         },
         {
           "name": "Invalid literal options false",
           "input": [0,1],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,false]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",false]],
           "lazy": {"invalid_graft":true}
         },
         {
           "name": "Invalid literal options true",
           "input": [0,1],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,true]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",true]],
           "lazy": {"invalid_graft":true}
         },
         {
           "name": "Invalid literal options 1.5",
           "input": [0,1],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,1.5]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1.5]],
           "lazy": {"invalid_graft":true}
         },
         {
           "name": "Invalid literal options \"1\"",
           "input": [0,1],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,"1"]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE","1"]],
           "lazy": {"invalid_graft":true}
         },
         {
           "name": "Invalid literal options []",
           "input": [0,1],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,[[]]]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[]]]],
           "lazy": {"invalid_graft":true}
         },
         {
           "name": "Invalid literal options [[]]",
           "input": [0,1],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,[[[[]]]]]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[[[]]]]]],
           "lazy": {"invalid_graft":true}
         },
         {
           "name": "Computed invalid options null",
           "input": {"options":null,"list":[0,1]},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list"],["NODE","options"]]],
+          "jgraft": ["JGRAFT",{"v":1,"const":["options",["NODE","options"]]},["AT","list",["SPLICE",["CONST","options"]]]],
           "lazy": {"runtime_error":true}
         },
         {
           "name": "Computed invalid options false",
           "input": {"options":false,"list":[0,1]},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list"],["NODE","options"]]],
+          "jgraft": ["JGRAFT",{"v":1,"const":["options",["NODE","options"]]},["AT","list",["SPLICE",["CONST","options"]]]],
           "lazy": {"runtime_error":true}
         },
         {
           "name": "Computed invalid options true",
           "input": {"options":true,"list":[0,1]},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list"],["NODE","options"]]],
+          "jgraft": ["JGRAFT",{"v":1,"const":["options",["NODE","options"]]},["AT","list",["SPLICE",["CONST","options"]]]],
           "lazy": {"runtime_error":true}
         },
         {
           "name": "Computed invalid options 1.5",
           "input": {"options":1.5,"list":[0,1]},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list"],["NODE","options"]]],
+          "jgraft": ["JGRAFT",{"v":1,"const":["options",["NODE","options"]]},["AT","list",["SPLICE",["CONST","options"]]]],
           "lazy": {"runtime_error":true}
         },
         {
           "name": "Computed invalid options \"1\"",
           "input": {"options":"1","list":[0,1]},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list"],["NODE","options"]]],
+          "jgraft": ["JGRAFT",{"v":1,"const":["options",["NODE","options"]]},["AT","list",["SPLICE",["CONST","options"]]]],
           "lazy": {"runtime_error":true}
         },
         {
           "name": "Computed invalid options []",
           "input": {"options":[],"list":[0,1]},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list"],["NODE","options"]]],
+          "jgraft": ["JGRAFT",{"v":1,"const":["options",["NODE","options"]]},["AT","list",["SPLICE",["CONST","options"]]]],
           "lazy": {"runtime_error":true}
         },
         {
           "name": "Computed invalid options {}",
           "input": {"options":{},"list":[0,1]},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list"],["NODE","options"]]],
+          "jgraft": ["JGRAFT",{"v":1,"const":["options",["NODE","options"]]},["AT","list",["SPLICE",["CONST","options"]]]],
           "lazy": {"runtime_error":true}
         },
         {
           "name": "Computed invalid options {\"ofs\":0,\"unknown\":1}",
           "input": {"options":{"ofs":0,"unknown":1},"list":[0,1]},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list"],["NODE","options"]]],
+          "jgraft": ["JGRAFT",{"v":1,"const":["options",["NODE","options"]]},["AT","list",["SPLICE",["CONST","options"]]]],
           "lazy": {"runtime_error":true}
         },
         {
           "name": "Computed invalid options {\"ofs\":2,\"lim\":1}",
           "input": {"options":{"ofs":2,"lim":1},"list":[0,1]},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list"],["NODE","options"]]],
+          "jgraft": ["JGRAFT",{"v":1,"const":["options",["NODE","options"]]},["AT","list",["SPLICE",["CONST","options"]]]],
           "lazy": {"runtime_error":true}
         },
         {
           "name": "Computed invalid options {\"len\":-1}",
           "input": {"options":{"len":-1},"list":[0,1]},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list"],["NODE","options"]]],
+          "jgraft": ["JGRAFT",{"v":1,"const":["options",["NODE","options"]]},["AT","list",["SPLICE",["CONST","options"]]]],
           "lazy": {"runtime_error":true}
         },
         {
-          "name": "Invalid splice path null",
-          "input": [0,1],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",null,0]],
-          "lazy": {"invalid_graft":true}
-        },
-        {
-          "name": "Invalid splice path true",
-          "input": [0,1],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",true,0]],
-          "lazy": {"invalid_graft":true}
-        },
-        {
-          "name": "Invalid splice path 0.5",
-          "input": [0,1],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0.5,0]],
-          "lazy": {"invalid_graft":true}
-        },
-        {
-          "name": "Invalid splice path {}",
-          "input": [0,1],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{},0]],
-          "lazy": {"invalid_graft":true}
-        },
-        {
-          "name": "Invalid splice path [[\"list\",0]]",
-          "input": [0,1],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[["list",0]],0]],
-          "lazy": {"invalid_graft":true}
-        },
-        {
-          "name": "Invalid splice path [\"LENGTH\"]",
-          "input": [0,1],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["LENGTH"],0]],
-          "lazy": {"invalid_graft":true}
-        },
-        {
-          "name": "Computed invalid splice selector null",
+          "name": "Computed invalid offset null",
           "input": {"selector":null,"list":[0,1]},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list",["NODE","selector"]],0]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"path":[["list"]],"ofs":["NODE","selector"],"len":0}]],
           "lazy": {"runtime_error":true}
         },
         {
-          "name": "Computed invalid splice selector true",
+          "name": "Computed invalid offset true",
           "input": {"selector":true,"list":[0,1]},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list",["NODE","selector"]],0]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"path":[["list"]],"ofs":["NODE","selector"],"len":0}]],
           "lazy": {"runtime_error":true}
         },
         {
-          "name": "Computed invalid splice selector 0.5",
+          "name": "Computed invalid offset 0.5",
           "input": {"selector":0.5,"list":[0,1]},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list",["NODE","selector"]],0]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"path":[["list"]],"ofs":["NODE","selector"],"len":0}]],
           "lazy": {"runtime_error":true}
         },
         {
-          "name": "Computed invalid splice selector {}",
+          "name": "Computed invalid offset {}",
           "input": {"selector":{},"list":[0,1]},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list",["NODE","selector"]],0]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"path":[["list"]],"ofs":["NODE","selector"],"len":0}]],
           "lazy": {"runtime_error":true}
         },
         {
@@ -2972,21 +3181,21 @@
           "lazy": {"invalid_graft":true}
         },
         {
-          "name": "Illegal arity [\"SPLICE\",0]",
+          "name": "Zero offset alone deletes the entire array",
           "input": [0,1],
           "jgraft": ["JGRAFT",{"v":1},["SPLICE",0]],
-          "lazy": {"invalid_graft":true}
+          "lazy": {"output":[]}
         },
         {
           "name": "Unescaped empty replacement is not an empty array",
           "input": [0,1],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,0,[]]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[0,0]],[]]],
           "lazy": {"invalid_graft":true}
         },
         {
           "name": "Unknown replacement expression",
           "input": [0,1],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",0,0,["UNKNOWN"]]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[0,0]],["UNKNOWN"]]],
           "lazy": {"invalid_graft":true}
         }
       ]
@@ -2999,7 +3208,7 @@
           "name": "SPLICE malformed unselected action",
           "desc": "IF is used only to skip an action; no matching algorithm or captures are under test.",
           "input": [],
-          "jgraft": ["JGRAFT",{"v":1},["IF",false,["SPLICE",["NODE"],{"len":null}],["COPY","safe",["NODE"]]]],
+          "jgraft": ["JGRAFT",{"v":1},["IF",false,["SPLICE",{"len":null}],["COPY","safe",["NODE"]]]],
           "lazy": {"output":"safe"},
           "strict": {"invalid_graft":true}
         },
@@ -3007,7 +3216,7 @@
           "name": "SPLICE encountered malformed action follows earlier log",
           "desc": "The earlier action executes in lazy mode. Strict validation may reject before execution, so its log sequence is not asserted.",
           "input": [],
-          "jgraft": ["JGRAFT",{"v":1},["RAISE","info","before"],["SPLICE",["NODE"],{"len":null}]],
+          "jgraft": ["JGRAFT",{"v":1},["RAISE","info","before"],["SPLICE",{"len":null}]],
           "lazy": {"invalid_graft":true,"emits":[{"level":"info","message":"before"}]},
           "strict": {"invalid_graft":true}
         },
@@ -3015,127 +3224,100 @@
           "name": "SPLICE runtime failure aborts later actions",
           "desc": "No output is specified on failure. The complete log prefix establishes that following actions did not run.",
           "input": [],
-          "jgraft": ["JGRAFT",{"v":1},["RAISE","info","before"],["SPLICE",0,1],["RAISE","info","after"]],
+          "jgraft": ["JGRAFT",{"v":1},["RAISE","info","before"],["SPLICE",[[0,1]]],["RAISE","info","after"]],
           "lazy": {"runtime_error":true,"emits":[{"level":"info","message":"before"}]}
         }
       ]
     },
     {
-      "name": "Expanded splice paths and computed span objects",
-      "desc": "Empty path expansion, numeric property names, and computed span fields retain their distinct meanings when selecting a splice target.",
+      "name": "Relative paths and computed span objects",
+      "desc": "An empty path uses the current node. Other cases exercise numeric property names and input-derived span fields.",
       "tests": [
         {
-          "name": "SPLICE empty expanded target path edits the current array",
+          "name": "Empty configuration path edits the current array",
           "input": [0,1],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE",[[]]],{"len":1},"x"]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"path":[[]],"len":1},"x"]],
           "lazy": {"output":["x",1]}
         },
         {
-          "name": "SPLICE integer form cannot address the document root",
-          "desc": "With literal integer options, bare NODE is forbidden: it would address the current node's parent rather than an element within the current node.",
+          "name": "Scalar offset replaces the document root array tail",
           "input": [0,1],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],1,"x"]],
-          "lazy": {"invalid_graft":true}
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,"x"]],
+          "lazy": {"output":[0,"x"]}
         },
         {
           "name": "SPLICE relative integer cannot select an object key",
           "input": {"0":[0,1]},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"path":[[0]],"len":1},"x"]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"path":[[0]],"len":1},"x"]],
           "lazy": {"runtime_error":true}
         },
         {
           "name": "SPLICE relative string can select a numeric object key",
           "input": {"0":[0,1]},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"path":[["0"]],"len":1},"x"]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"path":[["0"]],"len":1},"x"]],
           "lazy": {"output":{"0":["x",1]}}
         },
         {
           "name": "SPLICE relative empty expansion is not recursively flattened",
           "desc": "The options path is an array of selectors, not nested path expressions.",
           "input": {"list":[0,1]},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"path":[[[[]],"list"]],"len":1},"x"]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"path":[[[[]],"list"]],"len":1},"x"]],
           "lazy": {"runtime_error":true},
           "strict": {"runtime_error":true,"invalid_graft":true}
         },
         {
           "name": "SPLICE explicit null len is not a default",
           "input": {"options":{"ofs":1,"len":null},"list":[0,1,2]},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list"],["NODE","options"]]],
+          "jgraft": ["JGRAFT",{"v":1,"const":["options",["NODE","options"]]},["AT","list",["SPLICE",["CONST","options"]]]],
           "lazy": {"runtime_error":true}
         },
         {
           "name": "SPLICE explicit null path is not an empty path",
           "input": {"options":{"len":0,"path":null},"list":[0,1]},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list"],["NODE","options"]]],
+          "jgraft": ["JGRAFT",{"v":1,"const":["options",["NODE","options"]]},["AT","list",["SPLICE",["CONST","options"]]]],
           "lazy": {"runtime_error":true}
         },
         {
           "name": "SPLICE computed consistent triple is accepted",
-          "input": {"options":{"ofs":1,"len":1,"lim":2},"list":[0,1,2]},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list"],["NODE","options"],"x"]],
-          "lazy": {"output":{"options":{"ofs":1,"len":1,"lim":2},"list":[0,"x",2]}}
+          "input": {"options":{"ofs":1,"len":1,"lim":2,"path":["list"]},"list":[0,1,2]},
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","options"],"x"]],
+          "lazy": {"output":{"options":{"ofs":1,"len":1,"lim":2,"path":["list"]},"list":[0,"x",2]}}
         },
         {
           "name": "SPLICE computed negative offset is normalized before consistency check",
-          "input": {"options":{"ofs":-2,"len":1,"lim":2},"list":[0,1,2]},
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","list"],["NODE","options"],"x"]],
-          "lazy": {"output":{"options":{"ofs":-2,"len":1,"lim":2},"list":[0,"x",2]}}
+          "input": {"options":{"ofs":-2,"len":1,"lim":2,"path":["list"]},"list":[0,1,2]},
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","options"],"x"]],
+          "lazy": {"output":{"options":{"ofs":-2,"len":1,"lim":2,"path":["list"]},"list":[0,"x",2]}}
         }
       ]
     },
     {
       "name": "SPLICE current-node boundary",
-      "desc": "Integer options cannot splice the parent of the current node. Bare NODE is prohibited, including equivalent empty expanded paths; object options may edit the current array itself.",
+      "desc": "AT sets the source for every configuration form. Replacements can read that same current node.",
       "tests": [
         {
-          "name": "Bare NODE with integer options cannot splice the AT parent",
-          "desc": "Integer options require a final array selector below the current node, even when AT selected an array element.",
-          "input": [[0,1],[2,3]],
-          "jgraft": ["JGRAFT",{"v":1},["AT",0,["SPLICE",["NODE"],1,"x"]]],
-          "lazy": {"invalid_graft":true}
+          "name": "Scalar offset selects the tail of the AT node",
+          "input": [[0,1,2],[3,4]],
+          "jgraft": ["JGRAFT",{"v":1},["AT",0,["SPLICE",1,"x"]]],
+          "lazy": {"output":[[0,"x"],[3,4]]}
         },
         {
-          "name": "Bare NODE cannot insert into the AT parent",
+          "name": "Empty path inserts inside the AT node",
           "input": [[0,1],[2,3]],
-          "jgraft": ["JGRAFT",{"v":1},["AT",0,["SPLICE",["NODE"],0,"x"]]],
-          "lazy": {"invalid_graft":true}
+          "jgraft": ["JGRAFT",{"v":1},["AT",0,["SPLICE",{"path":[[]],"ofs":1,"len":0},"x"]]],
+          "lazy": {"output":[[0,"x",1],[2,3]]}
         },
         {
-          "name": "Computed integer options cannot splice the AT parent",
-          "desc": "The options type is only known after evaluating NODE. Object options could legally select nested; integer options cannot operate on the current node's parent.",
-          "input": [{"count":1,"nested":[0,1]}],
-          "jgraft": ["JGRAFT",{"v":1},["AT",0,["SPLICE",["NODE"],["NODE","count"],"x"]]],
+          "name": "Path is relative to the AT node",
+          "input": {"list":[0,1],"inner":{"list":[2,3],"value":"x"}},
+          "jgraft": ["JGRAFT",{"v":1},["AT","inner",["SPLICE",{"path":[["list"]],"ofs":1},["NODE","value"]]]],
+          "lazy": {"output":{"list":[0,1],"inner":{"list":[2,"x"],"value":"x"}}}
+        },
+        {
+          "name": "An offset cannot edit the parent of a scalar",
+          "input": [7,8],
+          "jgraft": ["JGRAFT",{"v":1},["AT",0,["SPLICE",0,"x"]]],
           "lazy": {"runtime_error":true}
-        },
-        {
-          "name": "Literal empty expansion cannot bypass AT boundary",
-          "desc": "After expansion the path is empty. Local type validation need not inspect array contents; deeper analysis can detect the forbidden root path.",
-          "input": [[0,1],[2,3]],
-          "jgraft": ["JGRAFT",{"v":1},["AT",0,["SPLICE",["NODE",[[]]],1,"x"]]],
-          "lazy": {"runtime_error":true},
-          "strict": {"runtime_error":true,"invalid_graft":true}
-        },
-        {
-          "name": "Computed empty expansion cannot bypass AT boundary",
-          "input": {"path":[],"list":[[0,1],[2,3]]},
-          "jgraft": [
-            "JGRAFT",
-            {"v":1,"const":["path",["NODE","path"]]},
-            ["AT",["NODE","list",0],["SPLICE",["NODE",["CONST","path"]],1,"x"]]
-          ],
-          "lazy": {"runtime_error":true}
-        },
-        {
-          "name": "Object options edit the AT current array itself",
-          "input": [[0,1],[2,3]],
-          "jgraft": ["JGRAFT",{"v":1},["AT",0,["SPLICE",["NODE"],{"len":1},"x"]]],
-          "lazy": {"output":[["x",1],[2,3]]}
-        },
-        {
-          "name": "Integer options with explicit selector stay inside AT",
-          "input": [[0,1],[2,3]],
-          "jgraft": ["JGRAFT",{"v":1},["AT",0,["SPLICE",["NODE",0],1,"x"]]],
-          "lazy": {"output":[["x",1],[2,3]]}
         }
       ]
     },
@@ -3890,7 +4072,7 @@
             {
               "name": "SPLICE",
               "input": {"list":[0,1,2]},
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],{"path":[["list"]],"ofs":1,"len":1,"lim":2},"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",{"path":[["list"]],"ofs":1,"len":1,"lim":2},"x"]],
               "lazy": {"output":{"list":[0,"x",2]}}
             }
           ]
@@ -3908,7 +4090,7 @@
             {
               "name": "SPLICE",
               "input": {"span":{"path":["list"],"ofs":1,"len":1,"lim":2},"list":[0,1,2]},
-              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE"],["NODE","span"],"x"]],
+              "jgraft": ["JGRAFT",{"v":1},["SPLICE",["NODE","span"],"x"]],
               "lazy": {"output":{"span":{"path":["list"],"ofs":1,"len":1,"lim":2},"list":[0,"x",2]}}
             }
           ]
@@ -3916,7 +4098,7 @@
         {
           "name": "Slice result is one splice replacement",
           "input": [0,1,2,3],
-          "jgraft": ["JGRAFT",{"v":1},["SPLICE",1,0,["SLICE",{"ofs":1,"len":2}]]],
+          "jgraft": ["JGRAFT",{"v":1},["SPLICE",[[1,0]],["SLICE",{"ofs":1,"len":2}]]],
           "lazy": {"output":[0,[1,2],1,2,3]}
         },
         {

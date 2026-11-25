@@ -13,7 +13,7 @@
           "input": {"steps":["setup","begin","lint","build","end","ship"]},
           "jgraft": [
             "JGRAFT", {"v":1},
-            ["MATCH",{"steps":[[["REP"],"begin",["GROUP","edit","lint","build"],"end",["REP"]]]},["COPY",["SLICE",["CAP","edit"]],"previous"],["SPLICE",["NODE"],["CAP","edit"],"check"]]
+            ["MATCH",{"steps":[[["REP"],"begin",["GROUP","edit","lint","build"],"end",["REP"]]]},["COPY",["SLICE",["CAP","edit"]],"previous"],["SPLICE",["CAP","edit"],"check"]]
           ],
           "lazy": {"output":{"steps":["setup","begin","check","end","ship"],"previous":["lint","build"]}}
         },
@@ -23,7 +23,7 @@
           "input": {"steps":["begin","build","lint","end"]},
           "jgraft": [
             "JGRAFT", {"v":1},
-            ["MATCH",{"steps":[[["REP"],"begin",["GROUP","edit","lint","build"],"end",["REP"]]]},["COPY",["SLICE",["CAP","edit"]],"previous"],["SPLICE",["NODE"],["CAP","edit"],"check"]]
+            ["MATCH",{"steps":[[["REP"],"begin",["GROUP","edit","lint","build"],"end",["REP"]]]},["COPY",["SLICE",["CAP","edit"]],"previous"],["SPLICE",["CAP","edit"],"check"]]
           ],
           "lazy": {"no_match":true}
         },
@@ -32,11 +32,23 @@
           "desc": "The second invocation prepares a fresh match after the first splice changes both values and offsets. A START anchor and a short prefix select the first occurrence.",
           "input": ["old","keep","old"],
           "jgraft": [
-            "JGRAFT", {"v":1,"const":["rename",["ACT",["MATCH",[[["START"],["SHORT",["REP"]],["GROUP","hit","old"],["REP"],["END"]]],["SPLICE",["NODE"],["CAP","hit"],"new","extra"]]]]},
+            "JGRAFT", {"v":1,"const":["rename",["ACT",["MATCH",[[["START"],["SHORT",["REP"]],["GROUP","hit","old"],["REP"],["END"]]],["SPLICE",["CAP","hit"],"new","extra"]]]]},
             ["CALL","rename"],
             ["CALL","rename"]
           ],
           "lazy": {"output":["new","extra","keep","new","extra"]}
+        },
+        {
+          "name": "Replace the first captured substring in a field",
+          "input": {"field":"😀needs_replaced / needs_replaced"},
+          "jgraft": ["JGRAFT",{"v":1},["MATCH",{"field":["STR",["GROUP",0,"needs_replaced"]]},["SPLICE",["CAP",0],"replacement"]]],
+          "lazy": {"output":{"field":"😀replacement / needs_replaced"}}
+        },
+        {
+          "name": "Captured bounds retain their original positions",
+          "input": "abc",
+          "jgraft": ["JGRAFT",{"v":1},["MATCH",["STR",["GROUP",0,"b"]],["SPLICE",[[0,0]],"x"],["SPLICE",["CAP",0],"B"]]],
+          "lazy": {"output":"xBbc"}
         }
       ]
     },

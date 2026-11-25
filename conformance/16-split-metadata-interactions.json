@@ -112,7 +112,7 @@
           "jgraft": [
             "JGRAFT", {"v":1,"const":["fmt",{"sep":["REG",["CHARS","|;"]],"default":"/","ltrim":["REG",["REP",1,-1," "]],"rtrim":["REG",["CHARS","!?."]]}]},
             ["COPY",["SPLIT",["CONST","fmt"]],["NODE"]],
-            ["SPLICE",["NODE"],{"ofs":0,"len":0},"N"],
+            ["SPLICE",{"ofs":0,"len":0},"N"],
             ["COPY",["JOIN",["CONST","fmt"]],["NODE"]]
           ],
           "lazy": {"output":"N| a!|  b?;   c."}
@@ -123,7 +123,7 @@
           "jgraft": [
             "JGRAFT", {"v":1,"const":["fmt",{"sep":["REG",["CHARS","|;"]],"default":"/","ltrim":["REG",["REP",1,-1," "]],"rtrim":["REG",["CHARS","!?."]]}]},
             ["COPY",["SPLIT",["CONST","fmt"]],["NODE"]],
-            ["SPLICE",["NODE"],{"ofs":1,"len":0},"N"],
+            ["SPLICE",{"ofs":1,"len":0},"N"],
             ["COPY",["JOIN",["CONST","fmt"]],["NODE"]]
           ],
           "lazy": {"output":" a!| N|  b?;   c."}
@@ -134,7 +134,7 @@
           "jgraft": [
             "JGRAFT", {"v":1,"const":["fmt",{"sep":["REG",["CHARS","|;"]],"default":"/","ltrim":["REG",["REP",1,-1," "]],"rtrim":["REG",["CHARS","!?."]]}]},
             ["COPY",["SPLIT",["CONST","fmt"]],["NODE"]],
-            ["SPLICE",["NODE"],{"ofs":3,"len":0},"N"],
+            ["SPLICE",{"ofs":3,"len":0},"N"],
             ["COPY",["JOIN",["CONST","fmt"]],["NODE"]]
           ],
           "lazy": {"output":" a!|  b?;   c.;   N"}
@@ -145,7 +145,7 @@
           "jgraft": [
             "JGRAFT", {"v":1,"const":["fmt",{"sep":["REG",["CHARS","|;"]],"default":"/","ltrim":["REG",["REP",1,-1," "]],"rtrim":["REG",["CHARS","!?."]]}]},
             ["COPY",["SPLIT",["CONST","fmt"]],["NODE"]],
-            ["SPLICE",["NODE"],{"ofs":1,"len":0},["NODE",1]],
+            ["SPLICE",{"ofs":1,"len":0},["NODE",1]],
             ["COPY",["JOIN",["CONST","fmt"]],["NODE"]]
           ],
           "lazy": {"output":" a!|  b?;  b?;   c."}
@@ -156,7 +156,7 @@
           "jgraft": [
             "JGRAFT", {"v":1,"const":["fmt",{"sep":["REG",["CHARS","|;"]],"default":"/","ltrim":["REG",["REP",1,-1," "]],"rtrim":["REG",["CHARS","!?."]]}]},
             ["COPY",["SPLIT",["CONST","fmt"]],["NODE"]],
-            ["SPLICE",["NODE"],{"ofs":1,"len":1}],
+            ["SPLICE",{"ofs":1,"len":1}],
             ["COPY",["JOIN",["CONST","fmt"]],["NODE"]]
           ],
           "lazy": {"output":" a!|   c."}
@@ -167,10 +167,16 @@
           "jgraft": [
             "JGRAFT", {"v":1,"const":["fmt",{"sep":["REG",["CHARS","|;"]],"default":"/","ltrim":["REG",["REP",1,-1," "]],"rtrim":["REG",["CHARS","!?."]]}]},
             ["COPY",["SPLIT",["CONST","fmt"]],["NODE"]],
-            ["SPLICE",["NODE"],{"ofs":1,"len":1},"N"],
+            ["SPLICE",{"ofs":1,"len":1},"N"],
             ["COPY",["JOIN",["CONST","fmt"]],["NODE"]]
           ],
           "lazy": {"output":" a!| N|   c."}
+        },
+        {
+          "name": "Editing a split field preserves its own separator and trimming",
+          "input": " a!|  b?;   c.",
+          "jgraft": ["JGRAFT",{"v":1},["ATSPLIT",["NODE"],{"sep":["REG",["CHARS","|;"]],"default":"/","ltrim":["REG",["REP",1,-1," "]],"rtrim":["REG",["CHARS","!?."]]},["SPLICE",{"path":[[1]],"len":1},"B","B"]]],
+          "lazy": {"output":" a!|  BB?;   c."}
         },
         {
           "name": "Move the middle field to the beginning",
@@ -389,7 +395,7 @@
           "jgraft": [
             "JGRAFT", {"v":1,"const":["fmt",{"sep":["REG",["CHARS","|;"]],"default":"/","ltrim":["REG",["REP",1,-1," "]],"rtrim":["REG",["CHARS","!?."]]}]},
             ["COPY",["SPLIT",["CONST","fmt"]],["NODE"]],
-            ["SPLICE",["NODE"],{"ofs":0,"len":3}],
+            ["SPLICE",{"ofs":0,"len":3}],
             ["COPY",["SPLIT",["CONST","fmt"],"    x?;y!"],["STASH","other"],["STASH","other",0],false,["STASH","other",1],false],
             ["COPY",["JOIN",["CONST","fmt"]],["NODE"]]
           ],

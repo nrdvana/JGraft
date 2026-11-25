@@ -105,13 +105,13 @@
         {
           "name": "SPLICE accepts 7",
           "input": ["a","b","c"],
-          "jgraft": ["JGRAFT",{"v":1},[7,1,1,"x","y"]],
+          "jgraft": ["JGRAFT",{"v":1},[7,[[1,1]],"x","y"]],
           "lazy": {"output":["a","x","y","c"]}
         },
         {
           "name": "SPLICE rejects \"7\"",
           "input": ["a","b","c"],
-          "jgraft": ["JGRAFT",{"v":1},["7",1,1,"x","y"]],
+          "jgraft": ["JGRAFT",{"v":1},["7",[[1,1]],"x","y"]],
           "lazy": {"invalid_graft":true}
         },
         {

@@ -242,8 +242,10 @@ disambiguate whether a plain JSON structure is a match pattern or a value
 construction notation.
 
 Macros are expanded in-line using the [`CALL` action](#act-call) or
-[`EX` expression](#ex-ex).  They do not receive parameters directly, but may
-receive them by way of namespaces like `TEMP` or `STASH`.
+[`EX` expression](#ex-ex).  Individual directives may also accept a macro
+object directly, as in the [`SLICE` base](#ex-slice).  Macros do not receive
+parameters directly, but may receive them by way of namespaces like `TEMP`
+or `STASH`.
 
 Macros may only be expanded in a compatible context; action macros can only be
 expanded by `CALL`, regex pattern macros may only be expanded in regex context,
@@ -349,7 +351,8 @@ facilitates transfer of values between actions.
 
 The primary intended workflow for JGraft is to use a `MATCH` or `IF` action to
 verify that the input data tree matches expectations or locate matching
-sequences using [array matching](#matching-arrays), then use `COPY`, `MOVE`,
+sequences of [array elements](#matching-arrays) or
+[string characters](#matching-string-characters), then use `COPY`, `MOVE`,
 and `SPLICE` to alter the tree.  Named captures provide the paths and bounds
 needed to edit sequences found at adjusted positions.
 
@@ -365,7 +368,7 @@ Name                    | ID | Description
 [IF](#act-if)           |  4 | Choose action based on which pattern matches
 [COPY](#act-copy)       |  5 | Assign-by-value to properties
 [MOVE](#act-move)       |  6 | Move existing values between properties
-[SPLICE](#act-splice)   |  7 | Perform standard splice() on an array
+[SPLICE](#act-splice)   |  7 | Replace a span of an array or string
 [WHILE](#act-while)     |  8 | General-purpose looping construct
 [CALL](#act-call)       |  9 | Invoke an action reference, localize STASH
 
@@ -1310,7 +1313,7 @@ to repeatedly act on `[STASH,0]` during the subactions:
             "Line thirteen"
           ]
         ]],
-        [SPLICE, [NODE], [CAP, "edit"],
+        [SPLICE, [CAP, "edit"],
           "New Line eleven"
           // no line 12
         ]
@@ -1581,36 +1584,68 @@ Examples:
 
 ### <span id="act-splice">SPLICE</span>
 
-    ['SPLICE', path, option_args, replacement1, replacement2...]
+    [SPLICE, slice_args, replacements...]
 
-Replace a span of an array, just like the splice function found in most
-programming languages.  The `path` argument is specified in path context and
-`option_args` in value context.  There are two permitted combinations:
+Replace the span of an array or string that [`[SLICE, slice_args]`](#ex-slice)
+would read.
 
-  * If `option_args` evaluates to an integer, `path` must refer to an element
-    of an array (or its insertion point at `LENGTH`) and may not be `[NODE]`
-    itself as that would alter a parent of the current node.
-    That index supplies the offset.  A non-negative integer supplies `len`;
-    a negative integer supplies a limit counting backward from the length of the array.
-  * If `option_args` evaluates to an object, `path` supplies the source node.
-    The object accepts the same optional `ofs`, `len`, `lim`, and `path`
-    properties as the object configuration of [`SLICE`](#ex-slice), with the
-    same defaults, alias resolution, and constraints.  At least one of `ofs`,
-    `len`, or `lim` must be supplied.  The object's `path`, if present, is
-    relative to the source node; the resulting target must be an array.
-    A complete [capture object](#ex-cap) can be used directly as these options.
+The `slice_args` and all replacements are given in
+[value context](#value-context), and evaluated in the invoking context prior to
+making any changes to the target.
 
-The resulting offset must fall in `[0..LENGTH]` and the limit in
-`[offset..LENGTH]`, using the target array's length.  The path and options are
-evaluated before mutation and are not reevaluated during the splice.
+The default target is the current node.  A `path` parameter can target a deeper
+node in the tree, and a `base` parameter can change which tree is descended.
+When used, the combination of `base` and `path` must refer to a writeable
+namespace; this effectively limits a `base` argument to a macro which is a
+`NODE` or `STASH` reference expression when fully expanded.  (`TEMP` is
+writeable, but is empty with nothing to use as a target)  The effective
+restriction on `base` does not change the domain of the `base` argument for
+lazy validation purposes, it just adds a runtime check specific to `SPLICE`.
 
-The replacement arguments ([value context](#value-context)) are each evaluated
-before making any alteration to the target array.
+If the target is an array, the span of elements described by `slice_args` gets
+replaced, with one element per `replacement` in argument order.  If the target
+is a string, each replacement must be a string or the action fails. The span of
+characters described by `slice_args` gets replaced by the concatenated
+replacements. Omitting all replacements deletes the span.  A zero-length span
+allows insertion at the offset.
 
-If [`SPLIT` metadata](#split-metadata) is present on the array it gets likewise
-spliced.  The replacement values may also introduce `SPLIT` metadata to the
-target array if none was present, in the same manner as if each element of the
-result of the splice had been inserted at the end of a fresh array.
+As with `SLICE`, the `slice_args` are compatible with `CAP` expressions, which
+is convenient when replacing groups captured by a `MATCH`.  However, beware
+that `CAP` values are not updated after a call to `SPLICE`; once modifications
+are made to the target array/string or any component of `path` it may leave the
+captures dangling or referring to the wrong spans.  A generator must work
+around this, either by emitting `SPLICE` actions in an order that ensures
+captures are used before becoming invalid, wrapping each `SPLICE` with a
+`MATCH` action to ensure a fresh capture, or other more advanced logic.
+
+Examples:
+
+    // Delete span of 5 array elements from offset 3 in array node.field1.
+    // This deletes 5 characters if node.field1 is a string.
+    // Be sure to MATCH first!
+    [AT, "field1", [SPLICE, [[ 3, 5 ]]]]
+
+    // Replace one character of the stashed draft with text from the current node.
+    [SPLICE, {base: [VAL, [STASH, "draft"]], ofs: 2, len: 1}, [NODE, "text"]]
+    
+    // find and replace some array elements
+    [MATCH,
+      { field1: [[ [NEAR, 3, [GROUP, 0, "item3", "item4"] ] ]] },
+      [SPLICE, [CAP,0], "new_item3", "new_item4", "new_item5"]
+    ]
+    
+    // find and replace some text
+    [MATCH,
+      { field1: [STR, [GROUP, 0, " tyypo "]] },
+      [SPLICE, [CAP,0], "typo"]
+    ]
+
+If a target array has [`SPLIT` metadata](#split-metadata), the action splices
+the metadata along with the elements.  The replacement values may also introduce
+`SPLIT` metadata to the target array if none was present, in the same manner
+as if each element of the result had been inserted at the end of a fresh array.
+Editing a string stored in an array element counts as an overwrite and preserves
+that element's separator and trimming metadata.
 
 ### <span id="act-while">WHILE</span>
 
@@ -1695,14 +1730,17 @@ the form:
       lim:   // ofs + len
     }
 
-These objects may be used as the argument to the [`SLICE` function](#ex-slice).
+These objects are compatible with the first argument of the
+[`SLICE` function](#ex-slice) and [`SPLICE` action](#act-splice).
 For example, to select the captured array elements of "example" as a new array
 value, you can use:
 
     [SLICE, [CAP, 'example'] ]
 
-Note that this works for both arrays and strings that were matched in the tree
-of the current node, since SLICE can operate on both strings and arrays.
+To replace a substring in the matched data, you can use:
+
+    [MATCH, { field: [STR, [GROUP, 0, "needs replaced"]] },
+      [SPLICE, [CAP, 0], "replacement"]]
 
 The captured `path` is computed at capture time and is not a "magic" property
 that adapts to changes.  It reaches back as far as the current node when the
@@ -1753,8 +1791,9 @@ Reference data relative to the [current node](#namespaces).
 
 The arguments form a [path](#paths).  The path may be empty to reference the
 current node itself.  The current node may be overwritten by `COPY` and `MOVE`
-actions.  Implementations need to track both the container and property of the
-current node, rather than just a pointer to it.
+actions.  When the current node is a string, `SPLICE` can also overwrite it.
+Implementations need to track both the container and property of the current
+node, rather than just a pointer to it.
 
 The current node is defined at the start of every action, though when
 evaluating an expression it is possible for the current node to be undefined.
@@ -2347,8 +2386,8 @@ Create a value-context expression macro.
 
 The `value_expr` is given in value context, but instead of executing it, an
 opaque object representing it is returned.  The object can be invoked with the
-`EX` expression.  None of the subexpressions within `value_expr` are evaluated
-until the point where `EX` expands it.  Parameters may be passed via the `TEMP`
+`EX` expression or used as a [span base](#ex-slice).  Its subexpressions are
+evaluated when the macro is expanded.  Parameters may be passed via the `TEMP`
 or `STASH` namespaces using whatever convention the JGraft generator prefers.
 
 #### <span id="ex-pat">PAT</span>
@@ -2485,28 +2524,37 @@ It returns `null` when the current node refers to the root of a namespace.
 #### <span id="ex-slice">SLICE</span>
 
     [SLICE, config_args]
-    [SLICE, config_args, source_val]
+    [SLICE, config_args, base]
     // config_args may be:
     //   ofs
     //   [[ ofs, len ]]
     //   [[ ofs, -(LENGTH-lim) ]]
-    //   { ofs: N, len: N, lim: N, path: P }
+    //   { ofs: N, len: N, lim: N, path: P, base: val_expr }
 
 Return a span of an array or string.
 
 All arguments are [value context](#value-context) expressions.
-If `source_val` is not specified, the value of the current node is used.
 The `config_args` may be a single integer to supply `ofs`,
 an (escaped) array with a non-negative second element to supply `ofs` and `len`,
 an (escaped) array with a negative second element to supply `ofs` and a
 calculated `lim`, or an object of arguments.
 
-The optional `path` argument must be an array value.  It modifies the source
-as per the expression `[NODE, path]`, or `[LOCAL,[NODE, path],null,source_val]`
-if `source_val` is provided.  After following this path (or using the source
-directly when no path is supplied), the target must be an array or string.
-All offsets and bounds refer to this target, whose length is used for alias
-resolution and defaults.
+The default `base` is the current node.  It may be overridden using either a
+distinct argument, or in `config_args`, with the distinct argument taking
+precedence.  An ordinary value supplies the base directly, by value.  An
+un-expanded [value macro object](#ex-val) may also be used as `base`, allowing
+`config_args` to be stored with a `base` without implying immediate expansion
+of a full namespace like `STASH` at the point where it was stored.
+
+If the `path` argument is supplied, it must be an array, and represents path
+selectors from the `base` to the target node.  An omitted or empty `path`
+selects the (macro-expanded) base itself.  All argument expressions, including
+within a `base` macro, use the invoking context.  The resulting target node
+must exist and be an array or string.  All offsets and bounds refer to this
+target, whose length is used for alias resolution and defaults.  The span
+consists of the positions `ofs ≤ i < lim`.
+For strings, offsets and lengths count Unicode code points as in
+[character matching](#matching-string-characters).
 
 All arguments are individually optional, though at least one of `ofs`, `len`,
 or `lim` must be provided.  The `ofs` argument must evaluate to an integer;
@@ -2538,6 +2586,12 @@ Examples:
     [SLICE, {ofs: 3, lim: 6}]       -> [3,4,5]
     [SLICE, {ofs: 1, len: 1}]       -> [1]
     [SLICE, {len: 2, lim: 5}]       -> [3,4]
+
+    // Equivalent ways to read one character of a stashed string
+    [SLICE, {ofs: 2, len: 1, base: [VAL, [STASH, "draft"]]}]
+    [SLICE, {ofs: 2, len: 1, base: [VAL, [STASH]], path:[["draft"]]}]
+    [SLICE, {ofs: 2, len: 1, base: [STASH, "draft"]}]
+    [SLICE, [[2, 1]], [STASH, "draft"]]
 
 #### <span id="ex-concat">CONCAT</span>
 

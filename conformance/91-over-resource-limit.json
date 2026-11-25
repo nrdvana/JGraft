@@ -29,6 +29,12 @@
           "lazy": {"resource_limit":true}
         },
         {
+          "name": "Recursive EX while resolving a splice destination",
+          "input": [0],
+          "jgraft": ["JGRAFT",{"v":1,"const":["again",["VAL",["EX","again"]]]},["SPLICE",{"base":["CONST","again"],"len":1},1]],
+          "lazy": {"resource_limit":true}
+        },
+        {
           "name": "Recursive pattern in a sequence alternative",
           "desc": "Preparing all participating alternatives expands the recursive PAT even though the literal alternative would match.",
           "input": ["x"],

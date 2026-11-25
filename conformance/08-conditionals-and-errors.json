@@ -837,7 +837,7 @@
             ["RAISE","info","before",["NODE","rows"]],
             ["COPY",2,["NODE","rows",0,"v"]],
             ["RAISE","warn","updated",["NODE","rows"]],
-            ["SPLICE",["NODE","rows"],{"ofs":1,"len":1},"new"],
+            ["SPLICE",{"path":[["rows"]],"ofs":1,"len":1},"new"],
             ["RAISE","info","after",["NODE","rows"]]
           ],
           "lazy": {

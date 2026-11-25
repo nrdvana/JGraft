@@ -834,7 +834,7 @@
           "jgraft": [
             "JGRAFT",{"v":1},
             ["WHILE",["LESS",0,["NODE","n"]],
-              ["SPLICE",["NODE","seen"],{"ofs":["LENGTH",["NODE","seen"]],"len":0},["NODE","n"]],
+              ["SPLICE",{"path":[["seen"]],"ofs":["LENGTH",["NODE","seen"]],"len":0},["NODE","n"]],
               ["COPY",["SUB",["NODE","n"],1],"n"]]
           ],
           "lazy": {"output":{"n":0,"seen":[3,2,1]}}
